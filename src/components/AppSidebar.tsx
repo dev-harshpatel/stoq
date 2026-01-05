@@ -40,8 +40,8 @@ export function AppSidebar({ open, collapsed, onClose, onToggleCollapse }: AppSi
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-full bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out',
-          'lg:sticky lg:top-0',
+          'fixed top-0 left-0 z-50 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out',
+          'lg:sticky lg:top-0 lg:h-screen',
           open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           collapsed ? 'w-16' : 'w-56'
         )}
