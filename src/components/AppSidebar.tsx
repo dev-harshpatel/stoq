@@ -7,6 +7,7 @@ import {
   Settings,
   X,
   ChevronLeft,
+  ShoppingBag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -19,11 +20,12 @@ interface AppSidebarProps {
 }
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
-  { label: 'Inventory', icon: Package, href: '/inventory' },
-  { label: 'Alerts', icon: Bell, href: '/alerts' },
-  { label: 'Reports', icon: BarChart3, href: '/reports' },
-  { label: 'Settings', icon: Settings, href: '/settings' },
+  { label: 'Dashboard', icon: LayoutDashboard, href: '/admin/dashboard' },
+  { label: 'Inventory', icon: Package, href: '/admin/inventory' },
+  { label: 'Orders', icon: ShoppingBag, href: '/admin/orders' },
+  { label: 'Alerts', icon: Bell, href: '/admin/alerts' },
+  { label: 'Reports', icon: BarChart3, href: '/admin/reports' },
+  { label: 'Settings', icon: Settings, href: '/admin/settings' },
 ];
 
 export function AppSidebar({ open, collapsed, onClose, onToggleCollapse }: AppSidebarProps) {

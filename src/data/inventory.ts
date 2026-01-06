@@ -1,113 +1,123 @@
 export interface InventoryItem {
   id: string;
   deviceName: string;
-  grade: 'A' | 'B' | 'C';
+  brand: string;
+  grade: "A" | "B" | "C";
   storage: string;
   quantity: number;
   pricePerUnit: number;
   lastUpdated: string;
-  priceChange?: 'up' | 'down' | 'stable';
+  priceChange?: "up" | "down" | "stable";
 }
 
 export const inventoryData: InventoryItem[] = [
   {
-    id: '1',
-    deviceName: 'Apple Watch Series 7 – 41mm',
-    grade: 'A',
-    storage: '32GB',
+    id: "1",
+    deviceName: "Apple Watch Series 7 – 41mm",
+    brand: "Apple",
+    grade: "A",
+    storage: "32GB",
     quantity: 31,
     pricePerUnit: 150,
-    lastUpdated: '2h ago',
-    priceChange: 'stable',
+    lastUpdated: "2h ago",
+    priceChange: "stable",
   },
   {
-    id: '2',
-    deviceName: 'Google Pixel 7a',
-    grade: 'A',
-    storage: '128GB',
+    id: "2",
+    deviceName: "Google Pixel 7a",
+    brand: "Google",
+    grade: "A",
+    storage: "128GB",
     quantity: 4,
     pricePerUnit: 200,
-    lastUpdated: '30m ago',
-    priceChange: 'down',
+    lastUpdated: "30m ago",
+    priceChange: "down",
   },
   {
-    id: '3',
-    deviceName: 'Google Pixel 8',
-    grade: 'A',
-    storage: '128GB',
+    id: "3",
+    deviceName: "Google Pixel 8",
+    brand: "Google",
+    grade: "A",
+    storage: "128GB",
     quantity: 11,
     pricePerUnit: 270,
-    lastUpdated: '1h ago',
-    priceChange: 'up',
+    lastUpdated: "1h ago",
+    priceChange: "up",
   },
   {
-    id: '4',
-    deviceName: 'Google Pixel 8 Pro',
-    grade: 'A',
-    storage: '128GB',
+    id: "4",
+    deviceName: "Google Pixel 8 Pro",
+    brand: "Google",
+    grade: "A",
+    storage: "128GB",
     quantity: 1,
     pricePerUnit: 380,
-    lastUpdated: '5h ago',
-    priceChange: 'stable',
+    lastUpdated: "5h ago",
+    priceChange: "stable",
   },
   {
-    id: '5',
-    deviceName: 'iPhone 13',
-    grade: 'B',
-    storage: '128GB',
+    id: "5",
+    deviceName: "iPhone 13",
+    brand: "Apple",
+    grade: "B",
+    storage: "128GB",
     quantity: 8,
     pricePerUnit: 420,
-    lastUpdated: '3h ago',
-    priceChange: 'down',
+    lastUpdated: "3h ago",
+    priceChange: "down",
   },
   {
-    id: '6',
-    deviceName: 'iPhone 14 Pro',
-    grade: 'A',
-    storage: '256GB',
+    id: "6",
+    deviceName: "iPhone 14 Pro",
+    brand: "Apple",
+    grade: "A",
+    storage: "256GB",
     quantity: 3,
     pricePerUnit: 780,
-    lastUpdated: '1h ago',
-    priceChange: 'up',
+    lastUpdated: "1h ago",
+    priceChange: "up",
   },
   {
-    id: '7',
-    deviceName: 'Samsung Galaxy S23',
-    grade: 'A',
-    storage: '128GB',
+    id: "7",
+    deviceName: "Samsung Galaxy S23",
+    brand: "Samsung",
+    grade: "A",
+    storage: "128GB",
     quantity: 14,
     pricePerUnit: 350,
-    lastUpdated: '4h ago',
-    priceChange: 'stable',
+    lastUpdated: "4h ago",
+    priceChange: "stable",
   },
   {
-    id: '8',
-    deviceName: 'HMD Aura',
-    grade: 'A',
-    storage: '64GB',
+    id: "8",
+    deviceName: "HMD Aura",
+    brand: "HMD",
+    grade: "A",
+    storage: "64GB",
     quantity: 1,
     pricePerUnit: 80,
-    lastUpdated: '6h ago',
-    priceChange: 'down',
+    lastUpdated: "6h ago",
+    priceChange: "down",
   },
   {
-    id: '9',
-    deviceName: 'HMD Pulse Pro',
-    grade: 'A',
-    storage: '128GB',
+    id: "9",
+    deviceName: "HMD Pulse Pro",
+    brand: "HMD",
+    grade: "A",
+    storage: "128GB",
     quantity: 3,
     pricePerUnit: 110,
-    lastUpdated: '2h ago',
-    priceChange: 'stable',
+    lastUpdated: "2h ago",
+    priceChange: "stable",
   },
 ];
 
-export type StockStatus = 'in-stock' | 'low-stock' | 'critical';
+export type StockStatus = "in-stock" | "low-stock" | "critical";
 
 export function getStockStatus(quantity: number): StockStatus {
-  if (quantity > 10) return 'in-stock';
-  if (quantity >= 5) return 'low-stock';
-  return 'critical';
+  if (quantity > 10) return "in-stock";
+  if (quantity >= 5) return "low-stock";
+  return "critical";
 }
 
 export function formatPrice(price: number): string {

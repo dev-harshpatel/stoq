@@ -1,6 +1,7 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { getOntarioTime } from "@/lib/utils";
 // import { Footer } from '@/components/Footer';
 
 interface AppLayoutProps {
@@ -11,8 +12,17 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastRefreshed, setLastRefreshed] = useState(getOntarioTime());
 
-  const lastRefreshed = "Jan 5, 2026 at 2:34 PM";
+  useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(() => {
+        setLastRefreshed(getOntarioTime());
+      }, 60000); // Update every minute
+
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh]);
 
   return (
     <div className="h-screen flex w-full bg-background overflow-hidden">
@@ -29,6 +39,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           autoRefresh={autoRefresh}
           onAutoRefreshChange={setAutoRefresh}
           lastRefreshed={lastRefreshed}
+          onRefresh={() => setLastRefreshed(getOntarioTime())}
         />
 
         <main className="flex-1 p-4 lg:p-6 overflow-y-auto">

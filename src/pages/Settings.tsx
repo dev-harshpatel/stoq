@@ -1,25 +1,25 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
-import { Save, User, Bell, Shield, Palette } from 'lucide-react';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { Save, User, Bell, Shield, Palette } from "lucide-react";
 
 export default function Settings() {
   const [settings, setSettings] = useState({
-    companyName: 'Mobile Wholesale Inc.',
-    email: 'admin@mobilewholesale.com',
-    currency: 'CAD',
-    timezone: 'America/Toronto',
+    companyName: "Stoq Inc.",
+    email: "admin@stoq.com",
+    currency: "CAD",
+    timezone: "America/Toronto",
     lowStockThreshold: 5,
     criticalStockThreshold: 2,
     emailAlerts: true,
@@ -30,7 +30,7 @@ export default function Settings() {
   });
 
   const handleSave = () => {
-    toast.success('Settings saved successfully');
+    toast.success("Settings saved successfully");
   };
 
   return (
@@ -51,7 +51,9 @@ export default function Settings() {
           </div>
           <div>
             <h3 className="font-semibold text-foreground">Profile</h3>
-            <p className="text-sm text-muted-foreground">Your account details</p>
+            <p className="text-sm text-muted-foreground">
+              Your account details
+            </p>
           </div>
         </div>
 
@@ -61,7 +63,9 @@ export default function Settings() {
             <Input
               id="company"
               value={settings.companyName}
-              onChange={(e) => setSettings({ ...settings, companyName: e.target.value })}
+              onChange={(e) =>
+                setSettings({ ...settings, companyName: e.target.value })
+              }
               className="bg-background"
             />
           </div>
@@ -71,7 +75,9 @@ export default function Settings() {
               id="email"
               type="email"
               value={settings.email}
-              onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+              onChange={(e) =>
+                setSettings({ ...settings, email: e.target.value })
+              }
               className="bg-background"
             />
           </div>
@@ -103,9 +109,15 @@ export default function Settings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-card">
-                  <SelectItem value="America/Toronto">Eastern (Toronto)</SelectItem>
-                  <SelectItem value="America/Vancouver">Pacific (Vancouver)</SelectItem>
-                  <SelectItem value="America/Chicago">Central (Chicago)</SelectItem>
+                  <SelectItem value="America/Toronto">
+                    Eastern (Toronto)
+                  </SelectItem>
+                  <SelectItem value="America/Vancouver">
+                    Pacific (Vancouver)
+                  </SelectItem>
+                  <SelectItem value="America/Chicago">
+                    Central (Chicago)
+                  </SelectItem>
                   <SelectItem value="Europe/London">GMT (London)</SelectItem>
                 </SelectContent>
               </Select>
@@ -129,34 +141,52 @@ export default function Settings() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground">Email Alerts</p>
-              <p className="text-xs text-muted-foreground">Get notified via email</p>
+              <p className="text-sm font-medium text-foreground">
+                Email Alerts
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Get notified via email
+              </p>
             </div>
             <Switch
               checked={settings.emailAlerts}
-              onCheckedChange={(v) => setSettings({ ...settings, emailAlerts: v })}
+              onCheckedChange={(v) =>
+                setSettings({ ...settings, emailAlerts: v })
+              }
             />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground">Push Notifications</p>
-              <p className="text-xs text-muted-foreground">Browser notifications</p>
+              <p className="text-sm font-medium text-foreground">
+                Push Notifications
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Browser notifications
+              </p>
             </div>
             <Switch
               checked={settings.pushNotifications}
-              onCheckedChange={(v) => setSettings({ ...settings, pushNotifications: v })}
+              onCheckedChange={(v) =>
+                setSettings({ ...settings, pushNotifications: v })
+              }
             />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground">Daily Digest</p>
-              <p className="text-xs text-muted-foreground">Receive a daily summary</p>
+              <p className="text-sm font-medium text-foreground">
+                Daily Digest
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Receive a daily summary
+              </p>
             </div>
             <Switch
               checked={settings.dailyDigest}
-              onCheckedChange={(v) => setSettings({ ...settings, dailyDigest: v })}
+              onCheckedChange={(v) =>
+                setSettings({ ...settings, dailyDigest: v })
+              }
             />
           </div>
         </div>
@@ -170,7 +200,9 @@ export default function Settings() {
           </div>
           <div>
             <h3 className="font-semibold text-foreground">Inventory</h3>
-            <p className="text-sm text-muted-foreground">Stock thresholds and display</p>
+            <p className="text-sm text-muted-foreground">
+              Stock thresholds and display
+            </p>
           </div>
         </div>
 
@@ -182,11 +214,16 @@ export default function Settings() {
               type="number"
               value={settings.lowStockThreshold}
               onChange={(e) =>
-                setSettings({ ...settings, lowStockThreshold: parseInt(e.target.value) })
+                setSettings({
+                  ...settings,
+                  lowStockThreshold: parseInt(e.target.value),
+                })
               }
               className="bg-background"
             />
-            <p className="text-xs text-muted-foreground">Show warning below this quantity</p>
+            <p className="text-xs text-muted-foreground">
+              Show warning below this quantity
+            </p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="critical-stock">Critical Stock Threshold</Label>
@@ -195,11 +232,16 @@ export default function Settings() {
               type="number"
               value={settings.criticalStockThreshold}
               onChange={(e) =>
-                setSettings({ ...settings, criticalStockThreshold: parseInt(e.target.value) })
+                setSettings({
+                  ...settings,
+                  criticalStockThreshold: parseInt(e.target.value),
+                })
               }
               className="bg-background"
             />
-            <p className="text-xs text-muted-foreground">Show critical below this quantity</p>
+            <p className="text-xs text-muted-foreground">
+              Show critical below this quantity
+            </p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="refresh">Auto-Refresh Interval (minutes)</Label>
@@ -208,7 +250,10 @@ export default function Settings() {
               type="number"
               value={settings.autoRefreshInterval}
               onChange={(e) =>
-                setSettings({ ...settings, autoRefreshInterval: parseInt(e.target.value) })
+                setSettings({
+                  ...settings,
+                  autoRefreshInterval: parseInt(e.target.value),
+                })
               }
               className="bg-background"
             />
@@ -224,18 +269,26 @@ export default function Settings() {
           </div>
           <div>
             <h3 className="font-semibold text-foreground">Security</h3>
-            <p className="text-sm text-muted-foreground">Account security settings</p>
+            <p className="text-sm text-muted-foreground">
+              Account security settings
+            </p>
           </div>
         </div>
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-foreground">Two-Factor Authentication</p>
-            <p className="text-xs text-muted-foreground">Add an extra layer of security</p>
+            <p className="text-sm font-medium text-foreground">
+              Two-Factor Authentication
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Add an extra layer of security
+            </p>
           </div>
           <Switch
             checked={settings.twoFactorAuth}
-            onCheckedChange={(v) => setSettings({ ...settings, twoFactorAuth: v })}
+            onCheckedChange={(v) =>
+              setSettings({ ...settings, twoFactorAuth: v })
+            }
           />
         </div>
       </div>

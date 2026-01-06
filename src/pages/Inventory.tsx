@@ -9,6 +9,7 @@ import { inventoryData, InventoryItem } from '@/data/inventory';
 
 const defaultFilters: FilterValues = {
   search: '',
+  brand: 'all',
   grade: 'all',
   storage: 'all',
   priceRange: 'all',
@@ -28,6 +29,9 @@ export default function Inventory() {
         filters.search &&
         !item.deviceName.toLowerCase().includes(filters.search.toLowerCase())
       ) {
+        return false;
+      }
+      if (filters.brand !== 'all' && item.brand !== filters.brand) {
         return false;
       }
       if (filters.grade !== 'all' && item.grade !== filters.grade) {

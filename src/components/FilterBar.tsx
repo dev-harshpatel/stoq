@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 
 export interface FilterValues {
   search: string;
+  brand: string;
   grade: string;
   storage: string;
   priceRange: string;
@@ -34,6 +35,7 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
 
   const hasActiveFilters =
     filters.search ||
+    filters.brand !== 'all' ||
     filters.grade !== 'all' ||
     filters.storage !== 'all' ||
     filters.priceRange !== 'all';
@@ -56,6 +58,19 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
             className="pl-9 bg-background border-border"
           />
         </div>
+
+        <Select value={filters.brand} onValueChange={(v) => handleChange('brand', v)}>
+          <SelectTrigger className="w-36 bg-background border-border">
+            <SelectValue placeholder="Brand" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border">
+            <SelectItem value="all">All Brands</SelectItem>
+            <SelectItem value="Apple">Apple</SelectItem>
+            <SelectItem value="Google">Google</SelectItem>
+            <SelectItem value="Samsung">Samsung</SelectItem>
+            <SelectItem value="HMD">HMD</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Select value={filters.grade} onValueChange={(v) => handleChange('grade', v)}>
           <SelectTrigger className="w-32 bg-background border-border">
@@ -138,6 +153,22 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
               </div>
 
               <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Brand</label>
+                  <Select value={filters.brand} onValueChange={(v) => handleChange('brand', v)}>
+                    <SelectTrigger className="w-full bg-background border-border">
+                      <SelectValue placeholder="Brand" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="all">All Brands</SelectItem>
+                      <SelectItem value="Apple">Apple</SelectItem>
+                      <SelectItem value="Google">Google</SelectItem>
+                      <SelectItem value="Samsung">Samsung</SelectItem>
+                      <SelectItem value="HMD">HMD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div>
                   <label className="text-sm font-medium mb-2 block">Grade</label>
                   <Select value={filters.grade} onValueChange={(v) => handleChange('grade', v)}>

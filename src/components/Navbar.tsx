@@ -9,6 +9,7 @@ interface NavbarProps {
   autoRefresh: boolean;
   onAutoRefreshChange: (value: boolean) => void;
   lastRefreshed: string;
+  onRefresh?: () => void;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export function Navbar({
   autoRefresh,
   onAutoRefreshChange,
   lastRefreshed,
+  onRefresh,
   className,
 }: NavbarProps) {
   return (
@@ -60,7 +62,12 @@ export function Navbar({
             />
           </div>
 
-          <Button variant="ghost" size="icon" className="hidden sm:flex">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hidden sm:flex"
+            onClick={onRefresh}
+          >
             <RefreshCw className="h-4 w-4" />
           </Button>
 
