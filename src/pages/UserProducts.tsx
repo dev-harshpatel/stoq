@@ -70,26 +70,31 @@ export default function UserProducts() {
 
   return (
     <>
-      <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">Products</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {filteredItems.length} devices available
-            </p>
+      <div className="flex flex-col h-full">
+        {/* Sticky Header Section */}
+        <div className="sticky top-0 z-10 bg-background pb-4 space-y-4 border-b border-border mb-4">
+          {/* Page Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground">Products</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {filteredItems.length} devices available
+              </p>
+            </div>
           </div>
+
+          {/* Filter Bar */}
+          <FilterBar
+            filters={filters}
+            onFiltersChange={setFilters}
+            onReset={handleResetFilters}
+          />
         </div>
 
-        {/* Filter Bar */}
-        <FilterBar
-          filters={filters}
-          onFiltersChange={setFilters}
-          onReset={handleResetFilters}
-        />
-
-        {/* Desktop Table */}
-        <div className="hidden md:block overflow-hidden rounded-lg border border-border bg-card">
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-hidden rounded-lg border border-border bg-card">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -289,7 +294,8 @@ export default function UserProducts() {
           })}
         </div>
 
-        {filteredItems.length === 0 && <EmptyState />}
+          {filteredItems.length === 0 && <EmptyState />}
+        </div>
       </div>
 
       <PurchaseModal

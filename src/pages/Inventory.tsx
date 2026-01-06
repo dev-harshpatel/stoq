@@ -71,7 +71,7 @@ export default function Inventory() {
             {filteredItems.length} devices in stock
           </p>
         </div>
-        <ExportActions />
+        <ExportActions data={filteredItems} filename="inventory" />
       </div>
 
       {/* Filter Bar */}

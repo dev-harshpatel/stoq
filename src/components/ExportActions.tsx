@@ -2,22 +2,54 @@ import { FileSpreadsheet, FileText, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
+import { InventoryItem } from '@/data/inventory';
 
 interface ExportActionsProps {
+  data?: InventoryItem[];
+  filename?: string;
   className?: string;
 }
 
-export function ExportActions({ className }: ExportActionsProps) {
+export function ExportActions({ data = [], filename = 'inventory', className }: ExportActionsProps) {
   const handleExportExcel = () => {
-    toast.success('Exporting to Excel...', {
-      description: 'Your download will start shortly',
-    });
+    if (data.length === 0) {
+      toast.error('No data to export', {
+        description: 'Please ensure there are items to export',
+      });
+      return;
+    }
+
+    try {
+      exportToExcel(data, filename);
+      toast.success('Export successful', {
+        description: 'Your Excel file has been downloaded',
+      });
+    } catch (error) {
+      toast.error('Export failed', {
+        description: 'There was an error exporting to Excel',
+      });
+    }
   };
 
   const handleExportPDF = () => {
-    toast.success('Exporting to PDF...', {
-      description: 'Your download will start shortly',
-    });
+    if (data.length === 0) {
+      toast.error('No data to export', {
+        description: 'Please ensure there are items to export',
+      });
+      return;
+    }
+
+    try {
+      exportToPDF(data, filename);
+      toast.success('Export successful', {
+        description: 'Your PDF file has been downloaded',
+      });
+    } catch (error) {
+      toast.error('Export failed', {
+        description: 'There was an error exporting to PDF',
+      });
+    }
   };
 
   const handleShareLink = () => {
