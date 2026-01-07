@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { FilterBar, FilterValues } from '@/components/FilterBar';
 import { ExportActions } from '@/components/ExportActions';
 import { InventoryTable } from '@/components/InventoryTable';
+import { Loader } from '@/components/Loader';
 import { useInventory } from '@/contexts/InventoryContext';
 import { InventoryItem } from '@/data/inventory';
 
@@ -56,16 +57,7 @@ export default function Inventory() {
   };
 
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">Inventory</h2>
-            <p className="text-sm text-muted-foreground mt-1">Loading inventory...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <Loader size="lg" text="Loading inventory..." />;
   }
 
   return (

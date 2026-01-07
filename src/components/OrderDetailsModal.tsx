@@ -61,20 +61,31 @@ export const OrderDetailsModal = ({
 
   if (!order) return null;
 
-  const handleApprove = () => {
-    // Decrease inventory quantities for each item in the order
-    order.items.forEach((orderItem) => {
-      decreaseQuantity(orderItem.item.id, orderItem.quantity);
-    });
+  const handleApprove = async () => {
+    try {
+      // Decrease inventory quantities for each item in the order
+      await Promise.all(
+        order.items.map((orderItem) =>
+          decreaseQuantity(orderItem.item.id, orderItem.quantity)
+        )
+      );
 
-    // Update order status
-    updateOrderStatus(order.id, "approved");
-    
-    toast({
-      title: "Order approved",
-      description: `Order #${order.id.slice(-8).toUpperCase()} has been approved. Inventory quantities have been updated.`,
-    });
-    onOpenChange(false);
+      // Update order status
+      updateOrderStatus(order.id, "approved");
+      
+      toast({
+        title: "Order approved",
+        description: `Order #${order.id.slice(-8).toUpperCase()} has been approved. Inventory quantities have been updated.`,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error approving order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update inventory quantities. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const canApprove = order.status === "pending";

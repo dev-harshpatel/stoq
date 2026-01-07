@@ -9,6 +9,7 @@ import { GradeBadge } from "@/components/GradeBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PriceChangeIndicator } from "@/components/PriceChangeIndicator";
 import { EmptyState } from "@/components/EmptyState";
+import { Loader } from "@/components/Loader";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +23,7 @@ const defaultFilters: FilterValues = {
 };
 
 export default function UserProducts() {
-  const { inventory } = useInventory();
+  const { inventory, isLoading } = useInventory();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
@@ -69,6 +70,10 @@ export default function UserProducts() {
   const handleResetFilters = () => {
     setFilters(defaultFilters);
   };
+
+  if (isLoading) {
+    return <Loader size="lg" text="Loading products..." />;
+  }
 
   return (
     <>

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { getStockStatus, formatPrice } from '@/data/inventory';
+import { Loader } from '@/components/Loader';
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {
@@ -54,8 +55,8 @@ function StatCard({ title, value, change, icon, accent = 'primary' }: StatCardPr
 }
 
 export default function Dashboard() {
-  const { inventory } = useInventory();
-  
+  const { inventory, isLoading } = useInventory();
+
   const stats = useMemo(() => {
     const totalDevices = inventory.length;
     const totalUnits = inventory.reduce((sum, item) => sum + item.quantity, 0);
@@ -81,6 +82,10 @@ export default function Dashboard() {
   const topDevices = inventory
     .sort((a, b) => b.quantity * b.pricePerUnit - a.quantity * a.pricePerUnit)
     .slice(0, 5);
+
+  if (isLoading) {
+    return <Loader size="lg" text="Loading dashboard..." />;
+  }
 
   return (
     <div className="space-y-6">
