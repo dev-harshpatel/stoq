@@ -6,11 +6,11 @@ import path from "path";
 export default defineConfig(async ({ mode }) => {
   const plugins = [react()];
 
-  // Only load lovable-tagger in development mode
-  if (mode === "development") {
-    const { componentTagger } = await import("lovable-tagger");
-    plugins.push(componentTagger());
-  }
+  // // Only load lovable-tagger in development mode
+  // if (mode === "development") {
+  //   const { componentTagger } = await import("lovable-tagger");
+  //   plugins.push(componentTagger());
+  // }
 
   return {
     server: {

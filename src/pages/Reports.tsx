@@ -14,37 +14,40 @@ import {
   Line,
   Legend,
 } from 'recharts';
-import { inventoryData, getStockStatus, formatPrice } from '@/data/inventory';
+import { useInventory } from '@/contexts/InventoryContext';
+import { getStockStatus, formatPrice } from '@/data/inventory';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const COLORS = ['hsl(245, 58%, 60%)', 'hsl(142, 76%, 36%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)'];
 
 export default function Reports() {
+  const { inventory } = useInventory();
+  
   const stockByGrade = useMemo(() => {
-    const gradeA = inventoryData.filter((i) => i.grade === 'A').reduce((s, i) => s + i.quantity, 0);
-    const gradeB = inventoryData.filter((i) => i.grade === 'B').reduce((s, i) => s + i.quantity, 0);
-    const gradeC = inventoryData.filter((i) => i.grade === 'C').reduce((s, i) => s + i.quantity, 0);
+    const gradeA = inventory.filter((i) => i.grade === 'A').reduce((s, i) => s + i.quantity, 0);
+    const gradeB = inventory.filter((i) => i.grade === 'B').reduce((s, i) => s + i.quantity, 0);
+    const gradeC = inventory.filter((i) => i.grade === 'C').reduce((s, i) => s + i.quantity, 0);
     return [
       { name: 'Grade A', value: gradeA },
       { name: 'Grade B', value: gradeB },
       { name: 'Grade C', value: gradeC },
     ].filter((d) => d.value > 0);
-  }, []);
+  }, [inventory]);
 
   const stockByStatus = useMemo(() => {
-    const inStock = inventoryData.filter((i) => getStockStatus(i.quantity) === 'in-stock').length;
-    const lowStock = inventoryData.filter((i) => getStockStatus(i.quantity) === 'low-stock').length;
-    const critical = inventoryData.filter((i) => getStockStatus(i.quantity) === 'critical').length;
+    const inStock = inventory.filter((i) => getStockStatus(i.quantity) === 'in-stock').length;
+    const lowStock = inventory.filter((i) => getStockStatus(i.quantity) === 'low-stock').length;
+    const critical = inventory.filter((i) => getStockStatus(i.quantity) === 'critical').length;
     return [
       { name: 'In Stock', value: inStock },
       { name: 'Low Stock', value: lowStock },
       { name: 'Critical', value: critical },
     ];
-  }, []);
+  }, [inventory]);
 
   const valueByDevice = useMemo(() => {
-    return inventoryData
+    return inventory
       .map((item) => ({
         name: item.deviceName.split(' ').slice(0, 2).join(' '),
         value: item.quantity * item.pricePerUnit,
@@ -52,7 +55,7 @@ export default function Reports() {
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
-  }, []);
+  }, [inventory]);
 
   const trendData = [
     { month: 'Aug', units: 58, value: 18500 },

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Bell, BellOff, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { inventoryData, getStockStatus, formatPrice } from '@/data/inventory';
+import { useInventory } from '@/contexts/InventoryContext';
+import { getStockStatus, formatPrice } from '@/data/inventory';
 import { cn } from '@/lib/utils';
 
 interface Alert {

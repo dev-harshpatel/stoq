@@ -7,7 +7,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
-import { inventoryData, getStockStatus, formatPrice } from '@/data/inventory';
+import { useInventory } from '@/contexts/InventoryContext';
+import { getStockStatus, formatPrice } from '@/data/inventory';
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {
@@ -53,19 +54,21 @@ function StatCard({ title, value, change, icon, accent = 'primary' }: StatCardPr
 }
 
 export default function Dashboard() {
+  const { inventory } = useInventory();
+  
   const stats = useMemo(() => {
-    const totalDevices = inventoryData.length;
-    const totalUnits = inventoryData.reduce((sum, item) => sum + item.quantity, 0);
-    const totalValue = inventoryData.reduce(
+    const totalDevices = inventory.length;
+    const totalUnits = inventory.reduce((sum, item) => sum + item.quantity, 0);
+    const totalValue = inventory.reduce(
       (sum, item) => sum + item.quantity * item.pricePerUnit,
       0
     );
-    const lowStockItems = inventoryData.filter(
+    const lowStockItems = inventory.filter(
       (item) => getStockStatus(item.quantity) !== 'in-stock'
     ).length;
 
     return { totalDevices, totalUnits, totalValue, lowStockItems };
-  }, []);
+  }, [inventory]);
 
   const recentActivity = [
     { action: 'Stock updated', device: 'Google Pixel 7a', time: '30m ago', type: 'update' },
@@ -75,7 +78,7 @@ export default function Dashboard() {
     { action: 'Stock updated', device: 'Samsung Galaxy S23', time: '4h ago', type: 'update' },
   ];
 
-  const topDevices = inventoryData
+  const topDevices = inventory
     .sort((a, b) => b.quantity * b.pricePerUnit - a.quantity * a.pricePerUnit)
     .slice(0, 5);
 

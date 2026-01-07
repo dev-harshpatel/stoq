@@ -7,11 +7,13 @@ import { AppLayout } from "@/components/AppLayout";
 import { UserLayout } from "@/components/UserLayout";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { InventoryProvider } from "@/contexts/InventoryContext";
 import { OrdersProvider } from "@/contexts/OrdersContext";
 import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 import Orders from "./pages/Orders";
 import Alerts from "./pages/Alerts";
+import ProductManagement from "./pages/ProductManagement";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import UserProducts from "./pages/UserProducts";
@@ -24,10 +26,11 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <CartProvider>
-          <OrdersProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+          <InventoryProvider>
+            <OrdersProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
           <Routes>
             {/* User Routes */}
             <Route
@@ -65,6 +68,14 @@ const App = () => (
               element={
                 <AppLayout>
                   <Inventory />
+                </AppLayout>
+              }
+            />
+            <Route
+              path="/admin/products"
+              element={
+                <AppLayout>
+                  <ProductManagement />
                 </AppLayout>
               }
             />
@@ -111,6 +122,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
           </OrdersProvider>
+          </InventoryProvider>
         </CartProvider>
       </AuthProvider>
     </TooltipProvider>

@@ -1,13 +1,14 @@
 import { NavLink } from '@/components/NavLink';
 import {
+  BarChart3,
+  Bell,
+  ChevronLeft,
   LayoutDashboard,
   Package,
-  Bell,
-  BarChart3,
+  Pencil,
   Settings,
-  X,
-  ChevronLeft,
   ShoppingBag,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ interface AppSidebarProps {
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/admin/dashboard' },
   { label: 'Inventory', icon: Package, href: '/admin/inventory' },
+  { label: 'Edit Products', icon: Pencil, href: '/admin/products' },
   { label: 'Orders', icon: ShoppingBag, href: '/admin/orders' },
   { label: 'Alerts', icon: Bell, href: '/admin/alerts' },
   { label: 'Reports', icon: BarChart3, href: '/admin/reports' },

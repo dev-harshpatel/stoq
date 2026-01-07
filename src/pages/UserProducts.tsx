@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { ShoppingCart } from "lucide-react";
-import { inventoryData, InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
+import { useInventory } from "@/contexts/InventoryContext";
+import { InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
 import { Button } from "@/components/ui/button";
 import { FilterBar, FilterValues } from "@/components/FilterBar";
 import { PurchaseModal } from "@/components/PurchaseModal";
@@ -21,6 +22,7 @@ const defaultFilters: FilterValues = {
 };
 
 export default function UserProducts() {
+  const { inventory } = useInventory();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
@@ -31,7 +33,7 @@ export default function UserProducts() {
   };
 
   const filteredItems = useMemo(() => {
-    return inventoryData.filter((item: InventoryItem) => {
+    return inventory.filter((item: InventoryItem) => {
       if (
         filters.search &&
         !item.deviceName.toLowerCase().includes(filters.search.toLowerCase())
@@ -62,7 +64,7 @@ export default function UserProducts() {
       }
       return true;
     });
-  }, [filters]);
+  }, [inventory, filters]);
 
   const handleResetFilters = () => {
     setFilters(defaultFilters);

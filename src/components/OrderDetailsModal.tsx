@@ -1,5 +1,6 @@
 import { Order, OrderStatus } from "@/types/order";
 import { useOrders } from "@/contexts/OrdersContext";
+import { useInventory } from "@/contexts/InventoryContext";
 import {
   Dialog,
   DialogContent,
@@ -55,15 +56,23 @@ export const OrderDetailsModal = ({
   order,
 }: OrderDetailsModalProps) => {
   const { updateOrderStatus } = useOrders();
+  const { decreaseQuantity } = useInventory();
   const { toast } = useToast();
 
   if (!order) return null;
 
   const handleApprove = () => {
+    // Decrease inventory quantities for each item in the order
+    order.items.forEach((orderItem) => {
+      decreaseQuantity(orderItem.item.id, orderItem.quantity);
+    });
+
+    // Update order status
     updateOrderStatus(order.id, "approved");
+    
     toast({
       title: "Order approved",
-      description: `Order #${order.id.slice(-8).toUpperCase()} has been approved.`,
+      description: `Order #${order.id.slice(-8).toUpperCase()} has been approved. Inventory quantities have been updated.`,
     });
     onOpenChange(false);
   };
