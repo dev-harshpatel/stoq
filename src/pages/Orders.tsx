@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOrders } from "@/contexts/OrdersContext";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
@@ -40,11 +40,13 @@ const getStatusLabel = (status: OrderStatus) => {
 };
 
 export default function Orders() {
-  const { getAllOrders } = useOrders();
+  const { orders: allOrders } = useOrders();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const orders = getAllOrders();
+  const orders = [...allOrders].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -117,7 +119,9 @@ export default function Orders() {
                         {order.username}
                       </td>
                       <td className="px-4 py-4 text-sm text-foreground">
-                        {Array.from(new Set(order.items.map(item => item.item.brand))).join(', ')}
+                        {Array.from(
+                          new Set(order.items.map((item) => item.item.brand))
+                        ).join(", ")}
                       </td>
                       <td className="px-4 py-4 text-center text-sm text-foreground">
                         {order.items.length} item(s)
@@ -130,7 +134,10 @@ export default function Orders() {
                       <td className="px-4 py-4 text-center">
                         <Badge
                           variant="outline"
-                          className={cn("text-xs", getStatusColor(order.status))}
+                          className={cn(
+                            "text-xs",
+                            getStatusColor(order.status)
+                          )}
                         >
                           {getStatusLabel(order.status)}
                         </Badge>
@@ -165,4 +172,3 @@ export default function Orders() {
     </>
   );
 }
-
