@@ -17,6 +17,7 @@ export interface FilterValues {
   grade: string;
   storage: string;
   priceRange: string;
+  stockStatus: string;
 }
 
 interface FilterBarProps {
@@ -38,7 +39,8 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
     filters.brand !== 'all' ||
     filters.grade !== 'all' ||
     filters.storage !== 'all' ||
-    filters.priceRange !== 'all';
+    filters.priceRange !== 'all' ||
+    filters.stockStatus !== 'all';
 
   return (
     <>
@@ -106,6 +108,18 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
             <SelectItem value="under200">Under $200</SelectItem>
             <SelectItem value="200-400">$200 – $400</SelectItem>
             <SelectItem value="400+">$400+</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={filters.stockStatus} onValueChange={(v) => handleChange('stockStatus', v)}>
+          <SelectTrigger className="w-40 bg-background border-border">
+            <SelectValue placeholder="Stock Status" />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border">
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="in-stock">In Stock</SelectItem>
+            <SelectItem value="low-stock">Low Stock</SelectItem>
+            <SelectItem value="critical">Critical</SelectItem>
           </SelectContent>
         </Select>
 
@@ -211,6 +225,21 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
                       <SelectItem value="under200">Under $200</SelectItem>
                       <SelectItem value="200-400">$200 – $400</SelectItem>
                       <SelectItem value="400+">$400+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Stock Status</label>
+                  <Select value={filters.stockStatus} onValueChange={(v) => handleChange('stockStatus', v)}>
+                    <SelectTrigger className="w-full bg-background border-border">
+                      <SelectValue placeholder="Stock Status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="in-stock">In Stock</SelectItem>
+                      <SelectItem value="low-stock">Low Stock</SelectItem>
+                      <SelectItem value="critical">Critical</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

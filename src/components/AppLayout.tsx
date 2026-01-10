@@ -42,8 +42,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           onRefresh={() => setLastRefreshed(getOntarioTime())}
         />
 
-        <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
-          <div className="max-w-7xl mx-auto">{children}</div>
+        <main className="flex-1 p-4 lg:p-6 overflow-hidden">
+          <div className="max-w-7xl mx-auto h-full">{children}</div>
         </main>
 
         {/* <Footer /> */}

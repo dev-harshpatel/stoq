@@ -6,9 +6,13 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
+  ShoppingCart,
+  Clock,
 } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useOrders } from '@/contexts/OrdersContext';
 import { getStockStatus, formatPrice } from '@/data/inventory';
+import { formatDateInOntario } from '@/lib/utils';
 import { Loader } from '@/components/Loader';
 import { cn } from '@/lib/utils';
 
@@ -55,7 +59,8 @@ function StatCard({ title, value, change, icon, accent = 'primary' }: StatCardPr
 }
 
 export default function Dashboard() {
-  const { inventory, isLoading } = useInventory();
+  const { inventory, isLoading: inventoryLoading } = useInventory();
+  const { orders } = useOrders();
 
   const stats = useMemo(() => {
     const totalDevices = inventory.length;
@@ -68,111 +73,230 @@ export default function Dashboard() {
       (item) => getStockStatus(item.quantity) !== 'in-stock'
     ).length;
 
-    return { totalDevices, totalUnits, totalValue, lowStockItems };
+    // Order statistics
+    const totalOrders = orders.length;
+    const pendingOrders = orders.filter((o) => o.status === 'pending').length;
+    const totalRevenue = orders
+      .filter((o) => o.status === 'approved' || o.status === 'completed')
+      .reduce((sum, order) => sum + order.totalPrice, 0);
+    const completedOrders = orders.filter((o) => o.status === 'completed').length;
+
+    return {
+      totalDevices,
+      totalUnits,
+      totalValue,
+      lowStockItems,
+      totalOrders,
+      pendingOrders,
+      totalRevenue,
+      completedOrders,
+    };
+  }, [inventory, orders]);
+
+  // Generate recent activity from real data
+  const recentActivity = useMemo(() => {
+    const activities: Array<{
+      action: string;
+      device: string;
+      time: string;
+      type: string;
+      timestamp: number;
+    }> = [];
+
+    // Add recent orders
+    const recentOrders = [...orders]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3);
+
+    recentOrders.forEach((order) => {
+      const orderDate = new Date(order.createdAt);
+      const now = new Date();
+      const diffMs = now.getTime() - orderDate.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      let timeAgo = '';
+      if (diffMins < 60) {
+        timeAgo = `${diffMins}m ago`;
+      } else if (diffHours < 24) {
+        timeAgo = `${diffHours}h ago`;
+      } else {
+        timeAgo = `${diffDays}d ago`;
+      }
+
+      const deviceName = order.items[0]?.item?.deviceName || 'Multiple items';
+      activities.push({
+        action: `New order ${order.status === 'pending' ? 'received' : order.status}`,
+        device: deviceName + (order.items.length > 1 ? ` +${order.items.length - 1} more` : ''),
+        time: timeAgo,
+        type: 'order',
+        timestamp: orderDate.getTime(),
+      });
+    });
+
+    // Add low stock items
+    const lowStockItems = inventory
+      .filter((item) => getStockStatus(item.quantity) !== 'in-stock')
+      .slice(0, 2);
+
+    lowStockItems.forEach((item) => {
+      activities.push({
+        action: 'Low stock alert',
+        device: item.deviceName,
+        time: item.lastUpdated || 'Recently',
+        type: 'alert',
+        timestamp: Date.now() - 3600000, // 1 hour ago as fallback
+      });
+    });
+
+    // Sort by timestamp and take most recent 5
+    return activities
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 5)
+      .map(({ timestamp, ...rest }) => rest);
+  }, [orders, inventory]);
+
+  const topDevices = useMemo(() => {
+    return inventory
+      .sort((a, b) => b.quantity * b.pricePerUnit - a.quantity * a.pricePerUnit)
+      .slice(0, 5);
   }, [inventory]);
 
-  const recentActivity = [
-    { action: 'Stock updated', device: 'Google Pixel 7a', time: '30m ago', type: 'update' },
-    { action: 'Low stock alert', device: 'Google Pixel 8 Pro', time: '1h ago', type: 'alert' },
-    { action: 'Price changed', device: 'iPhone 14 Pro', time: '1h ago', type: 'price' },
-    { action: 'New device added', device: 'HMD Aura', time: '6h ago', type: 'new' },
-    { action: 'Stock updated', device: 'Samsung Galaxy S23', time: '4h ago', type: 'update' },
-  ];
-
-  const topDevices = inventory
-    .sort((a, b) => b.quantity * b.pricePerUnit - a.quantity * a.pricePerUnit)
-    .slice(0, 5);
+  const isLoading = inventoryLoading;
 
   if (isLoading) {
     return <Loader size="lg" text="Loading dashboard..." />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Overview of your inventory performance
-        </p>
+    <div className="flex flex-col h-full overflow-y-auto lg:overflow-hidden">
+      <div className="space-y-6 flex-shrink-0 pb-6">
+        {/* Page Header */}
+        <div>
+          <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Overview of your inventory performance
+          </p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Devices"
+            value={stats.totalDevices}
+            icon={<Package className="h-5 w-5" />}
+            accent="primary"
+          />
+          <StatCard
+            title="Total Units"
+            value={stats.totalUnits}
+            icon={<TrendingUp className="h-5 w-5" />}
+            accent="success"
+          />
+          <StatCard
+            title="Inventory Value"
+            value={formatPrice(stats.totalValue)}
+            icon={<DollarSign className="h-5 w-5" />}
+            accent="primary"
+          />
+          <StatCard
+            title="Low Stock Alerts"
+            value={stats.lowStockItems}
+            icon={<AlertTriangle className="h-5 w-5" />}
+            accent="warning"
+          />
+        </div>
+
+        {/* Order Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Orders"
+            value={stats.totalOrders}
+            icon={<ShoppingCart className="h-5 w-5" />}
+            accent="primary"
+          />
+          <StatCard
+            title="Pending Orders"
+            value={stats.pendingOrders}
+            icon={<Clock className="h-5 w-5" />}
+            accent="warning"
+          />
+          <StatCard
+            title="Total Revenue"
+            value={formatPrice(stats.totalRevenue)}
+            icon={<DollarSign className="h-5 w-5" />}
+            accent="success"
+          />
+          <StatCard
+            title="Completed Orders"
+            value={stats.completedOrders}
+            icon={<TrendingUp className="h-5 w-5" />}
+            accent="success"
+          />
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Devices"
-          value={stats.totalDevices}
-          change={{ value: '+2', positive: true }}
-          icon={<Package className="h-5 w-5" />}
-          accent="primary"
-        />
-        <StatCard
-          title="Total Units"
-          value={stats.totalUnits}
-          change={{ value: '+12', positive: true }}
-          icon={<TrendingUp className="h-5 w-5" />}
-          accent="success"
-        />
-        <StatCard
-          title="Inventory Value"
-          value={formatPrice(stats.totalValue)}
-          change={{ value: '+$2,450', positive: true }}
-          icon={<DollarSign className="h-5 w-5" />}
-          accent="primary"
-        />
-        <StatCard
-          title="Low Stock Alerts"
-          value={stats.lowStockItems}
-          change={{ value: '+3', positive: false }}
-          icon={<AlertTriangle className="h-5 w-5" />}
-          accent="warning"
-        />
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Two Column Layout - Scrollable */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0 mt-6 pb-6 lg:pb-0">
         {/* Recent Activity */}
-        <div className="bg-card rounded-lg border border-border shadow-soft">
-          <div className="px-6 py-4 border-b border-border">
+        <div className="bg-card rounded-lg border border-border shadow-soft flex flex-col h-[300px] lg:h-auto lg:min-h-0">
+          <div className="px-6 py-4 border-b border-border flex-shrink-0">
             <h3 className="font-semibold text-foreground">Recent Activity</h3>
           </div>
-          <div className="divide-y divide-border">
-            {recentActivity.map((activity, idx) => (
-              <div key={idx} className="px-6 py-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{activity.action}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{activity.device}</p>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="divide-y divide-border">
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity, idx) => (
+                  <div key={idx} className="px-6 py-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{activity.action}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{activity.device}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{activity.time}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  No recent activity
                 </div>
-                <span className="text-xs text-muted-foreground">{activity.time}</span>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         </div>
 
         {/* Top Value Devices */}
-        <div className="bg-card rounded-lg border border-border shadow-soft">
-          <div className="px-6 py-4 border-b border-border">
+        <div className="bg-card rounded-lg border border-border shadow-soft flex flex-col h-[300px] lg:h-auto lg:min-h-0">
+          <div className="px-6 py-4 border-b border-border flex-shrink-0">
             <h3 className="font-semibold text-foreground">Top Value Devices</h3>
           </div>
-          <div className="divide-y divide-border">
-            {topDevices.map((device, idx) => (
-              <div key={device.id} className="px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-medium text-muted-foreground w-5">
-                    #{idx + 1}
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{device.deviceName}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {device.quantity} units × {formatPrice(device.pricePerUnit)}
-                    </p>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="divide-y divide-border">
+              {topDevices.length > 0 ? (
+                topDevices.map((device, idx) => (
+                  <div key={device.id} className="px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-medium text-muted-foreground w-5">
+                        #{idx + 1}
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{device.deviceName}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {device.quantity} units × {formatPrice(device.pricePerUnit)}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">
+                      {formatPrice(device.quantity * device.pricePerUnit)}
+                    </span>
                   </div>
+                ))
+              ) : (
+                <div className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  No devices available
                 </div>
-                <span className="text-sm font-semibold text-foreground">
-                  {formatPrice(device.quantity * device.pricePerUnit)}
-                </span>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         </div>
       </div>

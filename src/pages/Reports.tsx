@@ -67,23 +67,24 @@ export default function Reports() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold text-foreground">Reports</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Analytics and insights for your inventory
-          </p>
+    <div className="flex flex-col h-full overflow-y-auto">
+      <div className="space-y-6 pb-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-foreground">Reports</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Analytics and insights for your inventory
+            </p>
+          </div>
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            Download Report
+          </Button>
         </div>
-        <Button variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" />
-          Download Report
-        </Button>
-      </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Stock Trend */}
         <div className="bg-card rounded-lg border border-border shadow-soft p-6 lg:col-span-2">
           <h3 className="font-semibold text-foreground mb-4">Stock & Value Trend</h3>
@@ -205,6 +206,7 @@ export default function Reports() {
             ))}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

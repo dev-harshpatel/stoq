@@ -4,7 +4,7 @@ import { ExportActions } from '@/components/ExportActions';
 import { InventoryTable } from '@/components/InventoryTable';
 import { Loader } from '@/components/Loader';
 import { useInventory } from '@/contexts/InventoryContext';
-import { InventoryItem } from '@/data/inventory';
+import { InventoryItem, getStockStatus } from '@/data/inventory';
 
 const defaultFilters: FilterValues = {
   search: '',
@@ -12,6 +12,7 @@ const defaultFilters: FilterValues = {
   grade: 'all',
   storage: 'all',
   priceRange: 'all',
+  stockStatus: 'all',
 };
 
 export default function Inventory() {
@@ -48,9 +49,13 @@ export default function Inventory() {
             break;
         }
       }
+      if (filters.stockStatus !== 'all') {
+        const stockStatus = getStockStatus(item.quantity);
+        if (stockStatus !== filters.stockStatus) return false;
+      }
       return true;
     });
-  }, [filters]);
+  }, [filters, inventory]);
 
   const handleResetFilters = () => {
     setFilters(defaultFilters);
@@ -61,27 +66,32 @@ export default function Inventory() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold text-foreground">Inventory</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {filteredItems.length} devices in stock
-          </p>
+    <div className="flex flex-col h-full">
+      {/* Sticky Header Section */}
+      <div className="sticky top-0 z-10 bg-background pb-4 space-y-4 border-b border-border mb-4 -mx-4 lg:-mx-6 px-4 lg:px-6 pt-4 lg:pt-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-foreground">Inventory</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {filteredItems.length} devices in stock
+            </p>
+          </div>
+          <ExportActions data={filteredItems} filename="inventory" />
         </div>
-        <ExportActions data={filteredItems} filename="inventory" />
+
+        {/* Filter Bar */}
+        <FilterBar
+          filters={filters}
+          onFiltersChange={setFilters}
+          onReset={handleResetFilters}
+        />
       </div>
 
-      {/* Filter Bar */}
-      <FilterBar
-        filters={filters}
-        onFiltersChange={setFilters}
-        onReset={handleResetFilters}
-      />
-
-      {/* Inventory Table */}
-      <InventoryTable items={filteredItems} />
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
+        <InventoryTable items={filteredItems} />
+      </div>
     </div>
   );
 }
