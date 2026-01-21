@@ -110,14 +110,14 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
 
   const updateProduct = async (id: string, updates: Partial<InventoryItem>) => {
     try {
-      const updateData = toInventoryUpdate({
+      const updateData: InventoryUpdate = toInventoryUpdate({
         ...updates,
         lastUpdated: 'Just now',
       });
       updateData.updated_at = new Date().toISOString();
 
-      const { error } = await supabase
-        .from('inventory')
+      const { error } = await (supabase
+        .from('inventory') as any)
         .update(updateData)
         .eq('id', id);
 
@@ -149,13 +149,15 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
 
       const newQuantity = Math.max(0, item.quantity - amount);
 
-      const { error } = await supabase
-        .from('inventory')
-        .update({
-          quantity: newQuantity,
-          last_updated: 'Just now',
-          updated_at: new Date().toISOString(),
-        })
+      const updateData: InventoryUpdate = {
+        quantity: newQuantity,
+        last_updated: 'Just now',
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await (supabase
+        .from('inventory') as any)
+        .update(updateData)
         .eq('id', id);
 
       if (error) {

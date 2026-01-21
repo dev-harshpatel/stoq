@@ -1,6 +1,6 @@
 'use client'
 
-import Alerts from '@/pages/Alerts'
+import Alerts from '@/page-components/Alerts'
 
 export default function AlertsPage() {
   return <Alerts />

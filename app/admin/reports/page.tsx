@@ -1,6 +1,6 @@
 'use client'
 
-import Reports from '@/pages/Reports'
+import Reports from '@/page-components/Reports'
 
 export default function ReportsPage() {
   return <Reports />

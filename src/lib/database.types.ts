@@ -1,5 +1,4 @@
 // This file will be auto-generated, but for now we'll define the types manually
-import type { GenericSchema } from '@supabase/supabase-js';
 
 export type Json =
   | string
@@ -10,7 +9,7 @@ export type Json =
   | Json[];
 
 export interface Database {
-  public: GenericSchema & {
+  public: {
     Tables: {
       user_profiles: {
         Row: {

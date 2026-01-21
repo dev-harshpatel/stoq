@@ -11,16 +11,16 @@ import { CartProvider } from "@/contexts/CartContext";
 import { InventoryProvider } from "@/contexts/InventoryContext";
 import { OrdersProvider } from "@/contexts/OrdersContext";
 import { AuthGuard } from "@/lib/auth/AuthGuard";
-import Dashboard from "./pages/Dashboard";
-import Inventory from "./pages/Inventory";
-import Orders from "./pages/Orders";
-import Alerts from "./pages/Alerts";
-import ProductManagement from "./pages/ProductManagement";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import UserProducts from "./pages/UserProducts";
-import AdminLogin from "./pages/AdminLogin";
-import NotFound from "./pages/NotFound";
+import Dashboard from "./page-components/Dashboard";
+import Inventory from "./page-components/Inventory";
+import Orders from "./page-components/Orders";
+import Alerts from "./page-components/Alerts";
+import ProductManagement from "./page-components/ProductManagement";
+import Reports from "./page-components/Reports";
+import Settings from "./page-components/Settings";
+import UserProducts from "./page-components/UserProducts";
+import AdminLogin from "./page-components/AdminLogin";
+import NotFound from "./page-components/NotFound";
 
 const queryClient = new QueryClient();
 

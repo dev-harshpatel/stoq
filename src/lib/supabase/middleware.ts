@@ -84,13 +84,13 @@ export async function updateSession(request: NextRequest) {
   // If user is authenticated and accessing root route, check if admin and redirect
   if (user && pathname === '/') {
     try {
-      const { data: profile } = await supabase
-        .from('user_profiles')
+      const { data: profile } = await (supabase
+        .from('user_profiles') as any)
         .select('role')
         .eq('user_id', user.id)
         .single()
 
-      if (profile?.role === 'admin') {
+      if (profile && profile.role === 'admin') {
         const url = request.nextUrl.clone()
         url.pathname = '/admin/dashboard'
         return NextResponse.redirect(url)

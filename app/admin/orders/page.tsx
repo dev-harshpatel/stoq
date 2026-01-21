@@ -1,6 +1,6 @@
 'use client'
 
-import Orders from '@/pages/Orders'
+import Orders from '@/page-components/Orders'
 
 export default function OrdersPage() {
   return <Orders />

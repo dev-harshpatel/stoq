@@ -47,23 +47,23 @@ const dbRowToOrder = (row: OrderRow): Order => {
       } 
       // If items is already an array, use it directly
       else if (Array.isArray(row.items)) {
-        items = row.items;
+        items = row.items as unknown as OrderItem[];
       }
       // If items is an object (but not array), check if it's a single item or needs conversion
       else if (typeof row.items === 'object' && row.items !== null) {
         // Check if it has properties that suggest it's a single OrderItem
         if ('item' in row.items && 'quantity' in row.items) {
-          items = [row.items as OrderItem];
+          items = [row.items as unknown as OrderItem];
         } 
         // Otherwise try to extract array from object values
         else {
           const values = Object.values(row.items);
           if (values.length > 0 && Array.isArray(values[0])) {
-            items = values[0] as OrderItem[];
+            items = values[0] as unknown as OrderItem[];
           } else {
-            items = values.filter((v): v is OrderItem => 
+            items = values.filter((v) =>
               typeof v === 'object' && v !== null && 'item' in v && 'quantity' in v
-            ) as OrderItem[];
+            ) as unknown as OrderItem[];
           }
         }
       }
@@ -208,8 +208,8 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
 
     try {
       // Use the newOrder directly - Supabase will handle JSON serialization
-      const { data, error } = await supabase
-        .from('orders')
+      const { data, error } = await (supabase
+        .from('orders') as any)
         .insert([newOrder])
         .select()
         .single();
@@ -247,8 +247,8 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         updated_at: new Date().toISOString(),
       };
 
-      const { data, error } = await supabase
-        .from('orders')
+      const { data, error } = await (supabase
+        .from('orders') as any)
         .update(updateData)
         .eq('id', orderId)
         .select()

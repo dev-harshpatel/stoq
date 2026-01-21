@@ -98,8 +98,8 @@ export const upsertUserProfile = async (
   role: UserRole = 'user'
 ): Promise<UserProfile | null> => {
   try {
-    const { data, error } = await supabase
-      .from('user_profiles')
+    const { data, error } = await (supabase
+      .from('user_profiles') as any)
       .upsert(
         {
           user_id: userId,
@@ -136,8 +136,8 @@ export const updateUserRole = async (
   role: UserRole
 ): Promise<UserProfile | null> => {
   try {
-    const { data, error } = await supabase
-      .from('user_profiles')
+    const { data, error } = await (supabase
+      .from('user_profiles') as any)
       .update({ role })
       .eq('user_id', userId)
       .select()

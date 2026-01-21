@@ -65,7 +65,7 @@ async function createAdminUser() {
   try {
     // Check if admin user already exists
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    const existingAdmin = existingUsers?.users.find((u) => u.email === adminEmail);
+    const existingAdmin = existingUsers?.users.find((u: any) => u.email === adminEmail);
 
     let adminUserId: string;
 
@@ -93,8 +93,8 @@ async function createAdminUser() {
     }
 
     // Create or update admin profile
-    const { data: existingProfile } = await supabase
-      .from('user_profiles')
+    const { data: existingProfile } = await (supabase
+      .from('user_profiles') as any)
       .select('*')
       .eq('user_id', adminUserId)
       .single();
@@ -102,8 +102,8 @@ async function createAdminUser() {
     if (existingProfile) {
       // Update to admin role if not already
       if (existingProfile.role !== 'admin') {
-        await supabase
-          .from('user_profiles')
+        await (supabase
+          .from('user_profiles') as any)
           .update({ role: 'admin' })
           .eq('user_id', adminUserId);
         console.log('   ✅ Updated admin profile role');
@@ -148,7 +148,7 @@ async function createSampleUsers(): Promise<string[]> {
     try {
       // Check if user exists
       const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      const existingUser = existingUsers?.users.find((u) => u.email === userData.email);
+      const existingUser = existingUsers?.users.find((u: any) => u.email === userData.email);
 
       let userId: string;
 
@@ -255,8 +255,8 @@ async function createSampleOrders(userIds: string[]) {
 
   try {
     // Get inventory items
-    const { data: inventoryItems, error: invError } = await supabase
-      .from('inventory')
+    const { data: inventoryItems, error: invError } = await (supabase
+      .from('inventory') as any)
       .select('*')
       .limit(5);
 

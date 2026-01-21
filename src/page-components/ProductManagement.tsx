@@ -17,6 +17,7 @@ const defaultFilters: FilterValues = {
   grade: 'all',
   storage: 'all',
   priceRange: 'all',
+  stockStatus: 'all',
 };
 
 export default function ProductManagement() {
