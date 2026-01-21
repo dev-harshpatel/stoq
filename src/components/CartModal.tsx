@@ -1,5 +1,7 @@
+'use client'
+
 import { useCart } from "@/contexts/CartContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/lib/auth/context";
 import { useOrders } from "@/contexts/OrdersContext";
 import {
   Dialog,
@@ -11,10 +13,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 import { formatPrice } from "@/data/inventory";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { LoginModal } from "@/components/LoginModal";
 
 interface CartModalProps {
   open: boolean;
@@ -23,17 +27,18 @@ interface CartModalProps {
 
 export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
   const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
-  const { isAuthenticated, user } = useAuth();
+  const { user } = useAuth();
   const { createOrder } = useOrders();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
-  const handleCheckout = () => {
-    if (!isAuthenticated) {
-      toast({
-        title: "Login required",
-        description: "Please login to checkout",
-        variant: "destructive",
-      });
+  const isAuthenticated = !!user;
+
+  const handleCheckout = async () => {
+    if (!isAuthenticated || !user) {
+      // Show login modal instead of just a toast
+      setShowLoginModal(true);
       return;
     }
 
@@ -55,21 +60,33 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       return;
     }
 
-    // Create order
-    const orderItems = cartItems.map((cartItem) => ({
-      item: cartItem.item,
-      quantity: cartItem.quantity,
-    }));
+    setIsLoading(true);
+    try {
+      // Create order
+      const orderItems = cartItems.map((cartItem) => ({
+        item: cartItem.item,
+        quantity: cartItem.quantity,
+      }));
 
-    const order = createOrder(user.username, user.username, orderItems);
+      const order = await createOrder(user.id, orderItems);
 
-    toast({
-      title: "Order placed successfully",
-      description: `Order #${order.id.slice(-8)} has been submitted. Admin will contact you soon.`,
-    });
+      toast({
+        title: "Order placed successfully",
+        description: `Order #${order.id.slice(-8)} has been submitted. Admin will contact you soon.`,
+      });
 
-    clearCart();
-    onOpenChange(false);
+      clearCart();
+      onOpenChange(false);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create order. Please try again.";
+      toast({
+        title: "Error creating order",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const totalPrice = getTotalPrice();
@@ -196,14 +213,29 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
               <Button
                 onClick={handleCheckout}
                 className="flex-1"
-                disabled={cartItems.length === 0}
+                disabled={cartItems.length === 0 || isLoading}
               >
-                Checkout
+                {isLoading ? "Processing..." : "Checkout"}
               </Button>
             </div>
           </div>
         )}
       </DialogContent>
+
+      {/* Login Modal */}
+      <LoginModal 
+        open={showLoginModal} 
+        onOpenChange={(open) => {
+          setShowLoginModal(open);
+          // If login is successful and modal closes, try checkout again
+          if (!open && isAuthenticated && cartItems.length > 0) {
+            // Small delay to ensure auth state is updated
+            setTimeout(() => {
+              handleCheckout();
+            }, 100);
+          }
+        }} 
+      />
     </Dialog>
   );
 };

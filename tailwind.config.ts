@@ -108,5 +108,7 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  // Note: tailwindcss-animate plugin may not be fully compatible with Tailwind v4
+  // If you encounter issues, you can define animations directly in CSS using @keyframes
+  plugins: [],
 } satisfies Config;

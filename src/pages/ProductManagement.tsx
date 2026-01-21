@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useMemo } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { InventoryItem } from '@/data/inventory';

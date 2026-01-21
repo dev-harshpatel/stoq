@@ -1,14 +1,19 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Order, OrderStatus, OrderItem } from "@/types/order";
-import { InventoryItem } from "@/data/inventory";
+'use client'
+
+import { Database, Json } from "@/lib/database.types";
+import { supabase } from "@/lib/supabase/client";
+import { Order, OrderItem, OrderStatus } from "@/types/order";
+import { ReactNode, createContext, useContext, useEffect, useState } from "react";
 
 interface OrdersContextType {
   orders: Order[];
-  createOrder: (userId: string, username: string, items: OrderItem[]) => Order;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  createOrder: (userId: string, items: OrderItem[]) => Promise<Order>;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   getUserOrders: (userId: string) => Order[];
   getAllOrders: () => Order[];
   getOrderById: (orderId: string) => Order | undefined;
+  refreshOrders: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
@@ -25,83 +30,248 @@ interface OrdersProviderProps {
   children: ReactNode;
 }
 
-const STORAGE_KEY = "stoq-orders";
+type OrderInsert = Database["public"]["Tables"]["orders"]["Insert"];
+type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
+type OrderUpdate = Database["public"]["Tables"]["orders"]["Update"];
 
-const loadOrdersFromStorage = (): Order[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
+const dbRowToOrder = (row: OrderRow): Order => {
+  // Parse items from JSON - handle string, object, or array
+  let items: OrderItem[] = [];
+  
+  if (row.items) {
+    try {
+      // If items is a string, parse it
+      if (typeof row.items === 'string') {
+        const parsed = JSON.parse(row.items);
+        items = Array.isArray(parsed) ? parsed : [parsed];
+      } 
+      // If items is already an array, use it directly
+      else if (Array.isArray(row.items)) {
+        items = row.items;
+      }
+      // If items is an object (but not array), check if it's a single item or needs conversion
+      else if (typeof row.items === 'object' && row.items !== null) {
+        // Check if it has properties that suggest it's a single OrderItem
+        if ('item' in row.items && 'quantity' in row.items) {
+          items = [row.items as OrderItem];
+        } 
+        // Otherwise try to extract array from object values
+        else {
+          const values = Object.values(row.items);
+          if (values.length > 0 && Array.isArray(values[0])) {
+            items = values[0] as OrderItem[];
+          } else {
+            items = values.filter((v): v is OrderItem => 
+              typeof v === 'object' && v !== null && 'item' in v && 'quantity' in v
+            ) as OrderItem[];
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing order items for order', row.id, ':', error);
+      console.error('Raw items data:', row.items);
+      items = [];
     }
-  } catch (error) {
-    console.error("Failed to load orders from storage:", error);
   }
-  return [];
+
+  // Validate that items array contains valid OrderItems
+  items = items.filter((item): item is OrderItem => 
+    item !== null && 
+    typeof item === 'object' && 
+    'item' in item && 
+    'quantity' in item &&
+    item.item !== null &&
+    typeof item.item === 'object'
+  );
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    items,
+    totalPrice: Number(row.total_price),
+    status: row.status as OrderStatus,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 };
 
-const saveOrdersToStorage = (orders: Order[]) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-  } catch (error) {
-    console.error("Failed to save orders to storage:", error);
-  }
+const buildOrderInsert = (
+  userId: string,
+  items: OrderItem[]
+): OrderInsert => {
+  const totalPrice = items.reduce(
+    (total, orderItem) => total + orderItem.item.pricePerUnit * orderItem.quantity,
+    0
+  );
+
+  // Ensure items are properly formatted as JSON for Supabase
+  // JSONB columns in Supabase accept plain JavaScript objects/arrays
+  // No need to stringify - Supabase handles serialization
+  const itemsJson: Json = items as unknown as Json;
+
+  // Generate UUID v4 for order ID
+  const generateUUID = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
+  return {
+    id: generateUUID(),
+    user_id: userId,
+    items: itemsJson,
+    total_price: totalPrice,
+    status: "pending",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 };
 
 export const OrdersProvider = ({ children }: OrdersProviderProps) => {
-  const [orders, setOrders] = useState<Order[]>(loadOrdersFromStorage());
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Sync orders across browser tabs
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const updatedOrders = JSON.parse(e.newValue);
-          setOrders(updatedOrders);
-        } catch (error) {
-          console.error("Failed to parse orders from storage event:", error);
-        }
+  // Load orders from Supabase
+  const loadOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading orders:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+        // Don't return early - set empty array so UI shows no orders
+        setOrders([]);
+        return;
       }
-    };
 
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
-
-  const createOrder = (userId: string, username: string, items: OrderItem[]): Order => {
-    const totalPrice = items.reduce(
-      (total, orderItem) => total + orderItem.item.pricePerUnit * orderItem.quantity,
-      0
-    );
-
-    const newOrder: Order = {
-      id: `order-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      userId,
-      username,
-      items,
-      totalPrice,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setOrders((prev) => {
-      const updated = [...prev, newOrder];
-      saveOrdersToStorage(updated);
-      return updated;
-    });
-    return newOrder;
+      if (data) {
+        console.log(`Loaded ${data.length} orders from database`);
+        const orderItems = data.map(dbRowToOrder);
+        setOrders(orderItems);
+      } else {
+        console.log('No orders data returned from database');
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+      setOrders([]);
+    }
   };
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders((prev) => {
-      const updated = prev.map((order) =>
-        order.id === orderId
-          ? { ...order, status, updatedAt: new Date().toISOString() }
-          : order
-      );
-      saveOrdersToStorage(updated);
-      return updated;
-    });
+  useEffect(() => {
+    const initializeOrders = async () => {
+      setIsLoading(true);
+      await loadOrders();
+      setIsLoading(false);
+    };
+
+    initializeOrders();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+        },
+        () => {
+          // Reload orders when changes occur
+          loadOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const createOrder = async (userId: string, items: OrderItem[]): Promise<Order> => {
+    if (!items || items.length === 0) {
+      throw new Error('Order must have at least one item');
+    }
+
+    const newOrder = buildOrderInsert(userId, items);
+
+    try {
+      // Use the newOrder directly - Supabase will handle JSON serialization
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([newOrder])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating order:', error);
+        throw new Error(error.message || 'Failed to create order');
+      }
+
+      if (data) {
+        const createdOrder = dbRowToOrder(data);
+        setOrders((prev) => [createdOrder, ...prev]);
+        return createdOrder;
+      }
+
+      return {
+        id: newOrder.id ?? "",
+        userId: newOrder.user_id,
+        items,
+        totalPrice: Number(newOrder.total_price),
+        status: (newOrder.status ?? 'pending') as OrderStatus,
+        createdAt: newOrder.created_at ?? new Date().toISOString(),
+        updatedAt: newOrder.updated_at ?? new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error('Failed to create order:', error);
+      throw error;
+    }
+  };
+
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    try {
+      const updateData: OrderUpdate = {
+        status,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase
+        .from('orders')
+        .update(updateData)
+        .eq('id', orderId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating order status:', error);
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+        throw error;
+      }
+
+      // Reload orders from database to ensure we have the latest data
+      // This ensures the UI matches the database state
+      await loadOrders();
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      throw error;
+    }
   };
 
   const getUserOrders = (userId: string): Order[] => {
@@ -129,6 +299,8 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         getUserOrders,
         getAllOrders,
         getOrderById,
+        refreshOrders: loadOrders,
+        isLoading,
       }}
     >
       {children}

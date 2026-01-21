@@ -1,4 +1,6 @@
-import { useState, useMemo } from "react";
+'use client'
+
+import { useState, useMemo, useEffect } from "react";
 import { useOrders } from "@/contexts/OrdersContext";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
@@ -51,6 +53,8 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
+  const [userEmails, setUserEmails] = useState<Record<string, string>>({});
+  const [loadingEmails, setLoadingEmails] = useState(false);
 
   const filteredOrders = useMemo(() => {
     let filtered = [...allOrders];
@@ -66,6 +70,49 @@ export default function Orders() {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }, [allOrders, statusFilter]);
+
+  // Fetch user emails for all unique user IDs
+  useEffect(() => {
+    const fetchUserEmails = async () => {
+      if (allOrders.length === 0) return;
+
+      // Get unique user IDs
+      const uniqueUserIds = Array.from(
+        new Set(allOrders.map((order) => order.userId))
+      );
+
+      // Check which user IDs we need to fetch
+      const missingUserIds = uniqueUserIds.filter(
+        (userId) => !userEmails[userId]
+      );
+
+      if (missingUserIds.length === 0) return;
+
+      setLoadingEmails(true);
+      try {
+        const response = await fetch('/api/users/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userIds: missingUserIds }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUserEmails((prev) => ({ ...prev, ...data.emails }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch user emails:', error);
+      } finally {
+        setLoadingEmails(false);
+      }
+    };
+
+    fetchUserEmails();
+    // Only depend on allOrders - userEmails check is safe inside the effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allOrders]);
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -180,15 +227,17 @@ export default function Orders() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
-                          {order.username}
+                          {userEmails[order.userId] || order.userId.slice(0, 8) + '...'}
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
-                          {Array.from(
-                            new Set(order.items.map((item) => item.item.brand))
-                          ).join(", ")}
+                          {Array.isArray(order.items) && order.items.length > 0
+                            ? Array.from(
+                                new Set(order.items.map((item) => item.item?.brand).filter(Boolean))
+                              ).join(", ")
+                            : "N/A"}
                         </td>
                         <td className="px-4 py-4 text-center text-sm text-foreground">
-                          {order.items.length} item(s)
+                          {Array.isArray(order.items) ? order.items.length : 0} item(s)
                         </td>
                         <td className="px-4 py-4 text-right">
                           <span className="font-semibold text-foreground">

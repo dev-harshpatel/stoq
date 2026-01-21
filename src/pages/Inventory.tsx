@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useMemo } from 'react';
 import { FilterBar, FilterValues } from '@/components/FilterBar';
 import { ExportActions } from '@/components/ExportActions';

@@ -1,5 +1,7 @@
+'use client'
+
 import { useOrders } from "@/contexts/OrdersContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/lib/auth/context";
 import { Order, OrderStatus } from "@/types/order";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/data/inventory";
@@ -49,7 +51,7 @@ export const UserOrders = () => {
     );
   }
 
-  const orders = getUserOrders(user.username);
+  const orders = getUserOrders(user.id);
 
   if (orders.length === 0) {
     return (
@@ -98,19 +100,26 @@ export const UserOrders = () => {
           </div>
 
           <div className="space-y-2 pt-3 border-t border-border">
-            {order.items.map((orderItem, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between text-sm"
-              >
-                <span className="text-foreground">
-                  {orderItem.quantity}x {orderItem.item.deviceName}
-                </span>
-                <span className="text-muted-foreground">
-                  {formatPrice(orderItem.item.pricePerUnit * orderItem.quantity)}
-                </span>
-              </div>
-            ))}
+            {Array.isArray(order.items) && order.items.length > 0 ? (
+              order.items.map((orderItem, index) => {
+                if (!orderItem?.item) return null;
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <span className="text-foreground">
+                      {orderItem.quantity || 0}x {orderItem.item.deviceName || 'Unknown Device'}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {formatPrice((orderItem.item.pricePerUnit || 0) * (orderItem.quantity || 0))}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-sm text-muted-foreground">No items in this order</div>
+            )}
           </div>
         </div>
       ))}

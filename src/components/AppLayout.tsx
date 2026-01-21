@@ -1,3 +1,5 @@
+'use client'
+
 import { ReactNode, useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { AppSidebar } from "@/components/AppSidebar";

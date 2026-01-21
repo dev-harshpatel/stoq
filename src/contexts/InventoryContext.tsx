@@ -1,6 +1,9 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+'use client'
+
 import { InventoryItem } from '@/data/inventory';
-import { supabase } from '@/lib/supabase';
+import { Database } from '@/lib/database.types';
+import { supabase } from '@/lib/supabase/client';
+import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 
 interface InventoryContextType {
   inventory: InventoryItem[];
@@ -16,18 +19,37 @@ interface InventoryProviderProps {
   children: ReactNode;
 }
 
-// Helper to convert database row to InventoryItem
-const dbRowToInventoryItem = (row: any): InventoryItem => ({
+type InventoryRow = Database['public']['Tables']['inventory']['Row'];
+type InventoryUpdate = Database['public']['Tables']['inventory']['Update'];
+
+const dbRowToInventoryItem = (row: InventoryRow): InventoryItem => ({
   id: row.id,
-  deviceName: row.deviceName,
+  deviceName: row.device_name,
   brand: row.brand,
   grade: row.grade as 'A' | 'B' | 'C',
   storage: row.storage,
   quantity: row.quantity,
-  pricePerUnit: Number(row.pricePerUnit),
-  lastUpdated: row.lastUpdated,
-  priceChange: row.priceChange as 'up' | 'down' | 'stable' | undefined,
+  pricePerUnit: Number(row.price_per_unit),
+  lastUpdated: row.last_updated,
+  priceChange: (row.price_change ?? undefined) as 'up' | 'down' | 'stable' | undefined,
 });
+
+const toInventoryUpdate = (updates: Partial<InventoryItem>): InventoryUpdate => {
+  const updateData: InventoryUpdate = {};
+
+  if (updates.brand !== undefined) updateData.brand = updates.brand;
+  if (updates.deviceName !== undefined) updateData.device_name = updates.deviceName;
+  if (updates.grade !== undefined) updateData.grade = updates.grade;
+  if (updates.lastUpdated !== undefined) updateData.last_updated = updates.lastUpdated;
+  if (updates.priceChange !== undefined) updateData.price_change = updates.priceChange ?? null;
+  if (updates.pricePerUnit !== undefined) {
+    updateData.price_per_unit = Number(updates.pricePerUnit);
+  }
+  if (updates.quantity !== undefined) updateData.quantity = updates.quantity;
+  if (updates.storage !== undefined) updateData.storage = updates.storage;
+
+  return updateData;
+};
 
 export const InventoryProvider = ({ children }: InventoryProviderProps) => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -39,7 +61,7 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
       const { data, error } = await supabase
         .from('inventory')
         .select('*')
-        .order('createdAt', { ascending: true });
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error('Error loading inventory:', error);
@@ -88,16 +110,11 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
 
   const updateProduct = async (id: string, updates: Partial<InventoryItem>) => {
     try {
-      const updateData: any = {
+      const updateData = toInventoryUpdate({
         ...updates,
         lastUpdated: 'Just now',
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Convert pricePerUnit to number if present
-      if (updateData.pricePerUnit !== undefined) {
-        updateData.pricePerUnit = Number(updateData.pricePerUnit);
-      }
+      });
+      updateData.updated_at = new Date().toISOString();
 
       const { error } = await supabase
         .from('inventory')
@@ -136,8 +153,8 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         .from('inventory')
         .update({
           quantity: newQuantity,
-          lastUpdated: 'Just now',
-          updatedAt: new Date().toISOString(),
+          last_updated: 'Just now',
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id);
 

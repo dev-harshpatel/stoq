@@ -17,6 +17,22 @@ dist-ssr
 .env.local
 .env.production
 
+# Next.js
+.next
+out
+build
+next-env.d.ts
+
+# Lock files (keep only one)
+bun.lockb
+yarn.lock
+pnpm-lock.yaml
+
+# Environment files (including variants)
+*.local
+_env.local
+.env*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -27,5 +43,3 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-/generated/prisma

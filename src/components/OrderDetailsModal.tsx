@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/data/inventory";
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatDateTimeInOntario } from "@/lib/utils";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 interface OrderDetailsModalProps {
   open: boolean;
@@ -58,20 +60,65 @@ export const OrderDetailsModal = ({
   const { updateOrderStatus } = useOrders();
   const { decreaseQuantity } = useInventory();
   const { toast } = useToast();
+  const [isApproving, setIsApproving] = useState(false);
+  const [customerEmail, setCustomerEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCustomerEmail = async () => {
+      if (!order?.userId) return;
+
+      try {
+        const response = await fetch('/api/users/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userIds: [order.userId] }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setCustomerEmail(data.emails[order.userId] || null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch customer email:', error);
+      }
+    };
+
+    if (open && order) {
+      fetchCustomerEmail();
+    }
+  }, [open, order]);
 
   if (!order) return null;
 
   const handleApprove = async () => {
+    setIsApproving(true);
     try {
+      const items = Array.isArray(order.items) ? order.items : [];
+      
+      if (items.length === 0) {
+        toast({
+          title: "Error",
+          description: "Order has no items to approve.",
+          variant: "destructive",
+        });
+        setIsApproving(false);
+        return;
+      }
+
       // Decrease inventory quantities for each item in the order
       await Promise.all(
-        order.items.map((orderItem) =>
-          decreaseQuantity(orderItem.item.id, orderItem.quantity)
-        )
+        items.map((orderItem) => {
+          if (orderItem?.item?.id && orderItem?.quantity) {
+            return decreaseQuantity(orderItem.item.id, orderItem.quantity);
+          }
+          return Promise.resolve();
+        })
       );
 
-      // Update order status
-      updateOrderStatus(order.id, "approved");
+      // Update order status (await to ensure it completes)
+      await updateOrderStatus(order.id, "approved");
       
       toast({
         title: "Order approved",
@@ -85,6 +132,8 @@ export const OrderDetailsModal = ({
         description: "Failed to update inventory quantities. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -119,7 +168,9 @@ export const OrderDetailsModal = ({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Customer:</span>
-                <p className="font-medium text-foreground mt-1">{order.username}</p>
+                <p className="font-medium text-foreground mt-1">
+                  {customerEmail || order.userId.slice(0, 8) + '...'}
+                </p>
               </div>
               <div>
                 <span className="text-muted-foreground">Order Date:</span>
@@ -136,7 +187,7 @@ export const OrderDetailsModal = ({
               <div>
                 <span className="text-muted-foreground">Total Items:</span>
                 <p className="font-medium text-foreground mt-1">
-                  {order.items.length} item(s)
+                  {Array.isArray(order.items) ? order.items.length : 0} item(s)
                 </p>
               </div>
             </div>
@@ -146,39 +197,48 @@ export const OrderDetailsModal = ({
           <div className="space-y-3">
             <h3 className="font-semibold text-foreground">Order Items</h3>
             <div className="space-y-3">
-              {order.items.map((orderItem, index) => (
-                <div
-                  key={index}
-                  className="p-4 bg-muted/50 rounded-lg border border-border"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-foreground">
-                        {orderItem.item.deviceName}
-                      </h4>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Badge variant="outline" className="text-xs">
-                          Grade {orderItem.item.grade}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {orderItem.item.storage}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          Quantity: {orderItem.quantity}
-                        </span>
+              {Array.isArray(order.items) && order.items.length > 0 ? (
+                order.items.map((orderItem, index) => {
+                  if (!orderItem?.item) return null;
+                  return (
+                    <div
+                      key={index}
+                      className="p-4 bg-muted/50 rounded-lg border border-border"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-foreground">
+                            {orderItem.item.deviceName || 'Unknown Device'}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="text-xs">
+                              Grade {orderItem.item.grade || 'N/A'}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {orderItem.item.storage || 'N/A'}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              Quantity: {orderItem.quantity || 0}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">
+                            {formatPrice(orderItem.item.pricePerUnit || 0)} each
+                          </p>
+                          <p className="font-semibold text-foreground mt-1">
+                            {formatPrice((orderItem.item.pricePerUnit || 0) * (orderItem.quantity || 0))}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">
-                        {formatPrice(orderItem.item.pricePerUnit)} each
-                      </p>
-                      <p className="font-semibold text-foreground mt-1">
-                        {formatPrice(orderItem.item.pricePerUnit * orderItem.quantity)}
-                      </p>
-                    </div>
-                  </div>
+                  );
+                })
+              ) : (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No items in this order
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -195,11 +255,20 @@ export const OrderDetailsModal = ({
 
         {/* Actions */}
         <div className="border-t border-border pt-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isApproving}>
             Close
           </Button>
           {canApprove && (
-            <Button onClick={handleApprove}>Approve Order</Button>
+            <Button onClick={handleApprove} disabled={isApproving}>
+              {isApproving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                'Approve Order'
+              )}
+            </Button>
           )}
         </div>
       </DialogContent>

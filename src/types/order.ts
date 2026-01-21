@@ -10,7 +10,6 @@ export interface OrderItem {
 export interface Order {
   id: string;
   userId: string;
-  username: string;
   items: OrderItem[];
   totalPrice: number;
   status: OrderStatus;
@@ -18,3 +17,8 @@ export interface Order {
   updatedAt: string;
 }
 
+// Extended order with user profile info (for display)
+export interface OrderWithUser extends Order {
+  userEmail?: string;
+  userRole?: 'user' | 'admin';
+}

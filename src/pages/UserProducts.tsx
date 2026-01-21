@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useMemo } from "react";
 import { ShoppingCart } from "lucide-react";
 import { useInventory } from "@/contexts/InventoryContext";
@@ -20,6 +22,7 @@ const defaultFilters: FilterValues = {
   grade: "all",
   storage: "all",
   priceRange: "all",
+  stockStatus: "all",
 };
 
 export default function UserProducts() {
@@ -62,6 +65,10 @@ export default function UserProducts() {
             if (item.pricePerUnit < 400) return false;
             break;
         }
+      }
+      if (filters.stockStatus !== "all") {
+        const stockStatus = getStockStatus(item.quantity);
+        if (stockStatus !== filters.stockStatus) return false;
       }
       return true;
     });

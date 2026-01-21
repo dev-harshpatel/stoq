@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 240 20% 99%;
+    --background: 0 0% 100%;
     --foreground: 240 10% 20%;
 
     --card: 0 0% 100%;
@@ -54,8 +54,10 @@
     --lavender-dark: 245 58% 60%;
     --table-row-hover: 245 100% 98%;
     --table-row-zebra: 240 20% 99%;
-    --shadow-soft: 0 1px 3px 0 hsl(240 10% 20% / 0.04), 0 1px 2px -1px hsl(240 10% 20% / 0.04);
-    --shadow-card: 0 4px 6px -1px hsl(240 10% 20% / 0.05), 0 2px 4px -2px hsl(240 10% 20% / 0.05);
+    --shadow-soft: 0 1px 3px 0 hsl(240 10% 20% / 0.04),
+      0 1px 2px -1px hsl(240 10% 20% / 0.04);
+    --shadow-card: 0 4px 6px -1px hsl(240 10% 20% / 0.05),
+      0 2px 4px -2px hsl(240 10% 20% / 0.05);
   }
 
   .dark {
@@ -135,5 +137,45 @@
 
   .shadow-card {
     box-shadow: var(--shadow-card);
+  }
+}
+
+/* Animations for Tailwind v4 compatibility */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
   }
 }

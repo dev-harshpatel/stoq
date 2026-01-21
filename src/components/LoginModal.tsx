@@ -1,5 +1,7 @@
+'use client'
+
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/lib/auth/context";
 import {
   Dialog,
   DialogContent,
@@ -18,28 +20,33 @@ interface LoginModalProps {
 }
 
 export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn } = useAuth();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(username, password);
-    if (success) {
+    setIsLoading(true);
+    try {
+      await signIn(email, password);
       toast({
         title: "Login successful",
         description: "Welcome back!",
       });
-      setUsername("");
+      setEmail("");
       setPassword("");
       onOpenChange(false);
-    } else {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Invalid email or password";
       toast({
         title: "Login failed",
-        description: "Invalid username or password",
+        description: errorMessage,
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -54,13 +61,13 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter email"
               required
             />
           </div>
@@ -83,7 +90,9 @@ export const LoginModal = ({ open, onOpenChange }: LoginModalProps) => {
             >
               Cancel
             </Button>
-            <Button type="submit">Login</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
           </div>
         </form>
       </DialogContent>

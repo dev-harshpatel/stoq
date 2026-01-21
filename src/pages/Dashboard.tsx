@@ -1,3 +1,5 @@
+'use client'
+
 import { useMemo } from 'react';
 import {
   Package,
@@ -125,10 +127,13 @@ export default function Dashboard() {
         timeAgo = `${diffDays}d ago`;
       }
 
-      const deviceName = order.items[0]?.item?.deviceName || 'Multiple items';
+      const items = Array.isArray(order.items) ? order.items : [];
+      const firstItem = items[0];
+      const deviceName = firstItem?.item?.deviceName || 'Multiple items';
+      const itemsCount = items.length;
       activities.push({
         action: `New order ${order.status === 'pending' ? 'received' : order.status}`,
-        device: deviceName + (order.items.length > 1 ? ` +${order.items.length - 1} more` : ''),
+        device: deviceName + (itemsCount > 1 ? ` +${itemsCount - 1} more` : ''),
         time: timeAgo,
         type: 'order',
         timestamp: orderDate.getTime(),

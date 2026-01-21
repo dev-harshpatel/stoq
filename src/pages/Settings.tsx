@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +36,8 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="flex flex-col h-full overflow-y-auto">
+      <div className="space-y-6 max-w-3xl w-full pb-6">
       {/* Page Header */}
       <div>
         <h2 className="text-2xl font-semibold text-foreground">Settings</h2>
@@ -299,6 +302,7 @@ export default function Settings() {
           <Save className="h-4 w-4 mr-2" />
           Save Changes
         </Button>
+      </div>
       </div>
     </div>
   );

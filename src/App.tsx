@@ -5,10 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { UserLayout } from "@/components/UserLayout";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/lib/auth/context";
+import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { InventoryProvider } from "@/contexts/InventoryContext";
 import { OrdersProvider } from "@/contexts/OrdersContext";
+import { AuthGuard } from "@/lib/auth/AuthGuard";
 import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 import Orders from "./pages/Orders";
@@ -17,6 +19,7 @@ import ProductManagement from "./pages/ProductManagement";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import UserProducts from "./pages/UserProducts";
+import AdminLogin from "./pages/AdminLogin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,12 +28,13 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <CartProvider>
-          <InventoryProvider>
-            <OrdersProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
+        <UserProfileProvider>
+          <CartProvider>
+            <InventoryProvider>
+              <OrdersProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
           <Routes>
             {/* User Routes */}
             <Route
@@ -50,65 +54,89 @@ const App = () => (
               }
             />
 
-            {/* Admin Routes */}
+            {/* Admin Login */}
+            <Route
+              path="/admin/login"
+              element={<AdminLogin />}
+            />
+
+            {/* Admin Routes - Protected */}
             <Route
               path="/admin"
-              element={<Navigate to="/admin/dashboard" replace />}
+              element={
+                <AuthGuard requireAuth={true} redirectTo="/admin/login">
+                  <Navigate to="/admin/dashboard" replace />
+                </AuthGuard>
+              }
             />
             <Route
               path="/admin/dashboard"
               element={
-                <AppLayout>
-                  <Dashboard />
-                </AppLayout>
+                <AuthGuard requireAuth={true} redirectTo="/admin/login">
+                  <AppLayout>
+                    <Dashboard />
+                  </AppLayout>
+                </AuthGuard>
               }
             />
             <Route
               path="/admin/inventory"
               element={
-                <AppLayout>
-                  <Inventory />
-                </AppLayout>
+                <AuthGuard requireAuth={true} redirectTo="/admin/login">
+                  <AppLayout>
+                    <Inventory />
+                  </AppLayout>
+                </AuthGuard>
               }
             />
             <Route
               path="/admin/products"
               element={
-                <AppLayout>
-                  <ProductManagement />
-                </AppLayout>
+                <AuthGuard requireAuth={true} redirectTo="/admin/login">
+                  <AppLayout>
+                    <ProductManagement />
+                  </AppLayout>
+                </AuthGuard>
               }
             />
             <Route
               path="/admin/orders"
               element={
-                <AppLayout>
-                  <Orders />
-                </AppLayout>
+                <AuthGuard requireAuth={true} redirectTo="/admin/login">
+                  <AppLayout>
+                    <Orders />
+                  </AppLayout>
+                </AuthGuard>
               }
             />
             <Route
               path="/admin/alerts"
               element={
-                <AppLayout>
-                  <Alerts />
-                </AppLayout>
+                <AuthGuard requireAuth={true} redirectTo="/admin/login">
+                  <AppLayout>
+                    <Alerts />
+                  </AppLayout>
+                </AuthGuard>
               }
             />
             <Route
               path="/admin/reports"
               element={
-                <AppLayout>
-                  <Reports />
-                </AppLayout>
+                <AuthGuard requireAuth={true} redirectTo="/admin/login">
+                  <AppLayout>
+                    <Reports />
+                  </AppLayout>
+                </AuthGuard>
               }
             />
             <Route
               path="/admin/settings"
               element={
-                <AppLayout>
-                  <Settings />
-                </AppLayout>
+                <AuthGuard requireAuth={true} redirectTo="/admin/login">
+                  <AppLayout>
+                    <Settings />
+                  </AppLayout>
+                </AuthGuard>
               }
             />
 
@@ -121,9 +149,10 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-          </OrdersProvider>
-          </InventoryProvider>
-        </CartProvider>
+              </OrdersProvider>
+            </InventoryProvider>
+          </CartProvider>
+        </UserProfileProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

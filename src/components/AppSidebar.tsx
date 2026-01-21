@@ -84,7 +84,7 @@ export function AppSidebar({ open, collapsed, onClose, onToggleCollapse }: AppSi
             {navItems.map((item) => (
               <NavLink
                 key={item.href}
-                to={item.href}
+                href={item.href}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
                   collapsed && 'justify-center px-2'
