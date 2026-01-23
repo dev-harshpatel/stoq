@@ -1,6 +1,6 @@
 'use client'
 
-import { LogIn, LogOut, User, ShoppingCart, Package, Loader2, FileText } from "lucide-react";
+import { LogIn, LogOut, User, ShoppingCart, Package, Loader2, FileText, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,9 +15,11 @@ import { useAuth } from "@/lib/auth/context";
 import { useCart } from "@/contexts/CartContext";
 import { cn } from "@/lib/utils";
 import { LoginModal } from "./LoginModal";
+import { SignupModal } from "./SignupModal";
 import { CartModal } from "./CartModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface UserNavbarProps {
   className?: string;
@@ -28,14 +30,35 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
   const { getUniqueItemsCount } = useCart();
   const router = useRouter();
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [signupModalOpen, setSignupModalOpen] = useState(false);
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Reset logout state when user logs in (user state changes from null to user)
+  useEffect(() => {
+    if (user) {
+      setIsLoggingOut(false);
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
       await signOut();
+      toast.success('Logged out', {
+        description: 'You have been successfully logged out.',
+      });
+      // Reset state before redirect to prevent stuck loader
+      setIsLoggingOut(false);
+      // Redirect to home page after successful logout
+      router.push('/');
+      router.refresh();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to logout';
+      console.error('Logout error:', error);
+      toast.error('Logout failed', {
+        description: errorMessage,
+      });
       setIsLoggingOut(false);
     }
   };
@@ -104,6 +127,13 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
+                      onClick={() => router.push('/user/profile')}
+                      className="cursor-pointer"
+                    >
+                      <UserCircle className="h-4 w-4 mr-2" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
                       onClick={() => router.push('/user/orders')}
                       className="cursor-pointer"
                     >
@@ -132,15 +162,47 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                 </DropdownMenu>
               </>
             ) : (
-              <Button onClick={() => setLoginModalOpen(true)} className="gap-2">
-                <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Login</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSignupModalOpen(true)}
+                  className="gap-2"
+                >
+                  <span className="hidden sm:inline">Sign Up</span>
+                </Button>
+                <Button onClick={() => setLoginModalOpen(true)} className="gap-2">
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">Login</span>
+                </Button>
+              </div>
             )}
           </div>
         </div>
       </header>
-      <LoginModal open={loginModalOpen} onOpenChange={setLoginModalOpen} />
+      <LoginModal
+        open={loginModalOpen}
+        onOpenChange={(open) => {
+          setLoginModalOpen(open)
+          if (!open) {
+            // Close signup modal if login modal is closed
+            setSignupModalOpen(false)
+          }
+        }}
+        onSignupClick={() => {
+          setLoginModalOpen(false)
+          setSignupModalOpen(true)
+        }}
+      />
+      <SignupModal
+        open={signupModalOpen}
+        onOpenChange={(open) => {
+          setSignupModalOpen(open)
+          if (!open) {
+            // Close login modal if signup modal is closed
+            setLoginModalOpen(false)
+          }
+        }}
+      />
       <CartModal open={cartModalOpen} onOpenChange={setCartModalOpen} />
     </>
   );

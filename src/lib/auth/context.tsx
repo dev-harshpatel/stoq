@@ -8,7 +8,7 @@ type AuthContextType = {
   user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ user: User | null }>
-  signUp: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<{ user: User | null; session: any }>
   signOut: () => Promise<void>
 }
 
@@ -55,11 +55,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     })
-    if (error) throw error
+    
+    // When email confirmation is required:
+    // - User IS created (you'll receive email)
+    // - Session IS null (no immediate login)
+    // - Supabase returns user in data.user even if session is null
+    
+    // IMPORTANT: Even if there's an error about session, if user exists, return it
+    // The user was successfully created, they just need to confirm email
+    if (data?.user) {
+      // User was created - return it regardless of error
+      // Session will be null if email confirmation is required
+      return { user: data.user, session: data.session }
+    }
+    
+    // If there's an error and no user was created, throw it
+    if (error) {
+      throw error
+    }
+    
+    // No user and no error - shouldn't happen
+    throw new Error('Failed to create user account')
   }
 
   const signOut = async () => {

@@ -47,6 +47,8 @@ export async function updateSession(request: NextRequest) {
   const publicRoutes = [
     '/',
     '/user',
+    '/login',
+    '/signup',
     '/admin/login', // Admin login is public
     '/auth/callback',
     '/auth/auth-code-error'
@@ -72,25 +74,45 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // If user is authenticated and trying to access admin login, redirect to dashboard
-  if (user && isAdminLogin) {
-    const url = request.nextUrl.clone()
-    const redirectPath = url.searchParams.get('redirect') || '/admin/dashboard'
-    url.pathname = redirectPath
-    url.searchParams.delete('redirect')
-    return NextResponse.redirect(url)
+  // If user is authenticated and trying to access login/signup pages, redirect based on role
+  if (user && (pathname === '/login' || pathname === '/signup' || isAdminLogin)) {
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single()
+
+      const url = request.nextUrl.clone()
+      if (profile && (profile as { role: string }).role === 'admin') {
+        const redirectPath = url.searchParams.get('redirect') || '/admin/dashboard'
+        url.pathname = redirectPath
+      } else {
+        // Regular users go to home
+        url.pathname = '/'
+      }
+      url.searchParams.delete('redirect')
+      return NextResponse.redirect(url)
+    } catch (error) {
+      // If profile check fails, redirect to home
+      console.error('Failed to check user profile in middleware:', error)
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      url.searchParams.delete('redirect')
+      return NextResponse.redirect(url)
+    }
   }
 
   // If user is authenticated and accessing root route, check if admin and redirect
   if (user && pathname === '/') {
     try {
-      const { data: profile } = await (supabase
-        .from('user_profiles') as any)
+      const { data: profile } = await supabase
+        .from('user_profiles')
         .select('role')
         .eq('user_id', user.id)
         .single()
 
-      if (profile && profile.role === 'admin') {
+      if (profile && (profile as { role: string }).role === 'admin') {
         const url = request.nextUrl.clone()
         url.pathname = '/admin/dashboard'
         return NextResponse.redirect(url)

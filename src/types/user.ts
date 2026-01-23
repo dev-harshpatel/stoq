@@ -8,6 +8,15 @@ export interface UserProfile {
   id: string;
   userId: string;
   role: UserRole;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  businessName: string | null;
+  businessAddress: string | null;
+  businessAddressComponents: Record<string, any> | null;
+  businessYears: number | null;
+  businessWebsite: string | null;
+  businessEmail: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -16,6 +25,15 @@ export interface UserProfileInsert {
   id?: string;
   userId: string;
   role?: UserRole;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  businessName?: string | null;
+  businessAddress?: string | null;
+  businessAddressComponents?: Record<string, any> | null;
+  businessYears?: number | null;
+  businessWebsite?: string | null;
+  businessEmail?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -24,6 +42,15 @@ export interface UserProfileUpdate {
   id?: string;
   userId?: string;
   role?: UserRole;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  businessName?: string | null;
+  businessAddress?: string | null;
+  businessAddressComponents?: Record<string, any> | null;
+  businessYears?: number | null;
+  businessWebsite?: string | null;
+  businessEmail?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

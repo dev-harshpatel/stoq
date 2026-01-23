@@ -1,0 +1,67 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
+import { Database } from '@/lib/database.types'
+
+type UserProfileRow = Database['public']['Tables']['user_profiles']['Row']
+type InsertType = Database['public']['Tables']['user_profiles']['Insert']
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const {
+      userId,
+      firstName,
+      lastName,
+      phone,
+      businessName,
+      businessAddress,
+      businessAddressComponents,
+      businessYears,
+      businessWebsite,
+      businessEmail,
+      role = 'user',
+    } = body
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Use admin client to bypass RLS
+    const { data, error } = await supabaseAdmin
+      .from('user_profiles')
+      .insert({
+        user_id: userId,
+        role,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        phone: phone || null,
+        business_name: businessName || null,
+        business_address: businessAddress || null,
+        business_address_components: businessAddressComponents || null,
+        business_years: businessYears || null,
+        business_website: businessWebsite || null,
+        business_email: businessEmail || null,
+      } as InsertType)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating user profile via admin:', error)
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ profile: data }, { status: 201 })
+  } catch (error: any) {
+    console.error('Error in create profile API:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
