@@ -43,7 +43,8 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       return null;
     }
 
-    return dbRowToUserProfile(data);
+    const row = data as UserProfileRow;
+    return dbRowToUserProfile(row);
   } catch (error) {
     console.error('Failed to get user profile:', error);
     return null;
@@ -98,15 +99,24 @@ export const upsertUserProfile = async (
   role: UserRole = 'user'
 ): Promise<UserProfile | null> => {
   try {
-    const { data, error } = await (supabase
-      .from('user_profiles') as any)
+    type InsertType = Database['public']['Tables']['user_profiles']['Insert'];
+    
+    // Use type assertion to work around @supabase/ssr type limitations
+    const client = supabase.from('user_profiles') as unknown as {
+      upsert: (values: InsertType, options?: { onConflict?: string; ignoreDuplicates?: boolean }) => {
+        select: () => { single: () => Promise<{ data: UserProfileRow | null; error: Error | null }> };
+      };
+    };
+    
+    const { data, error } = await client
       .upsert(
         {
           user_id: userId,
           role,
-        },
+        } as InsertType,
         {
           onConflict: 'user_id',
+          ignoreDuplicates: true,
         }
       )
       .select()
@@ -117,11 +127,12 @@ export const upsertUserProfile = async (
       return null;
     }
 
-    if (!data) {
-      return null;
+    if (data) {
+      const row = data as UserProfileRow;
+      return dbRowToUserProfile(row);
     }
 
-    return dbRowToUserProfile(data);
+    return getUserProfile(userId);
   } catch (error) {
     console.error('Failed to upsert user profile:', error);
     return null;
@@ -136,9 +147,19 @@ export const updateUserRole = async (
   role: UserRole
 ): Promise<UserProfile | null> => {
   try {
-    const { data, error } = await (supabase
-      .from('user_profiles') as any)
-      .update({ role })
+    type UpdateType = Database['public']['Tables']['user_profiles']['Update'];
+    
+    // Use type assertion to work around @supabase/ssr type limitations
+    const client = supabase.from('user_profiles') as unknown as {
+      update: (values: UpdateType) => {
+        eq: (column: string, value: string) => {
+          select: () => { single: () => Promise<{ data: UserProfileRow | null; error: Error | null }> };
+        };
+      };
+    };
+    
+    const { data, error } = await client
+      .update({ role } as UpdateType)
       .eq('user_id', userId)
       .select()
       .single();
@@ -152,7 +173,8 @@ export const updateUserRole = async (
       return null;
     }
 
-    return dbRowToUserProfile(data);
+    const row = data as UserProfileRow;
+    return dbRowToUserProfile(row);
   } catch (error) {
     console.error('Failed to update user role:', error);
     return null;
