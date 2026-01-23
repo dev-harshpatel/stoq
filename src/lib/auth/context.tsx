@@ -55,12 +55,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string) => {
-    // Get the current origin (works in both dev and production)
-    const redirectTo = typeof window !== 'undefined' 
-      ? `${window.location.origin}/auth/callback`
-      : process.env.NEXT_PUBLIC_SITE_URL 
-        ? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
-        : 'http://localhost:3000/auth/callback'
+    // Prioritize NEXT_PUBLIC_SITE_URL for production, fallback to window.location.origin
+    // This ensures production uses the correct URL even if window.location is different
+    const getRedirectUrl = () => {
+      // In production, prefer the environment variable
+      if (process.env.NEXT_PUBLIC_SITE_URL) {
+        return `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
+      }
+      // In browser, use current origin
+      if (typeof window !== 'undefined') {
+        return `${window.location.origin}/auth/callback`
+      }
+      // Fallback for SSR
+      return 'http://localhost:3000/auth/callback'
+    }
+    
+    const redirectTo = getRedirectUrl()
     
     const { data, error } = await supabase.auth.signUp({
       email,

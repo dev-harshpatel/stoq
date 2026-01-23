@@ -43,6 +43,20 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Define protected admin routes that require authentication
+  // All routes starting with /admin (except /admin/login) are protected
+  const pathname = request.nextUrl.pathname
+  
+  // Check if there's an auth code in the query params (email confirmation)
+  // This handles cases where Supabase redirects to root path with code
+  const code = request.nextUrl.searchParams.get('code')
+  if (code && pathname === '/') {
+    // Redirect to auth callback handler if code is present on root path
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/callback'
+    return NextResponse.redirect(url)
+  }
+
   // Define public routes that don't require authentication
   const publicRoutes = [
     '/',
@@ -53,10 +67,6 @@ export async function updateSession(request: NextRequest) {
     '/auth/callback',
     '/auth/auth-code-error'
   ]
-
-  // Define protected admin routes that require authentication
-  // All routes starting with /admin (except /admin/login) are protected
-  const pathname = request.nextUrl.pathname
   const isAdminRoute = pathname.startsWith('/admin')
   const isAdminLogin = pathname === '/admin/login'
   const isProtectedAdminRoute = isAdminRoute && !isAdminLogin
