@@ -8,7 +8,12 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const origin = requestUrl.origin
 
-  if (code) {
+  if (!code) {
+    // No code provided - redirect to error page
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  }
+
+  try {
     const cookieStore = await cookies()
     const supabase = createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,8 +38,31 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
+    // Exchange the code for a session
+    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (exchangeError) {
+      console.error('Error exchanging code for session:', {
+        message: exchangeError.message,
+        status: exchangeError.status,
+        code: exchangeError.code,
+        origin,
+        hasCode: !!code
+      })
+      
+      // If the error is about redirect URL mismatch, provide helpful message
+      if (exchangeError.message?.includes('redirect') || exchangeError.message?.includes('URL')) {
+        // This usually means the redirect URL in the email doesn't match the allowed URLs
+        // Redirect to error page with specific message
+        return NextResponse.redirect(`${origin}/auth/auth-code-error?reason=redirect_mismatch`)
+      }
+      
+      // Other errors - redirect to error page
+      return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+    }
+
+    // Successfully exchanged code for session
+    if (sessionData?.session) {
       // Get user profile to determine redirect
       const { data: { user } } = await supabase.auth.getUser()
       
@@ -53,11 +81,20 @@ export async function GET(request: NextRequest) {
         }
       }
       
-      // Default redirect to home
+      // User exists but couldn't get profile - redirect to home
       return NextResponse.redirect(`${origin}/`)
     }
-  }
 
-  // Return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+    // No session after exchange - this shouldn't happen but handle it
+    console.error('Code exchange succeeded but no session returned')
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  } catch (error: any) {
+    console.error('Unexpected error in auth callback:', {
+      message: error?.message,
+      stack: error?.stack,
+      origin,
+      hasCode: !!code
+    })
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  }
 }
