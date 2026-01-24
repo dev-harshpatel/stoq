@@ -67,7 +67,11 @@ export default function ProfilePage() {
         form.reset({
           firstName: userProfile.firstName || '',
           lastName: userProfile.lastName || '',
-          phone: userProfile.phone || '',
+          phone: userProfile.phone && userProfile.phone.startsWith('+1') 
+            ? userProfile.phone 
+            : userProfile.phone 
+              ? '+1' + userProfile.phone.replace(/^\+1/, '')
+              : '+1',
           businessName: userProfile.businessName || '',
           businessAddress: userProfile.businessAddress || '',
           businessAddressComponents: userProfile.businessAddressComponents,
@@ -152,6 +156,9 @@ export default function ProfilePage() {
                   <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                   <span>{value}</span>
                 </span>
+              ) : field.key === 'phone' ? (
+                // Ensure phone number always shows with +1 prefix
+                value.toString().startsWith('+1') ? value : '+1' + value.toString().replace(/^\+1/, '')
               ) : (
                 value
               )
@@ -197,6 +204,55 @@ export default function ProfilePage() {
                     error={addressError}
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )
+          }}
+        />
+      )
+    }
+
+    // Special handling for phone field with +1 prefix
+    if (field.key === 'phone' && field.type === 'tel') {
+      return (
+        <FormField
+          key={field.key}
+          control={form.control}
+          name={field.key as keyof ProfileFormData}
+          render={({ field: formField }) => {
+            // Extract the number part (everything after +1)
+            const displayValue = formField.value && typeof formField.value === 'string' && formField.value.startsWith('+1')
+              ? formField.value.slice(2).trim()
+              : (formField.value && typeof formField.value === 'string' ? formField.value.replace(/^\+1/, '').trim() : '')
+            
+            return (
+              <FormItem>
+                <FormLabel>
+                  {field.label}
+                  {field.required && <span className="text-destructive ml-1">*</span>}
+                </FormLabel>
+                <FormControl>
+                  <div className="flex items-center">
+                    <span className="px-3 py-2 bg-muted border border-r-0 border-input rounded-l-md text-sm text-foreground font-medium">
+                      +1
+                    </span>
+                    <Input
+                      type="tel"
+                      placeholder="(555) 123-4567"
+                      className="rounded-l-none"
+                      value={displayValue}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        // Always prepend +1 to the value
+                        formField.onChange('+1' + value)
+                      }}
+                      onBlur={formField.onBlur}
+                    />
+                  </div>
+                </FormControl>
+                <FormDescription>
+                  Phone number for Canada/USA (country code +1 is included)
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )

@@ -41,7 +41,8 @@ export const profileFields: ProfileFieldConfig[] = [
     section: 'personal',
     editable: true,
     required: false,
-    placeholder: '+1 (555) 123-4567',
+    placeholder: '(555) 123-4567',
+    description: 'Phone number for Canada/USA (country code +1 is included)',
   },
   // Business Details
   {

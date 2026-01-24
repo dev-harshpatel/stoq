@@ -14,9 +14,20 @@ export const personalDetailsSchema = z.object({
     .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
   phone: z
     .string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(15, 'Phone number must be less than 15 characters')
-    .regex(/^[\d\s\-\+\(\)]+$/, 'Phone number contains invalid characters'),
+    .min(3, 'Phone number is required')
+    .regex(/^\+1[\d\s\-\(\)]+$/, 'Phone number must start with +1 and contain only digits, spaces, hyphens, and parentheses')
+    .refine(
+      (val) => val.startsWith('+1'),
+      'Phone number must start with +1 for Canada/USA'
+    )
+    .refine(
+      (val) => {
+        // Remove +1 and count digits
+        const digitsOnly = val.replace(/[^\d]/g, '').slice(1) // Remove +1
+        return digitsOnly.length === 10
+      },
+      'Phone number must have exactly 10 digits after country code'
+    ),
 });
 
 // Business Details Schema (Step 2)

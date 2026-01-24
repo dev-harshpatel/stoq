@@ -52,18 +52,41 @@ export function PersonalDetailsStep({ form }: PersonalDetailsStepProps) {
       <FormField
         control={form.control}
         name="phone"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Phone Number</FormLabel>
-            <FormControl>
-              <Input type="tel" placeholder="+1 (555) 123-4567" {...field} />
-            </FormControl>
-            <FormDescription>
-              Include country code for international numbers
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
+        render={({ field }) => {
+          // Extract the number part (everything after +1)
+          const displayValue = field.value.startsWith('+1') 
+            ? field.value.slice(2).trim() 
+            : field.value.replace(/^\+1/, '').trim()
+          
+          return (
+            <FormItem>
+              <FormLabel>Phone Number</FormLabel>
+              <FormControl>
+                <div className="flex items-center">
+                  <span className="px-3 py-2 bg-muted border border-r-0 border-input rounded-l-md text-sm text-foreground font-medium">
+                    +1
+                  </span>
+                  <Input
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    className="rounded-l-none"
+                    value={displayValue}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      // Always prepend +1 to the value
+                      field.onChange('+1' + value)
+                    }}
+                    onBlur={field.onBlur}
+                  />
+                </div>
+              </FormControl>
+              <FormDescription>
+                Phone number for Canada/USA (country code +1 is included)
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )
+        }}
       />
     </div>
   )

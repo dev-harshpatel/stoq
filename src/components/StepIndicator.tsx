@@ -11,7 +11,7 @@ interface StepIndicatorProps {
 
 export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndicatorProps) {
   return (
-    <div className="w-full">
+    <div className="w-full px-4 pt-6">
       <div className="flex items-center justify-between">
         {stepLabels.map((label, index) => {
           const stepNumber = index + 1
@@ -29,9 +29,11 @@ export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndic
                     isCompleted &&
                       'bg-primary border-primary text-primary-foreground',
                     isCurrent &&
-                      'bg-primary/10 border-primary text-primary ring-4 ring-primary/20',
+                      'bg-primary/10 border-primary text-primary ring-2 ring-primary/20',
                     isUpcoming &&
-                      'bg-background border-muted-foreground/30 text-muted-foreground'
+                      'bg-background border-muted-foreground/30 text-muted-foreground',
+                    index === 0 && 'ml-2',
+                    index === stepLabels.length - 1 && 'mr-2'
                   )}
                 >
                   {isCompleted ? (

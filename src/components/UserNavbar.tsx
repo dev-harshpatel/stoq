@@ -165,13 +165,19 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                 <Button
                   variant="outline"
                   onClick={() => setSignupModalOpen(true)}
-                  className="gap-2"
+                  className="gap-1.5 text-xs sm:text-sm"
+                  size="sm"
                 >
-                  <span className="hidden sm:inline">Sign Up</span>
+                  <UserCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span>Sign Up</span>
                 </Button>
-                <Button onClick={() => setLoginModalOpen(true)} className="gap-2">
-                  <LogIn className="h-4 w-4" />
-                  <span className="hidden sm:inline">Login</span>
+                <Button 
+                  onClick={() => setLoginModalOpen(true)} 
+                  className="gap-1.5 text-xs sm:text-sm"
+                  size="sm"
+                >
+                  <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span>Login</span>
                 </Button>
               </div>
             )}
