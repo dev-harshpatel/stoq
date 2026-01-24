@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
 import { useState, useMemo } from "react";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, FileText } from "lucide-react";
 import { useInventory } from "@/contexts/InventoryContext";
 import { InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { Loader } from "@/components/Loader";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { exportToPDF } from "@/lib/exportUtils";
+import { toast } from "sonner";
 
 const defaultFilters: FilterValues = {
   search: "",
@@ -59,7 +61,8 @@ export default function UserProducts() {
             if (item.pricePerUnit >= 200) return false;
             break;
           case "200-400":
-            if (item.pricePerUnit < 200 || item.pricePerUnit > 400) return false;
+            if (item.pricePerUnit < 200 || item.pricePerUnit > 400)
+              return false;
             break;
           case "400+":
             if (item.pricePerUnit < 400) return false;
@@ -78,6 +81,26 @@ export default function UserProducts() {
     setFilters(defaultFilters);
   };
 
+  const handleExportPDF = () => {
+    if (filteredItems.length === 0) {
+      toast.error("No data to export", {
+        description: "Please ensure there are items to export",
+      });
+      return;
+    }
+
+    try {
+      exportToPDF(filteredItems, "inventory");
+      toast.success("Export successful", {
+        description: "Your PDF file has been downloaded",
+      });
+    } catch (error) {
+      toast.error("Export failed", {
+        description: "There was an error exporting to PDF",
+      });
+    }
+  };
+
   if (isLoading) {
     return <Loader size="lg" text="Loading products..." />;
   }
@@ -90,11 +113,23 @@ export default function UserProducts() {
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold text-foreground">Products</h2>
+              <h2 className="text-2xl font-semibold text-foreground">
+                Products
+              </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {filteredItems.length} devices available
               </p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Download PDF</span>
+              <span className="sm:hidden">Download PDF</span>
+            </Button>
           </div>
 
           {/* Filter Bar */}
@@ -109,204 +144,206 @@ export default function UserProducts() {
         <div className="flex-1 overflow-y-auto min-h-0">
           {/* Desktop Table */}
           <div className="hidden md:block overflow-hidden rounded-lg border border-border bg-card">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                    Device Name
-                  </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                    Brand
-                  </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                    Grade
-                  </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                    Storage
-                  </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                    Qty
-                  </th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                    Price/Unit
-                  </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                    Status
-                  </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredItems.map((item, index) => {
-                  const status = getStockStatus(item.quantity);
-                  const isLowStock = status === "low-stock" || status === "critical";
-
-                  return (
-                    <tr
-                      key={item.id}
-                      className={cn(
-                        "transition-colors hover:bg-table-hover cursor-pointer",
-                        index % 2 === 1 && "bg-table-zebra",
-                        isLowStock && "bg-destructive/[0.02]"
-                      )}
-                      onClick={() => handleBuyClick(item)}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-foreground">
-                            {item.deviceName}
-                          </span>
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                            <Clock className="h-3 w-3" />
-                            Updated {item.lastUpdated}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-foreground">
-                        {item.brand}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <GradeBadge grade={item.grade} />
-                      </td>
-                      <td className="px-4 py-4 text-sm text-foreground">
-                        {item.storage}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <span
-                          className={cn(
-                            "font-semibold",
-                            status === "critical" && "text-destructive",
-                            status === "low-stock" && "text-warning",
-                            status === "in-stock" && "text-foreground"
-                          )}
-                        >
-                          {item.quantity}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="font-medium text-foreground">
-                            {formatPrice(item.pricePerUnit)}
-                          </span>
-                          <PriceChangeIndicator change={item.priceChange} />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <StatusBadge quantity={item.quantity} />
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleBuyClick(item);
-                          }}
-                          className="gap-2"
-                        >
-                          <ShoppingCart className="h-4 w-4" />
-                          Buy
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Mobile Cards */}
-        <div className="md:hidden space-y-3">
-          {filteredItems.map((item) => {
-            const status = getStockStatus(item.quantity);
-            const isLowStock = status === "low-stock" || status === "critical";
-
-            return (
-              <div
-                key={item.id}
-                className={cn(
-                  "p-4 bg-card rounded-lg border border-border",
-                  isLowStock && "border-destructive/20 bg-destructive/[0.02]"
-                )}
-              >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-foreground">
-                      {item.deviceName}
-                    </h3>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                      <Clock className="h-3 w-3" />
-                      Updated {item.lastUpdated}
-                    </span>
-                  </div>
-                  <StatusBadge quantity={item.quantity} />
-                </div>
-
-                <div className="grid grid-cols-5 gap-3 text-sm mb-4">
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                      Device Name
+                    </th>
+                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                       Brand
-                    </span>
-                    <span className="font-medium text-foreground">
-                      {item.brand}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    </th>
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                       Grade
-                    </span>
-                    <GradeBadge grade={item.grade} />
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    </th>
+                    <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                       Storage
-                    </span>
-                    <span className="font-medium text-foreground">
-                      {item.storage}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
+                    </th>
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                       Qty
-                    </span>
-                    <span
-                      className={cn(
-                        "font-semibold",
-                        status === "critical" && "text-destructive",
-                        status === "low-stock" && "text-warning",
-                        status === "in-stock" && "text-foreground"
-                      )}
-                    >
-                      {item.quantity}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-1">
-                      Price
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <span className="font-medium text-foreground">
-                        ${item.pricePerUnit}
+                    </th>
+                    <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                      Price/Unit
+                    </th>
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                      Status
+                    </th>
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredItems.map((item, index) => {
+                    const status = getStockStatus(item.quantity);
+                    const isLowStock =
+                      status === "low-stock" || status === "critical";
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className={cn(
+                          "transition-colors hover:bg-table-hover cursor-pointer",
+                          index % 2 === 1 && "bg-table-zebra",
+                          isLowStock && "bg-destructive/[0.02]",
+                        )}
+                        onClick={() => handleBuyClick(item)}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-foreground">
+                              {item.deviceName}
+                            </span>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <Clock className="h-3 w-3" />
+                              Updated {item.lastUpdated}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-foreground">
+                          {item.brand}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <GradeBadge grade={item.grade} />
+                        </td>
+                        <td className="px-4 py-4 text-sm text-foreground">
+                          {item.storage}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span
+                            className={cn(
+                              "font-semibold",
+                              status === "critical" && "text-destructive",
+                              status === "low-stock" && "text-warning",
+                              status === "in-stock" && "text-foreground",
+                            )}
+                          >
+                            {item.quantity}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="font-medium text-foreground">
+                              {formatPrice(item.pricePerUnit)}
+                            </span>
+                            <PriceChangeIndicator change={item.priceChange} />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <StatusBadge quantity={item.quantity} />
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBuyClick(item);
+                            }}
+                            className="gap-2"
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                            Buy
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {filteredItems.map((item) => {
+              const status = getStockStatus(item.quantity);
+              const isLowStock =
+                status === "low-stock" || status === "critical";
+
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "p-4 bg-card rounded-lg border border-border",
+                    isLowStock && "border-destructive/20 bg-destructive/[0.02]",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-foreground">
+                        {item.deviceName}
+                      </h3>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                        <Clock className="h-3 w-3" />
+                        Updated {item.lastUpdated}
                       </span>
-                      <PriceChangeIndicator change={item.priceChange} />
+                    </div>
+                    <StatusBadge quantity={item.quantity} />
+                  </div>
+
+                  <div className="grid grid-cols-5 gap-3 text-sm mb-4">
+                    <div>
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        Brand
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {item.brand}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        Grade
+                      </span>
+                      <GradeBadge grade={item.grade} />
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        Storage
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {item.storage}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        Qty
+                      </span>
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          status === "critical" && "text-destructive",
+                          status === "low-stock" && "text-warning",
+                          status === "in-stock" && "text-foreground",
+                        )}
+                      >
+                        {item.quantity}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        Price
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-foreground">
+                          ${item.pricePerUnit}
+                        </span>
+                        <PriceChangeIndicator change={item.priceChange} />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <Button
-                  className="w-full gap-2"
-                  onClick={() => handleBuyClick(item)}
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  Buy
-                </Button>
-              </div>
-            );
-          })}
-        </div>
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => handleBuyClick(item)}
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    Buy
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
 
           {filteredItems.length === 0 && <EmptyState />}
         </div>
@@ -320,4 +357,3 @@ export default function UserProducts() {
     </>
   );
 }
-
