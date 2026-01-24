@@ -5,7 +5,7 @@ import autoTable from "jspdf-autotable";
 
 export const exportToExcel = (items: InventoryItem[], filename: string = "inventory") => {
   try {
-    // Prepare data for Excel
+    // Prepare data for Excel (excluding Price Change and Last Updated)
     const data = items.map((item) => ({
       "Device Name": item.deviceName,
       Brand: item.brand,
@@ -13,8 +13,6 @@ export const exportToExcel = (items: InventoryItem[], filename: string = "invent
       Storage: item.storage,
       Quantity: item.quantity,
       "Price/Unit (CAD)": item.pricePerUnit,
-      "Last Updated": item.lastUpdated,
-      "Price Change": item.priceChange || "stable",
     }));
 
     // Create workbook and worksheet
@@ -30,8 +28,6 @@ export const exportToExcel = (items: InventoryItem[], filename: string = "invent
       { wch: 12 }, // Storage
       { wch: 10 }, // Quantity
       { wch: 15 }, // Price/Unit
-      { wch: 15 }, // Last Updated
-      { wch: 12 }, // Price Change
     ];
     worksheet["!cols"] = columnWidths;
 
@@ -85,8 +81,44 @@ export const exportToPDF = (items: InventoryItem[], filename: string = "inventor
       margin: { top: 30, left: 10, right: 10 },
     });
 
-    // Save PDF
-    doc.save(`${filename}.pdf`);
+    // Check if we're on iOS/mobile device
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isIOS || isMobile) {
+      // For iOS and mobile devices, use blob URL approach
+      try {
+        const pdfBlob = doc.output("blob");
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        
+        // Create a temporary anchor element
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = `${filename}.pdf`;
+        link.target = "_blank"; // Open in new tab as fallback for iOS
+        link.style.display = "none";
+        
+        // Append to body, click, and remove
+        document.body.appendChild(link);
+        link.click();
+        
+        // Clean up after a delay
+        setTimeout(() => {
+          if (document.body.contains(link)) {
+            document.body.removeChild(link);
+          }
+          URL.revokeObjectURL(blobUrl);
+        }, 200);
+      } catch (error) {
+        // Fallback: open PDF in new window if blob approach fails
+        const pdfDataUri = doc.output("datauristring");
+        window.open(pdfDataUri, "_blank");
+      }
+    } else {
+      // For desktop browsers, use the standard save method
+      doc.save(`${filename}.pdf`);
+    }
+    
     return true;
   } catch (error) {
     return false;
