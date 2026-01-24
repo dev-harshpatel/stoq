@@ -3,6 +3,18 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { Database } from '../database.types'
 
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+  
+  // Skip middleware for Next.js internal routes and static assets
+  // This prevents interference with chunk loading
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot)$/i)
+  ) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -45,7 +57,7 @@ export async function updateSession(request: NextRequest) {
 
   // Define protected admin routes that require authentication
   // All routes starting with /admin (except /admin/login) are protected
-  const pathname = request.nextUrl.pathname
+  // Note: pathname was already declared above for early return check
   
   // Check if there's an auth code in the query params (email confirmation)
   // This handles cases where Supabase redirects to root path with code

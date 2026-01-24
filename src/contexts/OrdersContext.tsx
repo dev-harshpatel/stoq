@@ -16,7 +16,7 @@ interface OrdersContextType {
   isLoading: boolean;
 }
 
-const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
+export const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 
 export const useOrders = () => {
   const context = useContext(OrdersContext);
@@ -157,10 +157,15 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     const initializeOrders = async () => {
       setIsLoading(true);
       await loadOrders();
-      setIsLoading(false);
+      // Only update loading state if component is still mounted
+      if (isMounted) {
+        setIsLoading(false);
+      }
     };
 
     initializeOrders();
@@ -176,13 +181,14 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
           table: 'orders',
         },
         () => {
-          // Reload orders when changes occur
+          // Reload orders when changes occur (don't set loading state for real-time updates)
           loadOrders();
         }
       )
       .subscribe();
 
     return () => {
+      isMounted = false;
       supabase.removeChannel(channel);
     };
   }, []);

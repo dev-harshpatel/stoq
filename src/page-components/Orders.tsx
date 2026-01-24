@@ -5,7 +5,7 @@ import { useOrders } from "@/contexts/OrdersContext";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, RotateCcw } from "lucide-react";
+import { Eye, RotateCcw, Package } from "lucide-react";
 import { formatPrice } from "@/data/inventory";
 import { cn, formatDateInOntario } from "@/lib/utils";
 import { OrderDetailsModal } from "@/components/OrderDetailsModal";
@@ -49,7 +49,7 @@ const getStatusLabel = (status: OrderStatus) => {
 };
 
 export default function Orders() {
-  const { orders: allOrders } = useOrders();
+  const { orders: allOrders, isLoading: ordersLoading } = useOrders();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
@@ -121,6 +121,16 @@ export default function Orders() {
   const handleResetFilter = () => {
     setStatusFilter("all");
   };
+
+  // Show loading state while orders are loading
+  if (ordersLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <Package className="h-12 w-12 text-muted-foreground mb-4 animate-pulse" />
+        <p className="text-muted-foreground">Loading orders...</p>
+      </div>
+    );
+  }
 
   return (
     <>

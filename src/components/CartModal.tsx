@@ -153,9 +153,9 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                         value={cartItem.quantity}
                         onChange={(e) => {
                           const newQuantity = Number.parseInt(e.target.value) || 1;
-                          if (newQuantity <= cartItem.item.quantity) {
-                            updateQuantity(cartItem.item.id, newQuantity);
-                          }
+                          // The updateQuantity function will validate against available quantity
+                          // (accounting for pending orders)
+                          updateQuantity(cartItem.item.id, newQuantity);
                         }}
                         className="w-16 text-center"
                       />

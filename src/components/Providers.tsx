@@ -19,15 +19,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <TooltipProvider>
         <AuthProvider>
           <UserProfileProvider>
-            <CartProvider>
-              <InventoryProvider>
+            <InventoryProvider>
+              <CartProvider>
                 <OrdersProvider>
                   {children}
                   <Toaster />
                   <Sonner />
                 </OrdersProvider>
-              </InventoryProvider>
-            </CartProvider>
+              </CartProvider>
+            </InventoryProvider>
           </UserProfileProvider>
         </AuthProvider>
       </TooltipProvider>

@@ -1,6 +1,7 @@
 import { Order, OrderStatus } from "@/types/order";
 import { useOrders } from "@/contexts/OrdersContext";
 import { useInventory } from "@/contexts/InventoryContext";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,7 @@ export const OrderDetailsModal = ({
 }: OrderDetailsModalProps) => {
   const { updateOrderStatus } = useOrders();
   const { decreaseQuantity } = useInventory();
+  const { isAdmin } = useUserProfile();
   const { toast } = useToast();
   const [isApproving, setIsApproving] = useState(false);
   const [customerEmail, setCustomerEmail] = useState<string | null>(null);
@@ -135,7 +137,8 @@ export const OrderDetailsModal = ({
     }
   };
 
-  const canApprove = order.status === "pending";
+  // Only admins can approve orders
+  const canApprove = order.status === "pending" && isAdmin;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

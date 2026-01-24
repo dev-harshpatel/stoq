@@ -1,5 +1,8 @@
 'use client'
 
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = 'force-dynamic'
+
 import { UserLayout } from '@/components/UserLayout'
 import { useState, useMemo } from "react";
 import { useOrders } from "@/contexts/OrdersContext";
@@ -51,8 +54,8 @@ const getStatusLabel = (status: OrderStatus) => {
 };
 
 export default function UserOrdersPage() {
-  const { getUserOrders, orders } = useOrders();
-  const { user } = useAuth();
+  const { getUserOrders, orders, isLoading: ordersLoading } = useOrders();
+  const { user, loading: authLoading } = useAuth();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
@@ -85,6 +88,18 @@ export default function UserOrdersPage() {
   const handleResetFilter = () => {
     setStatusFilter("all");
   };
+
+  // Show loading state while auth or orders are loading
+  if (authLoading || ordersLoading) {
+    return (
+      <UserLayout>
+        <div className="flex flex-col items-center justify-center h-full text-center">
+          <Package className="h-12 w-12 text-muted-foreground mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading orders...</p>
+        </div>
+      </UserLayout>
+    );
+  }
 
   if (!user) {
     return (

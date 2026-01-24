@@ -25,6 +25,7 @@ export interface Database {
           business_years: number | null;
           business_website: string | null;
           business_email: string | null;
+          cart_items: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -41,6 +42,7 @@ export interface Database {
           business_years?: number | null;
           business_website?: string | null;
           business_email?: string | null;
+          cart_items?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -57,6 +59,7 @@ export interface Database {
           business_years?: number | null;
           business_website?: string | null;
           business_email?: string | null;
+          cart_items?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
