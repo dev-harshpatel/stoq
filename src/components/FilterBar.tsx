@@ -83,6 +83,7 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
             <SelectItem value="A">Grade A</SelectItem>
             <SelectItem value="B">Grade B</SelectItem>
             <SelectItem value="C">Grade C</SelectItem>
+            <SelectItem value="D">Grade D</SelectItem>
           </SelectContent>
         </Select>
 
@@ -194,6 +195,7 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
                       <SelectItem value="A">Grade A</SelectItem>
                       <SelectItem value="B">Grade B</SelectItem>
                       <SelectItem value="C">Grade C</SelectItem>
+                      <SelectItem value="D">Grade D</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -9,7 +9,7 @@ import { ReactNode, createContext, useContext, useEffect, useState } from "react
 interface OrdersContextType {
   orders: Order[];
   createOrder: (userId: string, items: OrderItem[]) => Promise<Order>;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  updateOrderStatus: (orderId: string, status: OrderStatus, rejectionReason?: string, rejectionComment?: string) => Promise<void>;
   getUserOrders: (userId: string) => Order[];
   getAllOrders: () => Order[];
   getOrderById: (orderId: string) => Order | undefined;
@@ -91,6 +91,8 @@ const dbRowToOrder = (row: OrderRow): Order => {
     status: row.status as OrderStatus,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    rejectionReason: (row as any).rejection_reason ?? null,
+    rejectionComment: (row as any).rejection_comment ?? null,
   };
 };
 
@@ -238,12 +240,27 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     }
   };
 
-  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+  const updateOrderStatus = async (
+    orderId: string,
+    status: OrderStatus,
+    rejectionReason?: string,
+    rejectionComment?: string
+  ) => {
     try {
       const updateData: OrderUpdate = {
         status,
         updated_at: new Date().toISOString(),
       };
+
+      // Add rejection fields if rejecting
+      if (status === 'rejected') {
+        (updateData as any).rejection_reason = rejectionReason || null;
+        (updateData as any).rejection_comment = rejectionComment || null;
+      } else {
+        // Clear rejection fields if status is not rejected
+        (updateData as any).rejection_reason = null;
+        (updateData as any).rejection_comment = null;
+      }
 
       const { data, error } = await (supabase
         .from('orders') as any)

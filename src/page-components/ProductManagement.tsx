@@ -188,7 +188,7 @@ export default function ProductManagement() {
                   const hasEdits = !!editedProducts[product.id];
                   const deviceName = getFieldValue(product, 'deviceName') as string;
                   const brand = getFieldValue(product, 'brand') as string;
-                  const grade = getFieldValue(product, 'grade') as 'A' | 'B' | 'C';
+                  const grade = getFieldValue(product, 'grade') as 'A' | 'B' | 'C' | 'D';
                   const storage = getFieldValue(product, 'storage') as string;
                   const quantity = getFieldValue(product, 'quantity') as number;
                   const pricePerUnit = getFieldValue(product, 'pricePerUnit') as number;
@@ -219,7 +219,7 @@ export default function ProductManagement() {
                       <td className="px-4 py-4">
                         <Select
                           value={grade}
-                          onValueChange={(value) => handleFieldChange(product.id, 'grade', value as 'A' | 'B' | 'C')}
+                          onValueChange={(value) => handleFieldChange(product.id, 'grade', value as 'A' | 'B' | 'C' | 'D')}
                         >
                           <SelectTrigger className="w-20">
                             <SelectValue />
@@ -228,6 +228,7 @@ export default function ProductManagement() {
                             <SelectItem value="A">A</SelectItem>
                             <SelectItem value="B">B</SelectItem>
                             <SelectItem value="C">C</SelectItem>
+                            <SelectItem value="D">D</SelectItem>
                           </SelectContent>
                         </Select>
                       </td>

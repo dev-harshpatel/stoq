@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth/context";
 import { Order, OrderStatus } from "@/types/order";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/data/inventory";
-import { Clock, Package } from "lucide-react";
+import { Clock, Package, AlertCircle } from "lucide-react";
 import { cn, formatDateTimeInOntario } from "@/lib/utils";
 
 const getStatusColor = (status: OrderStatus) => {
@@ -121,6 +121,30 @@ export const UserOrders = () => {
               <div className="text-sm text-muted-foreground">No items in this order</div>
             )}
           </div>
+
+          {/* Rejection Notification */}
+          {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) && (
+            <div className="mt-3 pt-3 border-t border-border">
+              <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-semibold text-destructive">Order Rejected</p>
+                    {order.rejectionReason && (
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">Reason:</span> {order.rejectionReason}
+                      </p>
+                    )}
+                    {order.rejectionComment && (
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">Note:</span> {order.rejectionComment}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>

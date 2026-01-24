@@ -15,6 +15,8 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   updatedAt: string;
+  rejectionReason?: string | null;
+  rejectionComment?: string | null;
 }
 
 // Extended order with user profile info (for display)

@@ -27,7 +27,7 @@ const dbRowToInventoryItem = (row: InventoryRow): InventoryItem => ({
   id: row.id,
   deviceName: row.device_name,
   brand: row.brand,
-  grade: row.grade as 'A' | 'B' | 'C',
+  grade: row.grade as 'A' | 'B' | 'C' | 'D',
   storage: row.storage,
   quantity: row.quantity,
   pricePerUnit: Number(row.price_per_unit),

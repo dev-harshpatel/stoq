@@ -1,6 +1,6 @@
 'use client'
 
-import { LogIn, LogOut, User, ShoppingCart, Package, Loader2, FileText, UserCircle } from "lucide-react";
+import { LogIn, LogOut, User, ShoppingCart, Package, Loader2, FileText, UserCircle, BookOpen, Mail, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,8 +17,9 @@ import { cn } from "@/lib/utils";
 import { LoginModal } from "./LoginModal";
 import { SignupModal } from "./SignupModal";
 import { CartModal } from "./CartModal";
+import { NavLink } from "./NavLink";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 
 interface UserNavbarProps {
@@ -29,10 +30,12 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getUniqueItemsCount } = useCart();
   const router = useRouter();
+  const pathname = usePathname();
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [signupModalOpen, setSignupModalOpen] = useState(false);
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Reset logout state when user logs in (user state changes from null to user)
   useEffect(() => {
@@ -88,6 +91,42 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             </button>
           </div>
 
+          {/* Navigation Links */}
+          <nav className="hidden md:flex items-center gap-6">
+            <NavLink
+              href="/user/grades"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2",
+                pathname === "/user/grades" ? "text-primary" : "text-muted-foreground"
+              )}
+              activeClassName="text-primary"
+            >
+              <BookOpen className="h-4 w-4" />
+              Grades Guide
+            </NavLink>
+            <NavLink
+              href="/contact"
+              className={cn(
+                "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2",
+                pathname === "/contact" ? "text-primary" : "text-muted-foreground"
+              )}
+              activeClassName="text-primary"
+            >
+              <Mail className="h-4 w-4" />
+              Contact Us
+            </NavLink>
+          </nav>
+
+          {/* Mobile Menu Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
@@ -139,6 +178,13 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                       <FileText className="h-4 w-4 mr-2" />
                       View Orders
                     </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => router.push('/user/grades')}
+                      className="cursor-pointer"
+                    >
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Product Grades Guide
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={handleLogout} 
@@ -183,6 +229,42 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             )}
           </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-border bg-card">
+            <nav className="flex flex-col p-4 space-y-3">
+              <NavLink
+                href="/user/grades"
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2 px-3 py-2 rounded-lg",
+                  pathname === "/user/grades" 
+                    ? "text-primary bg-primary/10" 
+                    : "text-muted-foreground hover:bg-muted"
+                )}
+                activeClassName="text-primary bg-primary/10"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <BookOpen className="h-4 w-4" />
+                Grades Guide
+              </NavLink>
+              <NavLink
+                href="/contact"
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2 px-3 py-2 rounded-lg",
+                  pathname === "/contact" 
+                    ? "text-primary bg-primary/10" 
+                    : "text-muted-foreground hover:bg-muted"
+                )}
+                activeClassName="text-primary bg-primary/10"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Mail className="h-4 w-4" />
+                Contact Us
+              </NavLink>
+            </nav>
+          </div>
+        )}
       </header>
       <LoginModal
         open={loginModalOpen}

@@ -208,13 +208,8 @@ async function seedInventory() {
   console.log('📦 Seeding inventory...');
 
   try {
-    // Check if inventory already has items
-    const { data: existingItems } = await supabase.from('inventory').select('id').limit(1);
-
-    if (existingItems && existingItems.length > 0) {
-      console.log('   ⏭️  Inventory already has items, skipping...');
-      return;
-    }
+    // Get existing items to check what's already in the database
+    const { data: existingItems } = await supabase.from('inventory').select('device_name, brand, grade, storage');
 
     // Convert inventory data to database format
     const inventoryItems = inventoryData.map((item) => ({
@@ -229,13 +224,38 @@ async function seedInventory() {
       price_change: item.priceChange || null,
     }));
 
-    const { error } = await supabase.from('inventory').insert(inventoryItems);
+    // If inventory already has items, only add new ones that don't exist
+    if (existingItems && existingItems.length > 0) {
+      const existingKeys = new Set(
+        existingItems.map((item) => `${item.device_name}|${item.brand}|${item.grade}|${item.storage}`)
+      );
+      
+      const newItems = inventoryItems.filter(
+        (item) => !existingKeys.has(`${item.device_name}|${item.brand}|${item.grade}|${item.storage}`)
+      );
 
-    if (error) {
-      throw error;
+      if (newItems.length === 0) {
+        console.log('   ⏭️  All inventory items already exist, skipping...');
+        return;
+      }
+
+      const { error } = await supabase.from('inventory').insert(newItems);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log(`   ✅ Added ${newItems.length} new inventory items (${existingItems.length} already existed)`);
+    } else {
+      // No existing items, insert all
+      const { error } = await supabase.from('inventory').insert(inventoryItems);
+
+      if (error) {
+        throw error;
+      }
+
+      console.log(`   ✅ Seeded ${inventoryItems.length} inventory items`);
     }
-
-    console.log(`   ✅ Seeded ${inventoryItems.length} inventory items`);
   } catch (error) {
     console.error('   ❌ Failed to seed inventory:', error);
     throw error;

@@ -5,7 +5,7 @@ import { useOrders } from "@/contexts/OrdersContext";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, RotateCcw, Package } from "lucide-react";
+import { Eye, RotateCcw, Package, AlertCircle } from "lucide-react";
 import { formatPrice } from "@/data/inventory";
 import { cn, formatDateInOntario } from "@/lib/utils";
 import { OrderDetailsModal } from "@/components/OrderDetailsModal";
@@ -222,6 +222,9 @@ export default function Orders() {
                       <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                         Date
                       </th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                        Notes
+                      </th>
                       <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
                         Action
                       </th>
@@ -272,6 +275,27 @@ export default function Orders() {
                         </td>
                         <td className="px-4 py-4 text-sm text-muted-foreground">
                           {formatDateInOntario(order.createdAt)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) ? (
+                            <div className="flex items-start gap-2 max-w-xs">
+                              <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 space-y-1">
+                                {order.rejectionReason && (
+                                  <p className="text-xs text-foreground">
+                                    <span className="font-medium">Reason:</span> {order.rejectionReason}
+                                  </p>
+                                )}
+                                {order.rejectionComment && (
+                                  <p className="text-xs text-muted-foreground line-clamp-2">
+                                    {order.rejectionComment}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <Button

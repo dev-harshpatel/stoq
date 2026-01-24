@@ -15,7 +15,8 @@ import { formatPrice } from "@/data/inventory";
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatDateTimeInOntario } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, XCircle, AlertCircle } from "lucide-react";
+import { OrderRejectionDialog } from "@/components/OrderRejectionDialog";
 
 interface OrderDetailsModalProps {
   open: boolean;
@@ -63,6 +64,8 @@ export const OrderDetailsModal = ({
   const { isAdmin } = useUserProfile();
   const { toast } = useToast();
   const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
   const [customerEmail, setCustomerEmail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -137,14 +140,37 @@ export const OrderDetailsModal = ({
     }
   };
 
-  // Only admins can approve orders
+  const handleReject = async (reason: string, comment: string) => {
+    setIsRejecting(true);
+    try {
+      await updateOrderStatus(order.id, "rejected", reason, comment);
+      
+      toast({
+        title: "Order rejected",
+        description: `Order #${order.id.slice(-8).toUpperCase()} has been rejected.`,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject order. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  // Only admins can approve or reject orders
   const canApprove = order.status === "pending" && isAdmin;
+  const canReject = order.status === "pending" && isAdmin;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between pr-8">
             <div>
               <DialogTitle>
                 Order #{order.id.slice(-8).toUpperCase()}
@@ -155,7 +181,7 @@ export const OrderDetailsModal = ({
             </div>
             <Badge
               variant="outline"
-              className={cn("text-sm", getStatusColor(order.status))}
+              className={cn("text-sm flex-shrink-0", getStatusColor(order.status))}
             >
               {getStatusLabel(order.status)}
             </Badge>
@@ -243,6 +269,30 @@ export const OrderDetailsModal = ({
             </div>
           </div>
 
+          {/* Rejection Info */}
+          {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) && (
+            <div className="border-t border-border pt-3">
+              <div className="px-3 py-2 bg-destructive/10 rounded-md border border-destructive/20">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <p className="text-xs font-medium text-destructive">Rejected</p>
+                    {order.rejectionReason && (
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium">Reason:</span> {order.rejectionReason}
+                      </p>
+                    )}
+                    {order.rejectionComment && (
+                      <p className="text-xs text-muted-foreground">
+                        {order.rejectionComment}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Order Total */}
           <div className="border-t border-border pt-4">
             <div className="flex items-center justify-between">
@@ -256,11 +306,25 @@ export const OrderDetailsModal = ({
 
         {/* Actions */}
         <div className="border-t border-border pt-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isApproving}>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)} 
+            disabled={isApproving || isRejecting}
+          >
             Close
           </Button>
+          {canReject && (
+            <Button
+              variant="destructive"
+              onClick={() => setRejectionDialogOpen(true)}
+              disabled={isApproving || isRejecting}
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Reject Order
+            </Button>
+          )}
           {canApprove && (
-            <Button onClick={handleApprove} disabled={isApproving}>
+            <Button onClick={handleApprove} disabled={isApproving || isRejecting}>
               {isApproving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -273,6 +337,12 @@ export const OrderDetailsModal = ({
           )}
         </div>
       </DialogContent>
+
+      <OrderRejectionDialog
+        open={rejectionDialogOpen}
+        onOpenChange={setRejectionDialogOpen}
+        onReject={handleReject}
+      />
     </Dialog>
   );
 };

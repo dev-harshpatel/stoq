@@ -35,7 +35,21 @@ import { format } from 'date-fns';
 import { OrderStatus } from '@/types/order';
 import { cn } from '@/lib/utils';
 
-const COLORS = ['hsl(245, 58%, 60%)', 'hsl(142, 76%, 36%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)'];
+// Grade colors: A=Green, B=Yellow, C=Blue, D=Red
+const GRADE_COLORS: Record<string, string> = {
+  'Grade A': 'hsl(142, 76%, 36%)', // Green
+  'Grade B': 'hsl(38, 92%, 50%)',  // Yellow
+  'Grade C': 'hsl(217, 91%, 60%)', // Blue
+  'Grade D': 'hsl(0, 72%, 51%)',   // Red
+};
+
+// Fallback colors for other charts
+const COLORS = [
+  'hsl(142, 76%, 36%)', // Green
+  'hsl(38, 92%, 50%)',  // Yellow
+  'hsl(217, 91%, 60%)', // Blue
+  'hsl(0, 72%, 51%)',   // Red
+];
 
 interface ReportFilters {
   dateRange: {
@@ -43,7 +57,7 @@ interface ReportFilters {
     to: Date | null;
   };
   orderStatus: OrderStatus | 'all';
-  grade: 'A' | 'B' | 'C' | 'all';
+  grade: 'A' | 'B' | 'C' | 'D' | 'all';
   brand: string | 'all';
 }
 
@@ -172,10 +186,12 @@ export default function Reports() {
     const gradeA = filteredInventory.filter((i) => i.grade === 'A').reduce((s, i) => s + i.quantity, 0);
     const gradeB = filteredInventory.filter((i) => i.grade === 'B').reduce((s, i) => s + i.quantity, 0);
     const gradeC = filteredInventory.filter((i) => i.grade === 'C').reduce((s, i) => s + i.quantity, 0);
+    const gradeD = filteredInventory.filter((i) => i.grade === 'D').reduce((s, i) => s + i.quantity, 0);
     return [
       { name: 'Grade A', value: gradeA },
       { name: 'Grade B', value: gradeB },
       { name: 'Grade C', value: gradeC },
+      { name: 'Grade D', value: gradeD },
     ].filter((d) => d.value > 0);
   }, [filteredInventory]);
 
@@ -382,7 +398,7 @@ export default function Reports() {
               <Select
                 value={filters.grade}
                 onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, grade: value as 'A' | 'B' | 'C' | 'all' }))
+                  setFilters((prev) => ({ ...prev, grade: value as 'A' | 'B' | 'C' | 'D' | 'all' }))
                 }
               >
                 <SelectTrigger className="w-full sm:w-[140px]">
@@ -393,6 +409,7 @@ export default function Reports() {
                   <SelectItem value="A">Grade A</SelectItem>
                   <SelectItem value="B">Grade B</SelectItem>
                   <SelectItem value="C">Grade C</SelectItem>
+                  <SelectItem value="D">Grade D</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -581,8 +598,8 @@ export default function Reports() {
                       label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                       labelLine={false}
                     >
-                      {stockByGrade.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      {stockByGrade.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={GRADE_COLORS[entry.name] || COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip

@@ -124,6 +124,8 @@ export interface Database {
           status: string;
           created_at: string;
           updated_at: string;
+          rejection_reason?: string | null;
+          rejection_comment?: string | null;
         };
         Insert: {
           id?: string;
@@ -133,6 +135,8 @@ export interface Database {
           status?: string;
           created_at?: string;
           updated_at?: string;
+          rejection_reason?: string | null;
+          rejection_comment?: string | null;
         };
         Update: {
           id?: string;
@@ -142,6 +146,8 @@ export interface Database {
           status?: string;
           created_at?: string;
           updated_at?: string;
+          rejection_reason?: string | null;
+          rejection_comment?: string | null;
         };
         Relationships: [
           {
