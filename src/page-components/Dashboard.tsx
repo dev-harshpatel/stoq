@@ -62,7 +62,7 @@ function StatCard({ title, value, change, icon, accent = 'primary' }: StatCardPr
 
 export default function Dashboard() {
   const { inventory, isLoading: inventoryLoading } = useInventory();
-  const { orders } = useOrders();
+  const { orders, isLoading: ordersLoading } = useOrders();
 
   const stats = useMemo(() => {
     const totalDevices = inventory.length;
@@ -168,7 +168,7 @@ export default function Dashboard() {
       .slice(0, 5);
   }, [inventory]);
 
-  const isLoading = inventoryLoading;
+  const isLoading = inventoryLoading || ordersLoading;
 
   if (isLoading) {
     return <Loader size="lg" text="Loading dashboard..." />;

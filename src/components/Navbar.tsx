@@ -48,7 +48,7 @@ export function Navbar({
         title: 'Logged out',
         description: 'You have been successfully logged out.',
       });
-      router.push('/admin/login');
+      router.push('/');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to logout';
       toast({

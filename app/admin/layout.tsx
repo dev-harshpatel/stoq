@@ -9,20 +9,11 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const pathname = usePathname()
-  
-  // Login page should not be protected (it's public)
-  const isLoginPage = pathname === '/admin/login'
-  
-  if (isLoginPage) {
-    // Login page is public, no protection needed
-    return <>{children}</>
-  }
-  
-  // All other admin routes require ADMIN role (not just authentication)
+  // All admin routes require ADMIN role (not just authentication)
   // Regular users will be redirected to /user page
+  // Unauthenticated users will be redirected to home page where they can use the login modal
   return (
-    <AuthGuard requireAuth={true} requireAdmin={true} redirectTo="/admin/login">
+    <AuthGuard requireAuth={true} requireAdmin={true} redirectTo="/">
       <AppLayout>{children}</AppLayout>
     </AuthGuard>
   )

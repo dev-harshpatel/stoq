@@ -2,6 +2,7 @@
 
 import { Database, Json } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/context";
 import { Order, OrderItem, OrderStatus } from "@/types/order";
 import { ReactNode, createContext, useContext, useEffect, useState } from "react";
 
@@ -130,6 +131,7 @@ const buildOrderInsert = (
 export const OrdersProvider = ({ children }: OrdersProviderProps) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   // Load orders from Supabase
   const loadOrders = async () => {
@@ -140,7 +142,8 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        // Don't return early - set empty array so UI shows no orders
+        // Log error for debugging but don't throw
+        // Set empty array so UI shows no orders
         setOrders([]);
         return;
       }
@@ -152,6 +155,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         setOrders([]);
       }
     } catch (error) {
+      // On error, set empty array
       setOrders([]);
     }
   };
@@ -168,6 +172,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       }
     };
 
+    // Initialize immediately
     initializeOrders();
 
     // Set up real-time subscription
@@ -191,7 +196,8 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+    // Use user?.id to avoid re-fetching when user object reference changes but ID is the same
+  }, [user?.id]);
 
   const createOrder = async (userId: string, items: OrderItem[]): Promise<Order> => {
     if (!items || items.length === 0) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -17,39 +17,183 @@ import {
   Legend,
 } from 'recharts';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useOrders } from '@/contexts/OrdersContext';
 import { getStockStatus, formatPrice } from '@/data/inventory';
-import { Download } from 'lucide-react';
+import { Download, Calendar, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { format } from 'date-fns';
+import { OrderStatus } from '@/types/order';
+import { cn } from '@/lib/utils';
 
 const COLORS = ['hsl(245, 58%, 60%)', 'hsl(142, 76%, 36%)', 'hsl(38, 92%, 50%)', 'hsl(0, 72%, 51%)'];
 
+interface ReportFilters {
+  dateRange: {
+    from: Date | null;
+    to: Date | null;
+  };
+  orderStatus: OrderStatus | 'all';
+  grade: 'A' | 'B' | 'C' | 'all';
+  brand: string | 'all';
+}
+
 export default function Reports() {
   const { inventory } = useInventory();
-  
+  const { orders, isLoading: ordersLoading } = useOrders();
+
+  // Initialize filters
+  const [filters, setFilters] = useState<ReportFilters>({
+    dateRange: {
+      from: null,
+      to: null,
+    },
+    orderStatus: 'all',
+    grade: 'all',
+    brand: 'all',
+  });
+
+  // Get unique brands from inventory
+  const availableBrands = useMemo(() => {
+    const brands = new Set(inventory.map((item) => item.brand));
+    return Array.from(brands).sort();
+  }, [inventory]);
+
+  // Filter orders based on date range and status
+  const filteredOrders = useMemo(() => {
+    let filtered = orders;
+
+    // Filter by date range
+    if (filters.dateRange.from || filters.dateRange.to) {
+      filtered = filtered.filter((order) => {
+        const orderDate = new Date(order.createdAt);
+        if (filters.dateRange.from && orderDate < filters.dateRange.from) return false;
+        if (filters.dateRange.to) {
+          const toDate = new Date(filters.dateRange.to);
+          toDate.setHours(23, 59, 59, 999); // Include entire end date
+          if (orderDate > toDate) return false;
+        }
+        return true;
+      });
+    }
+
+    // Filter by order status
+    if (filters.orderStatus !== 'all') {
+      filtered = filtered.filter((order) => order.status === filters.orderStatus);
+    }
+
+    return filtered;
+  }, [orders, filters.dateRange, filters.orderStatus]);
+
+  // Filter inventory based on grade and brand
+  const filteredInventory = useMemo(() => {
+    let filtered = inventory;
+
+    if (filters.grade !== 'all') {
+      filtered = filtered.filter((item) => item.grade === filters.grade);
+    }
+
+    if (filters.brand !== 'all') {
+      filtered = filtered.filter((item) => item.brand === filters.brand);
+    }
+
+    return filtered;
+  }, [inventory, filters.grade, filters.brand]);
+
+  // Generate trend data from orders (grouped by month/week/day based on range)
+  const trendData = useMemo(() => {
+    if (filteredOrders.length === 0) return [];
+
+    const ordersByPeriod = new Map<string, { units: number; value: number; orders: number }>();
+
+    filteredOrders.forEach((order) => {
+      const orderDate = new Date(order.createdAt);
+      let periodKey: string;
+
+      // Determine grouping based on date range
+      const daysDiff = filters.dateRange.from && filters.dateRange.to
+        ? Math.ceil((filters.dateRange.to.getTime() - filters.dateRange.from.getTime()) / (1000 * 60 * 60 * 24))
+        : 365; // Default to yearly if no range
+
+      if (daysDiff <= 7) {
+        // Group by day
+        periodKey = format(orderDate, 'MMM dd');
+      } else if (daysDiff <= 90) {
+        // Group by week
+        const weekStart = new Date(orderDate);
+        weekStart.setDate(orderDate.getDate() - orderDate.getDay());
+        periodKey = format(weekStart, 'MMM dd');
+      } else {
+        // Group by month
+        periodKey = format(orderDate, 'MMM yyyy');
+      }
+
+      const existing = ordersByPeriod.get(periodKey) || { units: 0, value: 0, orders: 0 };
+      
+      // Calculate units and value from order items
+      let orderUnits = 0;
+      order.items.forEach((item) => {
+        orderUnits += item.quantity;
+      });
+
+      existing.units += orderUnits;
+      existing.value += order.totalPrice;
+      existing.orders += 1;
+
+      ordersByPeriod.set(periodKey, existing);
+    });
+
+    return Array.from(ordersByPeriod.entries())
+      .map(([period, data]) => ({
+        period,
+        units: data.units,
+        value: data.value,
+        orders: data.orders,
+      }))
+      .sort((a, b) => {
+        // Sort by date
+        const dateA = new Date(a.period);
+        const dateB = new Date(b.period);
+        return dateA.getTime() - dateB.getTime();
+      });
+  }, [filteredOrders, filters.dateRange]);
+
+  // Stock by Grade (filtered)
   const stockByGrade = useMemo(() => {
-    const gradeA = inventory.filter((i) => i.grade === 'A').reduce((s, i) => s + i.quantity, 0);
-    const gradeB = inventory.filter((i) => i.grade === 'B').reduce((s, i) => s + i.quantity, 0);
-    const gradeC = inventory.filter((i) => i.grade === 'C').reduce((s, i) => s + i.quantity, 0);
+    const gradeA = filteredInventory.filter((i) => i.grade === 'A').reduce((s, i) => s + i.quantity, 0);
+    const gradeB = filteredInventory.filter((i) => i.grade === 'B').reduce((s, i) => s + i.quantity, 0);
+    const gradeC = filteredInventory.filter((i) => i.grade === 'C').reduce((s, i) => s + i.quantity, 0);
     return [
       { name: 'Grade A', value: gradeA },
       { name: 'Grade B', value: gradeB },
       { name: 'Grade C', value: gradeC },
     ].filter((d) => d.value > 0);
-  }, [inventory]);
+  }, [filteredInventory]);
 
+  // Stock by Status (filtered)
   const stockByStatus = useMemo(() => {
-    const inStock = inventory.filter((i) => getStockStatus(i.quantity) === 'in-stock').length;
-    const lowStock = inventory.filter((i) => getStockStatus(i.quantity) === 'low-stock').length;
-    const critical = inventory.filter((i) => getStockStatus(i.quantity) === 'critical').length;
+    const inStock = filteredInventory.filter((i) => getStockStatus(i.quantity) === 'in-stock').length;
+    const lowStock = filteredInventory.filter((i) => getStockStatus(i.quantity) === 'low-stock').length;
+    const critical = filteredInventory.filter((i) => getStockStatus(i.quantity) === 'critical').length;
     return [
       { name: 'In Stock', value: inStock },
       { name: 'Low Stock', value: lowStock },
       { name: 'Critical', value: critical },
     ];
-  }, [inventory]);
+  }, [filteredInventory]);
 
+  // Value by Device (filtered)
   const valueByDevice = useMemo(() => {
-    return inventory
+    return filteredInventory
       .map((item) => ({
         name: item.deviceName.split(' ').slice(0, 2).join(' '),
         value: item.quantity * item.pricePerUnit,
@@ -57,16 +201,88 @@ export default function Reports() {
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
-  }, [inventory]);
+  }, [filteredInventory]);
 
-  const trendData = [
-    { month: 'Aug', units: 58, value: 18500 },
-    { month: 'Sep', units: 72, value: 22400 },
-    { month: 'Oct', units: 65, value: 20100 },
-    { month: 'Nov', units: 89, value: 27800 },
-    { month: 'Dec', units: 76, value: 24200 },
-    { month: 'Jan', units: 82, value: 26350 },
-  ];
+  // Order Status Distribution
+  const orderStatusDistribution = useMemo(() => {
+    const statusCounts = {
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      completed: 0,
+    };
+
+    filteredOrders.forEach((order) => {
+      statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+    });
+
+    return [
+      { name: 'Pending', value: statusCounts.pending },
+      { name: 'Approved', value: statusCounts.approved },
+      { name: 'Rejected', value: statusCounts.rejected },
+      { name: 'Completed', value: statusCounts.completed },
+    ].filter((d) => d.value > 0);
+  }, [filteredOrders]);
+
+  // Revenue by Status
+  const revenueByStatus = useMemo(() => {
+    const revenue = {
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      completed: 0,
+    };
+
+    filteredOrders.forEach((order) => {
+      revenue[order.status] = (revenue[order.status] || 0) + order.totalPrice;
+    });
+
+    return [
+      { name: 'Pending', value: revenue.pending },
+      { name: 'Approved', value: revenue.approved },
+      { name: 'Rejected', value: revenue.rejected },
+      { name: 'Completed', value: revenue.completed },
+    ].filter((d) => d.value > 0);
+  }, [filteredOrders]);
+
+  // Summary statistics
+  const summaryStats = useMemo(() => {
+    const totalRevenue = filteredOrders
+      .filter((o) => o.status === 'approved' || o.status === 'completed')
+      .reduce((sum, order) => sum + order.totalPrice, 0);
+
+    const totalOrders = filteredOrders.length;
+    const totalUnits = filteredOrders.reduce((sum, order) => {
+      return sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
+    }, 0);
+
+    return {
+      totalRevenue,
+      totalOrders,
+      totalUnits,
+    };
+  }, [filteredOrders]);
+
+  // Reset filters
+  const resetFilters = () => {
+    setFilters({
+      dateRange: { from: null, to: null },
+      orderStatus: 'all',
+      grade: 'all',
+      brand: 'all',
+    });
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.dateRange.from !== null ||
+      filters.dateRange.to !== null ||
+      filters.orderStatus !== 'all' ||
+      filters.grade !== 'all' ||
+      filters.brand !== 'all'
+    );
+  }, [filters]);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -76,7 +292,7 @@ export default function Reports() {
           <div>
             <h2 className="text-2xl font-semibold text-foreground">Reports</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Analytics and insights for your inventory
+              Analytics and insights for your inventory and orders
             </p>
           </div>
           <Button variant="outline" size="sm">
@@ -85,130 +301,398 @@ export default function Reports() {
           </Button>
         </div>
 
+        {/* Filters Section */}
+        <div className="bg-card rounded-lg border border-border shadow-soft p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Filters:</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              {/* Date Range Picker */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      'w-full sm:w-[240px] justify-start text-left font-normal',
+                      !filters.dateRange.from && 'text-muted-foreground'
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {filters.dateRange.from ? (
+                      filters.dateRange.to ? (
+                        <>
+                          {format(filters.dateRange.from, 'LLL dd, y')} -{' '}
+                          {format(filters.dateRange.to, 'LLL dd, y')}
+                        </>
+                      ) : (
+                        format(filters.dateRange.from, 'LLL dd, y')
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    initialFocus
+                    mode="range"
+                    defaultMonth={filters.dateRange.from || new Date()}
+                    selected={{
+                      from: filters.dateRange.from ?? undefined,
+                      to: filters.dateRange.to ?? undefined,
+                    }}
+                    onSelect={(range) => {
+                      setFilters((prev) => ({
+                        ...prev,
+                        dateRange: {
+                          from: range?.from ?? null,
+                          to: range?.to ?? null,
+                        },
+                      }));
+                    }}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {/* Order Status Filter */}
+              <Select
+                value={filters.orderStatus}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, orderStatus: value as OrderStatus | 'all' }))
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Order Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Grade Filter */}
+              <Select
+                value={filters.grade}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, grade: value as 'A' | 'B' | 'C' | 'all' }))
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="A">Grade A</SelectItem>
+                  <SelectItem value="B">Grade B</SelectItem>
+                  <SelectItem value="C">Grade C</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Brand Filter */}
+              <Select
+                value={filters.brand}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, brand: value }))
+                }
+              >
+                <SelectTrigger className="w-full sm:w-[160px]">
+                  <SelectValue placeholder="Brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Brands</SelectItem>
+                  {availableBrands.map((brand) => (
+                    <SelectItem key={brand} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Reset Button */}
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Reset
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-card rounded-lg border border-border shadow-soft p-4">
+            <p className="text-sm text-muted-foreground">Total Revenue</p>
+            <p className="text-2xl font-bold text-foreground mt-1">
+              {formatPrice(summaryStats.totalRevenue)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredOrders.filter((o) => o.status === 'approved' || o.status === 'completed').length} completed orders
+            </p>
+          </div>
+          <div className="bg-card rounded-lg border border-border shadow-soft p-4">
+            <p className="text-sm text-muted-foreground">Total Orders</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{summaryStats.totalOrders}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {summaryStats.totalUnits} total units
+            </p>
+          </div>
+          <div className="bg-card rounded-lg border border-border shadow-soft p-4">
+            <p className="text-sm text-muted-foreground">Inventory Items</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{filteredInventory.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {filteredInventory.reduce((sum, item) => sum + item.quantity, 0)} total units
+            </p>
+          </div>
+        </div>
+
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Stock Trend */}
-        <div className="bg-card rounded-lg border border-border shadow-soft p-6 lg:col-span-2">
-          <h3 className="font-semibold text-foreground mb-4">Stock & Value Trend</h3>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Legend />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="units"
-                  stroke="hsl(245, 58%, 60%)"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  name="Units"
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="value"
-                  stroke="hsl(142, 76%, 36%)"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  name="Value ($)"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Value by Device */}
-        <div className="bg-card rounded-lg border border-border shadow-soft p-6">
-          <h3 className="font-semibold text-foreground mb-4">Value by Device</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={valueByDevice} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} width={80} />
-                <Tooltip
-                  formatter={(value: number) => formatPrice(value)}
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Bar dataKey="value" fill="hsl(245, 58%, 60%)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Stock by Grade */}
-        <div className="bg-card rounded-lg border border-border shadow-soft p-6">
-          <h3 className="font-semibold text-foreground mb-4">Units by Grade</h3>
-          <div className="h-64 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={stockByGrade}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  labelLine={false}
-                >
-                  {stockByGrade.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Stock Status Distribution */}
-        <div className="bg-card rounded-lg border border-border shadow-soft p-6 lg:col-span-2">
-          <h3 className="font-semibold text-foreground mb-4">Stock Status Distribution</h3>
-          <div className="grid grid-cols-3 gap-4">
-            {stockByStatus.map((status, idx) => (
-              <div
-                key={status.name}
-                className="text-center p-4 rounded-lg"
-                style={{ backgroundColor: `${COLORS[idx]}10` }}
-              >
-                <p className="text-3xl font-bold" style={{ color: COLORS[idx] }}>
-                  {status.value}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">{status.name}</p>
+          {/* Orders & Revenue Trend */}
+          <div className="bg-card rounded-lg border border-border shadow-soft p-6 lg:col-span-2">
+            <h3 className="font-semibold text-foreground mb-4">Orders & Revenue Trend</h3>
+            {trendData.length > 0 ? (
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="period" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="orders"
+                      stroke="hsl(245, 58%, 60%)"
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      name="Orders"
+                    />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="units"
+                      stroke="hsl(38, 92%, 50%)"
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      name="Units"
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="value"
+                      stroke="hsl(142, 76%, 36%)"
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      name="Revenue ($)"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-            ))}
+            ) : (
+              <div className="h-72 flex items-center justify-center text-muted-foreground">
+                No data available for the selected filters
+              </div>
+            )}
+          </div>
+
+          {/* Value by Device */}
+          <div className="bg-card rounded-lg border border-border shadow-soft p-6">
+            <h3 className="font-semibold text-foreground mb-4">Value by Device</h3>
+            {valueByDevice.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={valueByDevice} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      type="number"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      width={80}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => formatPrice(value)}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Bar dataKey="value" fill="hsl(245, 58%, 60%)" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                No data available
+              </div>
+            )}
+          </div>
+
+          {/* Units by Grade */}
+          <div className="bg-card rounded-lg border border-border shadow-soft p-6">
+            <h3 className="font-semibold text-foreground mb-4">Units by Grade</h3>
+            {stockByGrade.length > 0 ? (
+              <div className="h-64 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stockByGrade}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      labelLine={false}
+                    >
+                      {stockByGrade.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                No data available
+              </div>
+            )}
+          </div>
+
+          {/* Order Status Distribution */}
+          <div className="bg-card rounded-lg border border-border shadow-soft p-6">
+            <h3 className="font-semibold text-foreground mb-4">Order Status Distribution</h3>
+            {orderStatusDistribution.length > 0 ? (
+              <div className="h-64 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={orderStatusDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      labelLine={false}
+                    >
+                      {orderStatusDistribution.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                No orders found
+              </div>
+            )}
+          </div>
+
+          {/* Revenue by Status */}
+          <div className="bg-card rounded-lg border border-border shadow-soft p-6">
+            <h3 className="font-semibold text-foreground mb-4">Revenue by Status</h3>
+            {revenueByStatus.length > 0 ? (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueByStatus}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => formatPrice(value)}
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Bar dataKey="value" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                No revenue data
+              </div>
+            )}
+          </div>
+
+          {/* Stock Status Distribution */}
+          <div className="bg-card rounded-lg border border-border shadow-soft p-6 lg:col-span-2">
+            <h3 className="font-semibold text-foreground mb-4">Stock Status Distribution</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {stockByStatus.map((status, idx) => (
+                <div
+                  key={status.name}
+                  className="text-center p-4 rounded-lg"
+                  style={{ backgroundColor: `${COLORS[idx]}10` }}
+                >
+                  <p className="text-3xl font-bold" style={{ color: COLORS[idx] }}>
+                    {status.value}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">{status.name}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

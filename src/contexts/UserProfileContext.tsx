@@ -24,20 +24,26 @@ export const UserProfileProvider = ({ children }: UserProfileProviderProps) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadProfile = async (authUser: User | null) => {
-    if (!authUser) {
+  const loadProfile = async (userId: string | null) => {
+    if (!userId) {
       setProfile(null);
+      setIsLoading(false);
+      return;
+    }
+
+    // Skip if we already have the profile for this user
+    if (profile?.id === userId) {
       setIsLoading(false);
       return;
     }
 
     try {
       setIsLoading(true);
-      let userProfile = await getUserProfile(authUser.id);
+      let userProfile = await getUserProfile(userId);
 
       // If profile doesn't exist, create one with default 'user' role
       if (!userProfile) {
-        userProfile = await upsertUserProfile(authUser.id, 'user');
+        userProfile = await upsertUserProfile(userId, 'user');
       }
 
       setProfile(userProfile);
@@ -50,13 +56,16 @@ export const UserProfileProvider = ({ children }: UserProfileProviderProps) => {
 
   useEffect(() => {
     if (!authLoading) {
-      loadProfile(user);
+      loadProfile(user?.id ?? null);
     }
-  }, [user, authLoading]);
+    // Use user?.id to avoid re-fetching when user object reference changes but ID is the same
+  }, [user?.id, authLoading]);
 
   const refreshProfile = async () => {
-    if (user) {
-      await loadProfile(user);
+    if (user?.id) {
+      // Force refresh by clearing profile first
+      setProfile(null);
+      await loadProfile(user.id);
     }
   };
 

@@ -14,7 +14,7 @@ interface AuthGuardProps {
 
 function AuthGuardInner({ 
   children, 
-  redirectTo = '/admin/login', 
+  redirectTo = '/', 
   requireAuth = true,
   requireAdmin = false
 }: AuthGuardProps) {
@@ -30,19 +30,15 @@ function AuthGuardInner({
   useEffect(() => {
     if (!loading) {
       if (requireAuth && !user) {
-        // Redirect to login with current path as redirect parameter
+        // Redirect to home page where they can use the login modal
         setIsRedirecting(true)
-        const currentPath = pathname || '/admin/dashboard'
-        const redirectUrl = `${redirectTo}?redirect=${encodeURIComponent(currentPath)}`
-        router.push(redirectUrl)
+        router.push(redirectTo)
       } else if (requireAdmin) {
         // Require admin role
         if (!user) {
-          // Not logged in - redirect to login
+          // Not logged in - redirect to home page
           setIsRedirecting(true)
-          const currentPath = pathname || '/admin/dashboard'
-          const redirectUrl = `/admin/login?redirect=${encodeURIComponent(currentPath)}`
-          router.push(redirectUrl)
+          router.push(redirectTo)
         } else if (!isAdmin) {
           // Logged in but not admin - immediately redirect to user page
           setIsRedirecting(true)

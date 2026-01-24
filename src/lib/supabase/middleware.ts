@@ -56,7 +56,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Define protected admin routes that require authentication
-  // All routes starting with /admin (except /admin/login) are protected
+  // All routes starting with /admin are protected
   // Note: pathname was already declared above for early return check
   
   // Check if there's an auth code in the query params (email confirmation)
@@ -75,13 +75,11 @@ export async function updateSession(request: NextRequest) {
     '/user',
     '/login',
     '/signup',
-    '/admin/login', // Admin login is public
     '/auth/callback',
     '/auth/auth-code-error'
   ]
   const isAdminRoute = pathname.startsWith('/admin')
-  const isAdminLogin = pathname === '/admin/login'
-  const isProtectedAdminRoute = isAdminRoute && !isAdminLogin
+  const isProtectedAdminRoute = isAdminRoute
 
   // Check if current path is a public route
   const isPublicRoute = publicRoutes.some(route =>
@@ -90,14 +88,14 @@ export async function updateSession(request: NextRequest) {
 
   // If user is not authenticated and trying to access protected admin route
   if (!user && isProtectedAdminRoute) {
+    // Redirect to home page where they can use the login modal
     const url = request.nextUrl.clone()
-    url.pathname = '/admin/login'
-    url.searchParams.set('redirect', pathname)
+    url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
   // If user is authenticated and trying to access login/signup pages, redirect based on role
-  if (user && (pathname === '/login' || pathname === '/signup' || isAdminLogin)) {
+  if (user && (pathname === '/login' || pathname === '/signup')) {
     try {
       const { data: profile } = await supabase
         .from('user_profiles')

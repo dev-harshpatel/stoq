@@ -3,6 +3,7 @@
 import { InventoryItem } from '@/data/inventory';
 import { Database } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/auth/context';
 import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 
 interface InventoryContextType {
@@ -54,6 +55,7 @@ const toInventoryUpdate = (updates: Partial<InventoryItem>): InventoryUpdate => 
 export const InventoryProvider = ({ children }: InventoryProviderProps) => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   // Load inventory from Supabase
   const loadInventory = async () => {
@@ -64,24 +66,34 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         .order('created_at', { ascending: true });
 
       if (error) {
+        setInventory([]);
         return;
       }
 
       if (data) {
         const inventoryItems = data.map(dbRowToInventoryItem);
         setInventory(inventoryItems);
+      } else {
+        setInventory([]);
       }
     } catch (error) {
+      setInventory([]);
     }
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     const initializeInventory = async () => {
       setIsLoading(true);
       await loadInventory();
-      setIsLoading(false);
+      // Only update loading state if component is still mounted
+      if (isMounted) {
+        setIsLoading(false);
+      }
     };
 
+    // Initialize immediately
     initializeInventory();
 
     // Set up real-time subscription
@@ -102,9 +114,11 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
       .subscribe();
 
     return () => {
+      isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+    // Use user?.id to avoid re-fetching when user object reference changes but ID is the same
+  }, [user?.id]);
 
   const updateProduct = async (id: string, updates: Partial<InventoryItem>) => {
     try {

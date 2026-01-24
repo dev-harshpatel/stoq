@@ -62,7 +62,7 @@ function AuthCodeErrorContent() {
             <Button onClick={() => router.push('/')} variant="outline" className="flex-1">
               Go Home
             </Button>
-            <Button onClick={() => router.push('/admin/login')} className="flex-1">
+            <Button onClick={() => router.push('/')} className="flex-1">
               Try Login
             </Button>
           </div>

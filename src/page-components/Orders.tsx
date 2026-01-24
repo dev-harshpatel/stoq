@@ -71,15 +71,21 @@ export default function Orders() {
     );
   }, [allOrders, statusFilter]);
 
+  // Create a stable key based on unique user IDs to avoid unnecessary re-fetches
+  const userIdsKey = useMemo(() => {
+    const uniqueUserIds = Array.from(
+      new Set(allOrders.map((order) => order.userId))
+    ).sort();
+    return uniqueUserIds.join(',');
+  }, [allOrders]);
+
   // Fetch user emails for all unique user IDs
   useEffect(() => {
     const fetchUserEmails = async () => {
-      if (allOrders.length === 0) return;
+      if (!userIdsKey) return;
 
-      // Get unique user IDs
-      const uniqueUserIds = Array.from(
-        new Set(allOrders.map((order) => order.userId))
-      );
+      // Get unique user IDs from the key
+      const uniqueUserIds = userIdsKey.split(',').filter(Boolean);
 
       // Check which user IDs we need to fetch
       const missingUserIds = uniqueUserIds.filter(
@@ -109,9 +115,9 @@ export default function Orders() {
     };
 
     fetchUserEmails();
-    // Only depend on allOrders - userEmails check is safe inside the effect
+    // Only re-fetch when the set of user IDs changes, not when orders array reference changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allOrders]);
+  }, [userIdsKey]);
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
