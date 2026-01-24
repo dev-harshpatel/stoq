@@ -56,7 +56,6 @@ export const initAutocomplete = (
   onPlaceSelect: (place: any) => void
 ): any => {
   if (!window.google || !window.google.maps || !window.google.maps.places) {
-    console.error('Google Places API not loaded');
     return null;
   }
 

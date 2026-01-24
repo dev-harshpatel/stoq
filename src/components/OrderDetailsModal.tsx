@@ -81,7 +81,6 @@ export const OrderDetailsModal = ({
           setCustomerEmail(data.emails[order.userId] || null);
         }
       } catch (error) {
-        console.error('Failed to fetch customer email:', error);
       }
     };
 
@@ -126,7 +125,6 @@ export const OrderDetailsModal = ({
       });
       onOpenChange(false);
     } catch (error) {
-      console.error('Error approving order:', error);
       toast({
         title: "Error",
         description: "Failed to update inventory quantities. Please try again.",

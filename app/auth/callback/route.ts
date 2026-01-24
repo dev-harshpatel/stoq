@@ -42,14 +42,6 @@ export async function GET(request: NextRequest) {
     const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
     
     if (exchangeError) {
-      console.error('Error exchanging code for session:', {
-        message: exchangeError.message,
-        status: exchangeError.status,
-        code: exchangeError.code,
-        origin,
-        hasCode: !!code
-      })
-      
       // If the error is about redirect URL mismatch, provide helpful message
       if (exchangeError.message?.includes('redirect') || exchangeError.message?.includes('URL')) {
         // This usually means the redirect URL in the email doesn't match the allowed URLs
@@ -86,15 +78,8 @@ export async function GET(request: NextRequest) {
     }
 
     // No session after exchange - this shouldn't happen but handle it
-    console.error('Code exchange succeeded but no session returned')
     return NextResponse.redirect(`${origin}/auth/auth-code-error`)
   } catch (error: any) {
-    console.error('Unexpected error in auth callback:', {
-      message: error?.message,
-      stack: error?.stack,
-      origin,
-      hasCode: !!code
-    })
     return NextResponse.redirect(`${origin}/auth/auth-code-error`)
   }
 }

@@ -68,8 +68,6 @@ const dbRowToOrder = (row: OrderRow): Order => {
         }
       }
     } catch (error) {
-      console.error('Error parsing order items for order', row.id, ':', error);
-      console.error('Raw items data:', row.items);
       items = [];
     }
   }
@@ -142,28 +140,18 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error loading orders:', error);
-        console.error('Error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
         // Don't return early - set empty array so UI shows no orders
         setOrders([]);
         return;
       }
 
       if (data) {
-        console.log(`Loaded ${data.length} orders from database`);
         const orderItems = data.map(dbRowToOrder);
         setOrders(orderItems);
       } else {
-        console.log('No orders data returned from database');
         setOrders([]);
       }
     } catch (error) {
-      console.error('Failed to load orders:', error);
       setOrders([]);
     }
   };
@@ -215,7 +203,6 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         .single();
 
       if (error) {
-        console.error('Error creating order:', error);
         throw new Error(error.message || 'Failed to create order');
       }
 
@@ -235,7 +222,6 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         updatedAt: newOrder.updated_at ?? new Date().toISOString(),
       };
     } catch (error) {
-      console.error('Failed to create order:', error);
       throw error;
     }
   };
@@ -255,13 +241,6 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         .single();
 
       if (error) {
-        console.error('Error updating order status:', error);
-        console.error('Error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
         throw error;
       }
 
@@ -269,7 +248,6 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       // This ensures the UI matches the database state
       await loadOrders();
     } catch (error) {
-      console.error('Failed to update order status:', error);
       throw error;
     }
   };

@@ -42,7 +42,6 @@ export const UserProfileProvider = ({ children }: UserProfileProviderProps) => {
 
       setProfile(userProfile);
     } catch (error) {
-      console.error('Failed to load user profile:', error);
       setProfile(null);
     } finally {
       setIsLoading(false);

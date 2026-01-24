@@ -338,21 +338,37 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
       let showRetryMessage = false
       let shouldShowToast = true
 
-      if (error.message) {
+      if (error?.message) {
+        const errorMsg = error.message.toLowerCase()
+        
         // Handle rate limiting errors
-        if (error.message.includes('rate limit') || error.message.includes('too many requests') || error.message.includes('security purposes')) {
-          // Only show rate limit message after 2-3 attempts
+        if (errorMsg.includes('rate limit') || errorMsg.includes('too many requests') || errorMsg.includes('security purposes') || errorMsg.includes('try again after')) {
+          // Rate limiting - show appropriate message
           if (attemptCount >= 3) {
-            errorMessage = error.message
+            errorMessage = 'Too many signup attempts. Please wait 15-30 minutes before trying again.'
           } else {
-            errorMessage = 'Please wait a moment and try again.'
+            errorMessage = 'Too many requests. Please wait a moment and try again.'
             showRetryMessage = true
           }
-        } else if (error.message.includes('email') && error.message.includes('already')) {
+        } 
+        // Handle email already exists
+        else if (errorMsg.includes('email') && (errorMsg.includes('already') || errorMsg.includes('exists') || errorMsg.includes('registered'))) {
           errorMessage = 'This email is already registered. Please try logging in instead.'
-        } else if (error.message.includes('password')) {
+        } 
+        // Handle password errors
+        else if (errorMsg.includes('password')) {
           errorMessage = 'Password does not meet requirements. Please check and try again.'
-        } else if (error.message.includes('Auth session') || error.message.includes('session missing') || error.message.includes('session')) {
+        } 
+        // Handle invalid email format
+        else if (errorMsg.includes('invalid email') || errorMsg.includes('email format')) {
+          errorMessage = 'Please enter a valid email address.'
+        }
+        // Handle network/connection errors
+        else if (errorMsg.includes('network') || errorMsg.includes('fetch') || errorMsg.includes('connection')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.'
+        }
+        // Handle session-related errors (user created but no session)
+        else if (errorMsg.includes('auth session') || errorMsg.includes('session missing') || errorMsg.includes('session')) {
           // Session-related error - but user was likely created (since emails are being sent)
           // Don't show error, just show email confirmation modal
           // The user exists, they just need to confirm email
@@ -363,7 +379,9 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
           setShowEmailConfirmation(true)
           setIsSubmitting(false)
           return // Exit early, don't show error toast
-        } else if (error.message.includes('profile') && error.message.includes('Failed to create')) {
+        } 
+        // Handle profile creation errors
+        else if (errorMsg.includes('profile') && errorMsg.includes('failed to create')) {
           // Profile creation failed - likely due to RLS (no session during email confirmation)
           // Show email confirmation modal instead of error
           // Profile will be created after email confirmation via UserProfileContext
@@ -374,7 +392,9 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
           setShowEmailConfirmation(true)
           setIsSubmitting(false)
           return // Exit early, don't show error toast
-        } else {
+        } 
+        // Use the actual error message for other cases
+        else {
           errorMessage = error.message
         }
       }
@@ -385,11 +405,11 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
       })
 
       // If rate limited after 3 attempts, show additional info
-      if (attemptCount >= 3 && error.message?.includes('security purposes')) {
+      if (attemptCount >= 3 && error?.message?.toLowerCase().includes('security purposes')) {
         setTimeout(() => {
           toast.info('Rate limit active', {
-            description: 'For security, please wait before trying again. You can try 2-3 times before this limit applies.',
-            duration: 6000,
+            description: 'For security, please wait 15-30 minutes before trying again. This limit resets automatically.',
+            duration: 8000,
           })
         }, 2000)
       }

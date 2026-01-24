@@ -103,7 +103,6 @@ export default function Orders() {
           setUserEmails((prev) => ({ ...prev, ...data.emails }));
         }
       } catch (error) {
-        console.error('Failed to fetch user emails:', error);
       } finally {
         setLoadingEmails(false);
       }

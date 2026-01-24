@@ -44,7 +44,6 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
         // No rows returned
         return null;
       }
-      console.error('Error fetching user profile:', error);
       return null;
     }
 
@@ -55,7 +54,6 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     const row = data as UserProfileRow;
     return dbRowToUserProfile(row);
   } catch (error) {
-    console.error('Failed to get user profile:', error);
     return null;
   }
 };
@@ -71,7 +69,6 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
     }
     return getUserProfile(user.id);
   } catch (error) {
-    console.error('Failed to get current user profile:', error);
     return null;
   }
 };
@@ -95,7 +92,6 @@ export const isCurrentUserAdmin = async (): Promise<boolean> => {
     }
     return isAdmin(user.id);
   } catch (error) {
-    console.error('Failed to check admin status:', error);
     return false;
   }
 };
@@ -132,7 +128,6 @@ export const upsertUserProfile = async (
       .single();
 
     if (error) {
-      console.error('Error upserting user profile:', error);
       return null;
     }
 
@@ -143,7 +138,6 @@ export const upsertUserProfile = async (
 
     return getUserProfile(userId);
   } catch (error) {
-    console.error('Failed to upsert user profile:', error);
     return null;
   }
 };
@@ -174,7 +168,6 @@ export const updateUserRole = async (
       .single();
 
     if (error) {
-      console.error('Error updating user role:', error);
       return null;
     }
 
@@ -185,7 +178,6 @@ export const updateUserRole = async (
     const row = data as UserProfileRow;
     return dbRowToUserProfile(row);
   } catch (error) {
-    console.error('Failed to update user role:', error);
     return null;
   }
 };
@@ -353,7 +345,6 @@ export const updateUserProfileDetails = async (
       .single();
 
     if (error) {
-      console.error('Error updating user profile details:', error);
       return null;
     }
 
@@ -364,7 +355,6 @@ export const updateUserProfileDetails = async (
     const row = data as UserProfileRow;
     return dbRowToUserProfile(row);
   } catch (error) {
-    console.error('Failed to update user profile details:', error);
     return null;
   }
 };

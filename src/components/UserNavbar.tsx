@@ -55,7 +55,6 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
       router.refresh();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to logout';
-      console.error('Logout error:', error);
       toast.error('Logout failed', {
         description: errorMessage,
       });

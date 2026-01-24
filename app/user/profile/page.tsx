@@ -74,7 +74,6 @@ export default function ProfilePage() {
         })
       }
     } catch (error) {
-      console.error('Failed to load profile:', error)
       toast.error('Failed to load profile', {
         description: 'Please try refreshing the page.',
       })
@@ -110,7 +109,6 @@ export default function ProfilePage() {
         throw new Error('Failed to update profile')
       }
     } catch (error: any) {
-      console.error('Failed to update profile:', error)
       toast.error('Update failed', {
         description: error.message || 'Failed to update profile. Please try again.',
       })

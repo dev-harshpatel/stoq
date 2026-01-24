@@ -39,7 +39,6 @@ export const exportToExcel = (items: InventoryItem[], filename: string = "invent
     writeFile(workbook, `${filename}.xlsx`);
     return true;
   } catch (error) {
-    console.error("Error exporting to Excel:", error);
     return false;
   }
 };
@@ -90,7 +89,6 @@ export const exportToPDF = (items: InventoryItem[], filename: string = "inventor
     doc.save(`${filename}.pdf`);
     return true;
   } catch (error) {
-    console.error("Error exporting to PDF:", error);
     return false;
   }
 };

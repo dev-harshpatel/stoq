@@ -64,7 +64,6 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         .order('created_at', { ascending: true });
 
       if (error) {
-        console.error('Error loading inventory:', error);
         return;
       }
 
@@ -73,7 +72,6 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         setInventory(inventoryItems);
       }
     } catch (error) {
-      console.error('Failed to load inventory:', error);
     }
   };
 
@@ -122,7 +120,6 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         .eq('id', id);
 
       if (error) {
-        console.error('Error updating product:', error);
         throw error;
       }
 
@@ -135,7 +132,6 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         )
       );
     } catch (error) {
-      console.error('Failed to update product:', error);
       throw error;
     }
   };
@@ -161,7 +157,6 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         .eq('id', id);
 
       if (error) {
-        console.error('Error decreasing quantity:', error);
         throw error;
       }
 
@@ -178,7 +173,6 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         )
       );
     } catch (error) {
-      console.error('Failed to decrease quantity:', error);
       throw error;
     }
   };

@@ -46,7 +46,6 @@ export function GoogleAddressAutocomplete({
   useEffect(() => {
     if (!apiKey) {
       // API key not configured - allow manual entry
-      console.warn('Google Maps API key is not configured. Manual address entry will be used.')
       setHasError(false)
       setIsLoading(false)
       return
@@ -59,7 +58,6 @@ export function GoogleAddressAutocomplete({
         setHasError(false)
       })
       .catch((err) => {
-        console.warn('Failed to load Google Places API:', err)
         // Don't treat this as an error - just allow manual entry
         setHasError(false)
       })
@@ -82,7 +80,6 @@ export function GoogleAddressAutocomplete({
         }
       })
     } catch (err) {
-      console.error('Failed to initialize autocomplete:', err)
       onError?.('Failed to initialize address autocomplete')
       setHasError(true)
     }

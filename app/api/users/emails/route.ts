@@ -20,14 +20,12 @@ export async function POST(request: NextRequest) {
           emailMap[userId] = user.user.email
         }
       } catch (error) {
-        console.error(`Error fetching user ${userId}:`, error)
         // Continue with other users even if one fails
       }
     }
 
     return NextResponse.json({ emails: emailMap }, { status: 200 })
   } catch (error) {
-    console.error('Error fetching user emails:', error)
     return NextResponse.json(
       { error: 'Failed to fetch user emails' },
       { status: 500 }

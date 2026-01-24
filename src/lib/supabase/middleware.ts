@@ -105,7 +105,6 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url)
     } catch (error) {
       // If profile check fails, redirect to home
-      console.error('Failed to check user profile in middleware:', error)
       const url = request.nextUrl.clone()
       url.pathname = '/'
       url.searchParams.delete('redirect')
@@ -130,7 +129,6 @@ export async function updateSession(request: NextRequest) {
     } catch (error) {
       // If profile check fails, continue to root page
       // This allows non-admin users to access the root route
-      console.error('Failed to check user profile in middleware:', error)
     }
   }
 
