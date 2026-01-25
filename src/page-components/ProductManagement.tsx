@@ -25,6 +25,25 @@ export default function ProductManagement() {
   const [editedProducts, setEditedProducts] = useState<Record<string, Partial<InventoryItem>>>({});
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
 
+  // Extract unique brands and storage options from inventory
+  const availableBrands = useMemo(() => {
+    const brands = new Set(inventory.map((item) => item.brand));
+    return Array.from(brands).sort();
+  }, [inventory]);
+
+  const availableStorage = useMemo(() => {
+    const storage = new Set(inventory.map((item) => item.storage));
+    return Array.from(storage).sort((a, b) => {
+      // Sort by numeric value if possible (e.g., "128GB" vs "256GB")
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.localeCompare(b);
+    });
+  }, [inventory]);
+
   const handleFieldChange = (id: string, field: keyof InventoryItem, value: string | number) => {
     setEditedProducts((prev) => ({
       ...prev,
@@ -140,6 +159,8 @@ export default function ProductManagement() {
           filters={filters}
           onFiltersChange={setFilters}
           onReset={handleResetFilters}
+          brands={availableBrands}
+          storageOptions={availableStorage}
         />
       </div>
 

@@ -8,6 +8,7 @@ import {
   Pencil,
   Settings,
   ShoppingBag,
+  Upload,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/admin/dashboard' },
   { label: 'Inventory', icon: Package, href: '/admin/inventory' },
   { label: 'Edit Products', icon: Pencil, href: '/admin/products' },
+  { label: 'Upload Products', icon: Upload, href: '/admin/upload-products' },
   { label: 'Orders', icon: ShoppingBag, href: '/admin/orders' },
   { label: 'Alerts', icon: Bell, href: '/admin/alerts' },
   { label: 'Reports', icon: BarChart3, href: '/admin/reports' },

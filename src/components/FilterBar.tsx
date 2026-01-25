@@ -25,9 +25,18 @@ interface FilterBarProps {
   onFiltersChange: (filters: FilterValues) => void;
   onReset: () => void;
   className?: string;
+  brands?: string[]; // Dynamic brands from inventory
+  storageOptions?: string[]; // Dynamic storage options from inventory
 }
 
-export function FilterBar({ filters, onFiltersChange, onReset, className }: FilterBarProps) {
+export function FilterBar({
+  filters,
+  onFiltersChange,
+  onReset,
+  className,
+  brands = [],
+  storageOptions = [],
+}: FilterBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleChange = (key: keyof FilterValues, value: string) => {
@@ -65,12 +74,13 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
           <SelectTrigger className="w-36 bg-background border-border">
             <SelectValue placeholder="Brand" />
           </SelectTrigger>
-          <SelectContent className="bg-card border-border">
+          <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
             <SelectItem value="all">All Brands</SelectItem>
-            <SelectItem value="Apple">Apple</SelectItem>
-            <SelectItem value="Google">Google</SelectItem>
-            <SelectItem value="Samsung">Samsung</SelectItem>
-            <SelectItem value="HMD">HMD</SelectItem>
+            {brands.map((brand) => (
+              <SelectItem key={brand} value={brand}>
+                {brand}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -91,12 +101,13 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
           <SelectTrigger className="w-36 bg-background border-border">
             <SelectValue placeholder="Storage" />
           </SelectTrigger>
-          <SelectContent className="bg-card border-border">
+          <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
             <SelectItem value="all">All Storage</SelectItem>
-            <SelectItem value="32GB">32GB</SelectItem>
-            <SelectItem value="64GB">64GB</SelectItem>
-            <SelectItem value="128GB">128GB</SelectItem>
-            <SelectItem value="256GB">256GB</SelectItem>
+            {storageOptions.map((storage) => (
+              <SelectItem key={storage} value={storage}>
+                {storage}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -174,12 +185,13 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
                     <SelectTrigger className="w-full bg-background border-border">
                       <SelectValue placeholder="Brand" />
                     </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
+                    <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
                       <SelectItem value="all">All Brands</SelectItem>
-                      <SelectItem value="Apple">Apple</SelectItem>
-                      <SelectItem value="Google">Google</SelectItem>
-                      <SelectItem value="Samsung">Samsung</SelectItem>
-                      <SelectItem value="HMD">HMD</SelectItem>
+                      {brands.map((brand) => (
+                        <SelectItem key={brand} value={brand}>
+                          {brand}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -206,12 +218,13 @@ export function FilterBar({ filters, onFiltersChange, onReset, className }: Filt
                     <SelectTrigger className="w-full bg-background border-border">
                       <SelectValue placeholder="Storage" />
                     </SelectTrigger>
-                    <SelectContent className="bg-card border-border">
+                    <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
                       <SelectItem value="all">All Storage</SelectItem>
-                      <SelectItem value="32GB">32GB</SelectItem>
-                      <SelectItem value="64GB">64GB</SelectItem>
-                      <SelectItem value="128GB">128GB</SelectItem>
-                      <SelectItem value="256GB">256GB</SelectItem>
+                      {storageOptions.map((storage) => (
+                        <SelectItem key={storage} value={storage}>
+                          {storage}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

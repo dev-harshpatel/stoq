@@ -5,12 +5,15 @@ import { Database } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/context';
 import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
+import { UploadHistory, BulkInsertResult } from '@/types/upload';
 
 interface InventoryContextType {
   inventory: InventoryItem[];
   updateProduct: (id: string, updates: Partial<InventoryItem>) => Promise<void>;
   decreaseQuantity: (id: string, amount: number) => Promise<void>;
   resetInventory: () => Promise<void>;
+  bulkInsertProducts: (products: InventoryItem[]) => Promise<BulkInsertResult>;
+  getUploadHistory: () => Promise<UploadHistory[]>;
   isLoading: boolean;
 }
 
@@ -197,9 +200,138 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
     setIsLoading(false);
   };
 
+  const bulkInsertProducts = async (products: InventoryItem[]): Promise<BulkInsertResult> => {
+    if (!user?.id) {
+      throw new Error('User must be authenticated to upload products');
+    }
+
+    const result: BulkInsertResult = {
+      success: 0,
+      failed: 0,
+      errors: [],
+    };
+
+    // Insert products in batches of 50 to avoid timeouts
+    const batchSize = 50;
+    for (let i = 0; i < products.length; i += batchSize) {
+      const batch = products.slice(i, i + batchSize);
+      
+      try {
+        // Map to database format
+        const insertData = batch.map((product) => {
+          return {
+            device_name: product.deviceName,
+            brand: product.brand,
+            grade: product.grade,
+            storage: product.storage,
+            quantity: product.quantity,
+            price_per_unit: product.pricePerUnit,
+            last_updated: product.lastUpdated || 'Just now',
+            price_change: product.priceChange ?? null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+        });
+
+        const { data, error } = await (supabase
+          .from('inventory') as any)
+          .insert(insertData)
+          .select();
+
+        if (error) {
+          // If batch fails, try inserting individually
+          for (const product of batch) {
+            try {
+              const { error: individualError } = await (supabase
+                .from('inventory') as any)
+                .insert({
+                  device_name: product.deviceName,
+                  brand: product.brand,
+                  grade: product.grade,
+                  storage: product.storage,
+                  quantity: product.quantity,
+                  price_per_unit: product.pricePerUnit,
+                  last_updated: product.lastUpdated || 'Just now',
+                  price_change: product.priceChange ?? null,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+
+              if (individualError) {
+                result.failed++;
+                result.errors.push(
+                  `${product.deviceName} ${product.storage}: ${individualError.message}`
+                );
+              } else {
+                result.success++;
+              }
+            } catch (err) {
+              result.failed++;
+              result.errors.push(
+                `${product.deviceName} ${product.storage}: ${err instanceof Error ? err.message : 'Unknown error'}`
+              );
+            }
+          }
+        } else {
+          result.success += batch.length;
+        }
+      } catch (error) {
+        result.failed += batch.length;
+        result.errors.push(
+          `Batch ${Math.floor(i / batchSize) + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+
+    // Refresh inventory after bulk insert
+    await loadInventory();
+
+    return result;
+  };
+
+  const getUploadHistory = async (): Promise<UploadHistory[]> => {
+    try {
+      const { data, error } = await (supabase
+        .from('product_uploads') as any)
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data) {
+        return [];
+      }
+
+      return (data as any[]).map((row: any) => ({
+        id: row.id,
+        uploadedBy: row.uploaded_by,
+        fileName: row.file_name,
+        totalProducts: row.total_products,
+        successfulInserts: row.successful_inserts,
+        failedInserts: row.failed_inserts,
+        uploadStatus: row.upload_status as 'pending' | 'completed' | 'failed',
+        errorMessage: row.error_message ?? undefined,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+    } catch (error) {
+      throw error;
+    }
+  };
+
   return (
     <InventoryContext.Provider
-      value={{ inventory, updateProduct, decreaseQuantity, resetInventory, isLoading }}
+      value={{
+        inventory,
+        updateProduct,
+        decreaseQuantity,
+        resetInventory,
+        bulkInsertProducts,
+        getUploadHistory,
+        isLoading,
+      }}
     >
       {children}
     </InventoryContext.Provider>

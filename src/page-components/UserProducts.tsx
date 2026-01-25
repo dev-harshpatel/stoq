@@ -33,6 +33,25 @@ export default function UserProducts() {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
 
+  // Extract unique brands and storage options from inventory
+  const availableBrands = useMemo(() => {
+    const brands = new Set(inventory.map((item) => item.brand));
+    return Array.from(brands).sort();
+  }, [inventory]);
+
+  const availableStorage = useMemo(() => {
+    const storage = new Set(inventory.map((item) => item.storage));
+    return Array.from(storage).sort((a, b) => {
+      // Sort by numeric value if possible (e.g., "128GB" vs "256GB")
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.localeCompare(b);
+    });
+  }, [inventory]);
+
   const handleBuyClick = (item: InventoryItem) => {
     setSelectedItem(item);
     setPurchaseModalOpen(true);
@@ -134,6 +153,8 @@ export default function UserProducts() {
 
           {/* Filter Bar */}
           <FilterBar
+            brands={availableBrands}
+            storageOptions={availableStorage}
             filters={filters}
             onFiltersChange={setFilters}
             onReset={handleResetFilters}
