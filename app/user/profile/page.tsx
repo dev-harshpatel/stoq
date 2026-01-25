@@ -27,9 +27,18 @@ import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 // Combined schema for profile update
+// Make businessCity and businessCountry optional since they're read-only
 const profileUpdateSchema = z.object({
   ...personalDetailsSchema.shape,
-  ...businessDetailsSchema.shape,
+  businessName: businessDetailsSchema.shape.businessName,
+  businessAddress: businessDetailsSchema.shape.businessAddress,
+  businessAddressComponents: businessDetailsSchema.shape.businessAddressComponents,
+  businessState: businessDetailsSchema.shape.businessState,
+  businessCity: z.string().min(2).max(100).optional(),
+  businessCountry: z.enum(['Canada', 'USA']).optional(),
+  businessYears: businessDetailsSchema.shape.businessYears,
+  businessWebsite: businessDetailsSchema.shape.businessWebsite,
+  businessEmail: businessDetailsSchema.shape.businessEmail,
 })
 
 type ProfileFormData = z.infer<typeof profileUpdateSchema>
@@ -39,15 +48,22 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileUpdateSchema),
     mode: 'onChange',
+    shouldUnregister: false,
   })
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking user
+    if (authLoading) {
+      return
+    }
+
+    // Only redirect if auth has finished loading and user is still null
     if (!user) {
       router.push('/')
       return
@@ -55,7 +71,7 @@ export default function ProfilePage() {
 
     loadProfile()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, router])
+  }, [user, authLoading, router])
 
   const loadProfile = async () => {
     if (!user) return
@@ -77,6 +93,7 @@ export default function ProfilePage() {
           businessName: userProfile.businessName || '',
           businessAddress: userProfile.businessAddress || '',
           businessAddressComponents: userProfile.businessAddressComponents,
+          businessState: userProfile.businessState || '',
           businessCity: userProfile.businessCity || '',
           businessCountry: (userProfile.businessCountry as 'Canada' | 'USA') || 'Canada',
           businessYears: userProfile.businessYears || 0,
@@ -94,7 +111,12 @@ export default function ProfilePage() {
   }
 
   const handleSave = async (data: ProfileFormData) => {
-    if (!user) return
+    if (!user) {
+      toast.error('Error', {
+        description: 'You must be logged in to update your profile.',
+      })
+      return
+    }
 
     setIsSaving(true)
     try {
@@ -121,7 +143,7 @@ export default function ProfilePage() {
         // Reload profile to get latest data
         await loadProfile()
       } else {
-        throw new Error('Failed to update profile')
+        throw new Error('Failed to update profile - no data returned')
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update profile. Please try again.';
@@ -142,6 +164,7 @@ export default function ProfilePage() {
         businessName: profile.businessName || '',
         businessAddress: profile.businessAddress || '',
         businessAddressComponents: profile.businessAddressComponents,
+        businessState: profile.businessState || '',
         businessCity: profile.businessCity || '',
         businessCountry: (profile.businessCountry as 'Canada' | 'USA') || 'Canada',
         businessYears: profile.businessYears || 0,
@@ -245,6 +268,7 @@ export default function ProfilePage() {
               <FormControl>
                 <Input
                   type="text"
+                  {...formField}
                   value={formField.value as string || ''}
                   disabled
                   className="bg-muted cursor-not-allowed"
@@ -349,7 +373,8 @@ export default function ProfilePage() {
     )
   }
 
-  if (isLoading) {
+  // Show loading while auth is loading or profile is loading
+  if (authLoading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader size="lg" text="Loading profile..." />
@@ -454,7 +479,11 @@ export default function ProfilePage() {
                       <X className="h-4 w-4" />
                       Cancel
                     </Button>
-                    <Button type="submit" disabled={isSaving} className="gap-2">
+                    <Button 
+                      type="submit" 
+                      disabled={isSaving} 
+                      className="gap-2"
+                    >
                       {isSaving ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
