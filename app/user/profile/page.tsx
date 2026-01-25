@@ -24,6 +24,7 @@ import { UserLayout } from '@/components/UserLayout'
 import { toast } from 'sonner'
 import { User, Edit2, Save, X, MapPin, Building2, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 // Combined schema for profile update
 const profileUpdateSchema = z.object({
@@ -53,6 +54,7 @@ export default function ProfilePage() {
     }
 
     loadProfile()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, router])
 
   const loadProfile = async () => {
@@ -75,6 +77,8 @@ export default function ProfilePage() {
           businessName: userProfile.businessName || '',
           businessAddress: userProfile.businessAddress || '',
           businessAddressComponents: userProfile.businessAddressComponents,
+          businessCity: userProfile.businessCity || '',
+          businessCountry: (userProfile.businessCountry as 'Canada' | 'USA') || 'Canada',
           businessYears: userProfile.businessYears || 0,
           businessWebsite: userProfile.businessWebsite || '',
           businessEmail: userProfile.businessEmail || '',
@@ -94,6 +98,7 @@ export default function ProfilePage() {
 
     setIsSaving(true)
     try {
+      // Don't allow updating Country and City (used for tax calculation)
       const updatedProfile = await updateUserProfileDetails(user.id, {
         firstName: data.firstName || null,
         lastName: data.lastName || null,
@@ -101,6 +106,7 @@ export default function ProfilePage() {
         businessName: data.businessName || null,
         businessAddress: data.businessAddress || null,
         businessAddressComponents: data.businessAddressComponents || null,
+        // businessCity and businessCountry are intentionally omitted - they cannot be changed
         businessYears: data.businessYears || null,
         businessWebsite: data.businessWebsite || null,
         businessEmail: data.businessEmail || null,
@@ -112,12 +118,15 @@ export default function ProfilePage() {
         toast.success('Profile updated', {
           description: 'Your profile has been updated successfully.',
         })
+        // Reload profile to get latest data
+        await loadProfile()
       } else {
         throw new Error('Failed to update profile')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile. Please try again.';
       toast.error('Update failed', {
-        description: error.message || 'Failed to update profile. Please try again.',
+        description: errorMessage,
       })
     } finally {
       setIsSaving(false)
@@ -133,6 +142,8 @@ export default function ProfilePage() {
         businessName: profile.businessName || '',
         businessAddress: profile.businessAddress || '',
         businessAddressComponents: profile.businessAddressComponents,
+        businessCity: profile.businessCity || '',
+        businessCountry: (profile.businessCountry as 'Canada' | 'USA') || 'Canada',
         businessYears: profile.businessYears || 0,
         businessWebsite: profile.businessWebsite || '',
         businessEmail: profile.businessEmail || '',
@@ -159,6 +170,11 @@ export default function ProfilePage() {
               ) : field.key === 'phone' ? (
                 // Ensure phone number always shows with +1 prefix
                 value.toString().startsWith('+1') ? value : '+1' + value.toString().replace(/^\+1/, '')
+              ) : (field.key === 'businessCountry' || field.key === 'businessCity') ? (
+                <span className="flex items-center gap-2">
+                  <span>{value}</span>
+                  <span className="text-xs text-muted-foreground italic">(Used for tax calculation)</span>
+                </span>
               ) : (
                 value
               )
@@ -208,6 +224,40 @@ export default function ProfilePage() {
               </FormItem>
             )
           }}
+        />
+      )
+    }
+
+    // Country and City are read-only (used for tax calculation)
+    if (field.key === 'businessCountry' || field.key === 'businessCity') {
+      // Show as read-only field in edit mode
+      return (
+        <FormField
+          key={field.key}
+          control={form.control}
+          name={field.key as keyof ProfileFormData}
+          render={({ field: formField }) => (
+            <FormItem>
+              <FormLabel>
+                {field.label}
+                {field.required && <span className="text-destructive ml-1">*</span>}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  value={formField.value as string || ''}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+              </FormControl>
+              {field.description && (
+                <FormDescription className="text-xs text-muted-foreground">
+                  {field.description}
+                </FormDescription>
+              )}
+              <FormMessage />
+            </FormItem>
+          )}
         />
       )
     }

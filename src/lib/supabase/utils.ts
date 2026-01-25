@@ -322,42 +322,41 @@ export const updateUserProfileDetails = async (
     businessName?: string | null;
     businessAddress?: string | null;
     businessAddressComponents?: Record<string, any> | null;
+    businessCity?: string | null;
+    businessCountry?: string | null;
     businessYears?: number | null;
     businessWebsite?: string | null;
     businessEmail?: string | null;
   }
 ): Promise<UserProfile | null> => {
   try {
-    type UpdateType = Database['public']['Tables']['user_profiles']['Update'];
-    
-    const client = supabase.from('user_profiles') as unknown as {
-      update: (values: UpdateType) => {
-        eq: (column: string, value: string) => {
-          select: () => { single: () => Promise<{ data: UserProfileRow | null; error: Error | null }> };
-        };
-      };
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
     };
-    
-    const updateData: Partial<UpdateType> = {};
     
     if (details.firstName !== undefined) updateData.first_name = details.firstName;
     if (details.lastName !== undefined) updateData.last_name = details.lastName;
     if (details.phone !== undefined) updateData.phone = details.phone;
     if (details.businessName !== undefined) updateData.business_name = details.businessName;
     if (details.businessAddress !== undefined) updateData.business_address = details.businessAddress;
-    if (details.businessAddressComponents !== undefined) updateData.business_address_components = details.businessAddressComponents;
+    if (details.businessAddressComponents !== undefined) {
+      updateData.business_address_components = details.businessAddressComponents;
+    }
+    if (details.businessCity !== undefined) updateData.business_city = details.businessCity;
+    if (details.businessCountry !== undefined) updateData.business_country = details.businessCountry;
     if (details.businessYears !== undefined) updateData.business_years = details.businessYears;
     if (details.businessWebsite !== undefined) updateData.business_website = details.businessWebsite;
     if (details.businessEmail !== undefined) updateData.business_email = details.businessEmail;
     
-    const { data, error } = await client
-      .update(updateData as UpdateType)
+    const { data, error } = await (supabase
+      .from('user_profiles') as any)
+      .update(updateData)
       .eq('user_id', userId)
       .select()
       .single();
 
     if (error) {
-      return null;
+      throw error;
     }
 
     if (!data) {
@@ -367,7 +366,7 @@ export const updateUserProfileDetails = async (
     const row = data as UserProfileRow;
     return dbRowToUserProfile(row);
   } catch (error) {
-    return null;
+    throw error;
   }
 };
 
