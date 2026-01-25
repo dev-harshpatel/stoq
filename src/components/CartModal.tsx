@@ -13,12 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
-import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Trash2, Plus, Minus, ShoppingBag, Loader2, AlertCircle } from "lucide-react";
 import { formatPrice } from "@/data/inventory";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { LoginModal } from "@/components/LoginModal";
+import { getUserProfile } from "@/lib/supabase/utils";
 
 interface CartModalProps {
   open: boolean;
@@ -26,14 +27,50 @@ interface CartModalProps {
 }
 
 export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
-  const { cartItems, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
+  const { 
+    cartItems, 
+    removeFromCart, 
+    updateQuantity, 
+    clearCart, 
+    getSubtotal,
+    getTaxAmount,
+    getTotalWithTax,
+    taxRatePercent,
+    taxAmount,
+    taxType,
+    isTaxLoading,
+  } = useCart();
   const { user } = useAuth();
   const { createOrder } = useOrders();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [hasBusinessLocation, setHasBusinessLocation] = useState<boolean | null>(null);
 
   const isAuthenticated = !!user;
+
+  // Check if user has business location set
+  useEffect(() => {
+    const checkBusinessLocation = async () => {
+      if (!user?.id) {
+        setHasBusinessLocation(null);
+        return;
+      }
+
+      try {
+        const profile = await getUserProfile(user.id);
+        if (profile && profile.businessCountry && profile.businessState) {
+          setHasBusinessLocation(true);
+        } else {
+          setHasBusinessLocation(false);
+        }
+      } catch {
+        setHasBusinessLocation(null);
+      }
+    };
+
+    checkBusinessLocation();
+  }, [user?.id]);
 
   const handleCheckout = async () => {
     if (!isAuthenticated || !user) {
@@ -68,7 +105,14 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
         quantity: cartItem.quantity,
       }));
 
-      const order = await createOrder(user.id, orderItems);
+      // Include tax information in order
+      const order = await createOrder(
+        user.id, 
+        orderItems,
+        subtotal,
+        taxRatePercent > 0 ? taxRatePercent / 100 : undefined,
+        taxAmount > 0 ? taxAmount : undefined
+      );
 
       toast({
         title: "Order placed successfully",
@@ -89,7 +133,9 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     }
   };
 
-  const totalPrice = getTotalPrice();
+  const subtotal = getSubtotal();
+  const totalWithTax = getTotalWithTax();
+  const showTaxBreakdown = isAuthenticated && hasBusinessLocation && subtotal > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -195,12 +241,50 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
         {cartItems.length > 0 && (
           <div className="border-t border-border pt-4 space-y-4">
-            <div className="flex items-center justify-between">
+            {/* Tax Breakdown */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium text-foreground">
+                  {formatPrice(subtotal)}
+                </span>
+              </div>
+
+              {isAuthenticated && !hasBusinessLocation && (
+                <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-md border border-border">
+                  <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Please complete your business profile with state and city to calculate tax.
+                  </p>
+                </div>
+              )}
+
+              {showTaxBreakdown && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {taxType} ({taxRatePercent.toFixed(2)}%):
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {isTaxLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin inline" />
+                    ) : (
+                      formatPrice(taxAmount)
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Total */}
+            <div className="flex items-center justify-between pt-2 border-t border-border">
               <span className="text-lg font-semibold text-foreground">Total:</span>
               <span className="text-2xl font-bold text-primary">
-                {formatPrice(totalPrice)}
+                {showTaxBreakdown && !isTaxLoading
+                  ? formatPrice(totalWithTax)
+                  : formatPrice(subtotal)}
               </span>
             </div>
+
             <div className="flex gap-2">
               <Button
                 variant="outline"

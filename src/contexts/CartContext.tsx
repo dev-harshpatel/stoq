@@ -16,6 +16,8 @@ import {
   StoredCartItem,
 } from "@/lib/cartPersistence";
 import { getAvailableQuantityForUser } from "@/lib/orderUtils";
+import { getUserProfile } from "@/lib/supabase/utils";
+import { getTaxInfo, calculateTax } from "@/lib/taxUtils";
 
 export interface CartItem {
   item: InventoryItem;
@@ -31,6 +33,14 @@ interface CartContextType {
   getTotalItems: () => number;
   getUniqueItemsCount: () => number;
   getTotalPrice: () => number;
+  getSubtotal: () => number;
+  getTaxAmount: () => number;
+  getTotalWithTax: () => number;
+  taxRate: number;
+  taxRatePercent: number;
+  taxAmount: number;
+  taxType: string;
+  isTaxLoading: boolean;
   isLoading: boolean;
 }
 
@@ -53,6 +63,11 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [lastUserId, setLastUserId] = useState<string | null>(null);
+  const [taxRate, setTaxRate] = useState<number>(0);
+  const [taxRatePercent, setTaxRatePercent] = useState<number>(0);
+  const [taxAmount, setTaxAmount] = useState<number>(0);
+  const [taxType, setTaxType] = useState<string>('Tax');
+  const [isTaxLoading, setIsTaxLoading] = useState(false);
   const { user } = useAuth();
   const { inventory } = useInventory();
   
@@ -247,6 +262,71 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     );
   };
 
+  const getSubtotal = () => {
+    return getTotalPrice();
+  };
+
+  const getTaxAmount = () => {
+    return taxAmount;
+  };
+
+  const getTotalWithTax = () => {
+    return getSubtotal() + taxAmount;
+  };
+
+  // Calculate tax when cart items or user changes
+  useEffect(() => {
+    const calculateTaxForCart = async () => {
+      if (!user?.id || cartItems.length === 0) {
+        setTaxRate(0);
+        setTaxRatePercent(0);
+        setTaxAmount(0);
+        setTaxType('Tax');
+        return;
+      }
+
+      setIsTaxLoading(true);
+      try {
+        // Fetch user profile to get business location
+        const profile = await getUserProfile(user.id);
+        
+        if (!profile || !profile.businessCountry || !profile.businessState) {
+          // User hasn't set business location
+          setTaxRate(0);
+          setTaxRatePercent(0);
+          setTaxAmount(0);
+          setTaxType('Tax');
+          return;
+        }
+
+        // Get tax info
+        const taxInfo = await getTaxInfo(
+          profile.businessCountry,
+          profile.businessState,
+          profile.businessCity
+        );
+
+        const subtotal = getSubtotal();
+        const calculatedTax = calculateTax(subtotal, taxInfo.taxRate);
+
+        setTaxRate(taxInfo.taxRate);
+        setTaxRatePercent(taxInfo.taxRatePercent);
+        setTaxAmount(calculatedTax);
+        setTaxType(taxInfo.taxType);
+      } catch (error) {
+        // On error, set tax to 0
+        setTaxRate(0);
+        setTaxRatePercent(0);
+        setTaxAmount(0);
+        setTaxType('Tax');
+      } finally {
+        setIsTaxLoading(false);
+      }
+    };
+
+    calculateTaxForCart();
+  }, [user?.id, cartItems]);
+
   return (
     <CartContext.Provider
       value={{
@@ -258,6 +338,14 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         getTotalItems,
         getUniqueItemsCount,
         getTotalPrice,
+        getSubtotal,
+        getTaxAmount,
+        getTotalWithTax,
+        taxRate,
+        taxRatePercent,
+        taxAmount,
+        taxType,
+        isTaxLoading,
         isLoading,
       }}
     >

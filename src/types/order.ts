@@ -11,12 +11,26 @@ export interface Order {
   id: string;
   userId: string;
   items: OrderItem[];
+  subtotal: number;
+  taxRate: number | null;
+  taxAmount: number | null;
   totalPrice: number;
   status: OrderStatus;
   createdAt: string;
   updatedAt: string;
   rejectionReason?: string | null;
   rejectionComment?: string | null;
+  invoiceNumber?: string | null;
+  invoiceDate?: string | null;
+  poNumber?: string | null;
+  paymentTerms?: string | null;
+  dueDate?: string | null;
+  hstNumber?: string | null;
+  invoiceNotes?: string | null;
+  invoiceTerms?: string | null;
+  invoiceConfirmed?: boolean;
+  invoiceConfirmedAt?: string | null;
+  discountAmount?: number;
 }
 
 // Extended order with user profile info (for display)

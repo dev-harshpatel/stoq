@@ -14,6 +14,9 @@ export interface UserProfile {
   businessName: string | null;
   businessAddress: string | null;
   businessAddressComponents: Record<string, any> | null;
+  businessState: string | null;
+  businessCity: string | null;
+  businessCountry: string | null;
   businessYears: number | null;
   businessWebsite: string | null;
   businessEmail: string | null;
@@ -31,6 +34,9 @@ export interface UserProfileInsert {
   businessName?: string | null;
   businessAddress?: string | null;
   businessAddressComponents?: Record<string, any> | null;
+  businessState?: string | null;
+  businessCity?: string | null;
+  businessCountry?: string | null;
   businessYears?: number | null;
   businessWebsite?: string | null;
   businessEmail?: string | null;
@@ -48,6 +54,9 @@ export interface UserProfileUpdate {
   businessName?: string | null;
   businessAddress?: string | null;
   businessAddressComponents?: Record<string, any> | null;
+  businessState?: string | null;
+  businessCity?: string | null;
+  businessCountry?: string | null;
   businessYears?: number | null;
   businessWebsite?: string | null;
   businessEmail?: string | null;

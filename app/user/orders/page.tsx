@@ -226,9 +226,25 @@ export default function UserOrdersPage() {
                           {Array.isArray(order.items) ? order.items.length : 0} item(s)
                         </td>
                         <td className="px-4 py-4 text-right">
-                          <span className="font-semibold text-foreground">
-                            {formatPrice(order.totalPrice)}
-                          </span>
+                          <div className="flex flex-col items-end">
+                            {order.discountAmount && order.discountAmount > 0 && order.invoiceConfirmed && (
+                              <span className="text-xs text-success mb-1">
+                                Discount: -{formatPrice(order.discountAmount)}
+                              </span>
+                            )}
+                            <span className="font-semibold text-foreground">
+                              {(() => {
+                                // For users: show total without discount until invoice is confirmed
+                                if (!order.invoiceConfirmed) {
+                                  const subtotal = order.subtotal || 0;
+                                  const taxAmount = order.taxAmount || 0;
+                                  return formatPrice(subtotal + taxAmount);
+                                }
+                                // Show the actual totalPrice (which includes discount) when invoice is confirmed
+                                return formatPrice(order.totalPrice);
+                              })()}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-4 text-center">
                           <Badge

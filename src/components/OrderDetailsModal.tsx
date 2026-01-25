@@ -15,8 +15,10 @@ import { formatPrice } from "@/data/inventory";
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatDateTimeInOntario } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Loader2, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, XCircle, AlertCircle, FileText, Download, CheckCircle2 } from "lucide-react";
 import { OrderRejectionDialog } from "@/components/OrderRejectionDialog";
+import { InvoiceConfirmationDialog } from "@/components/InvoiceConfirmationDialog";
+import { useRouter } from "next/navigation";
 
 interface OrderDetailsModalProps {
   open: boolean;
@@ -59,14 +61,18 @@ export const OrderDetailsModal = ({
   onOpenChange,
   order,
 }: OrderDetailsModalProps) => {
-  const { updateOrderStatus } = useOrders();
+  const { updateOrderStatus, downloadInvoicePDF, confirmInvoice } = useOrders();
   const { decreaseQuantity } = useInventory();
   const { isAdmin } = useUserProfile();
   const { toast } = useToast();
+  const router = useRouter();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
   const [customerEmail, setCustomerEmail] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchCustomerEmail = async () => {
@@ -85,7 +91,8 @@ export const OrderDetailsModal = ({
           const data = await response.json();
           setCustomerEmail(data.emails[order.userId] || null);
         }
-      } catch (error) {
+      } catch {
+        // Silently handle error - email is optional
       }
     };
 
@@ -165,6 +172,60 @@ export const OrderDetailsModal = ({
   // Only admins can approve or reject orders
   const canApprove = order.status === "pending" && isAdmin;
   const canReject = order.status === "pending" && isAdmin;
+  
+  // Invoice actions
+  const hasInvoice = !!order.invoiceNumber;
+  const canDownloadInvoice = hasInvoice && (isAdmin || order.invoiceConfirmed);
+  const canConfirmInvoice = hasInvoice && !order.invoiceConfirmed && isAdmin;
+  const canCreateEditInvoice = isAdmin && order.status === "approved";
+
+  const handleDownloadInvoice = async () => {
+    if (!order) return;
+    
+    setIsDownloading(true);
+    try {
+      await downloadInvoicePDF(order.id);
+      toast({
+        title: "Invoice downloaded",
+        description: "Invoice PDF has been downloaded.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download invoice. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleConfirmInvoice = async () => {
+    if (!order) return;
+    
+    setIsConfirming(true);
+    try {
+      await confirmInvoice(order.id);
+      toast({
+        title: "Invoice confirmed",
+        description: "Invoice has been confirmed. Customer can now download it.",
+      });
+      setConfirmationDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to confirm invoice. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleCreateEditInvoice = () => {
+    router.push(`/admin/orders/${order.id}/invoice`);
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -294,47 +355,175 @@ export const OrderDetailsModal = ({
           )}
 
           {/* Order Total */}
-          <div className="border-t border-border pt-4">
-            <div className="flex items-center justify-between">
+          <div className="border-t border-border pt-4 space-y-2">
+            {order.subtotal !== undefined && order.subtotal !== order.totalPrice && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium text-foreground">
+                  {formatPrice(order.subtotal)}
+                </span>
+              </div>
+            )}
+            {order.taxAmount && order.taxRate && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Tax ({(order.taxRate * 100).toFixed(2)}%):
+                </span>
+                <span className="font-medium text-foreground">
+                  {formatPrice(order.taxAmount)}
+                </span>
+              </div>
+            )}
+            {/* Show discount only if invoice is confirmed (for users) or always (for admin) */}
+            {order.discountAmount && order.discountAmount > 0 && (isAdmin || order.invoiceConfirmed) && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Discount:</span>
+                <span className="font-medium text-success">
+                  -{formatPrice(order.discountAmount)}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-2 border-t border-border">
               <span className="text-lg font-semibold text-foreground">Total:</span>
               <span className="text-2xl font-bold text-primary">
-                {formatPrice(order.totalPrice)}
+                {(() => {
+                  // For users: show total without discount until invoice is confirmed
+                  // For admins: always show the actual totalPrice (which includes discount if applied)
+                  if (!isAdmin && !order.invoiceConfirmed) {
+                    // Calculate total without discount for unconfirmed invoices (user view)
+                    const subtotal = order.subtotal || 0;
+                    const taxAmount = order.taxAmount || 0;
+                    return formatPrice(subtotal + taxAmount);
+                  }
+                  // For admins or confirmed invoices, show the actual totalPrice
+                  return formatPrice(order.totalPrice);
+                })()}
               </span>
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="border-t border-border pt-4 flex justify-end gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)} 
-            disabled={isApproving || isRejecting}
-          >
-            Close
-          </Button>
-          {canReject && (
-            <Button
-              variant="destructive"
-              onClick={() => setRejectionDialogOpen(true)}
+        <div className="border-t border-border pt-4 space-y-3">
+          {/* Admin Invoice Actions */}
+          {isAdmin && (canCreateEditInvoice || canDownloadInvoice || canConfirmInvoice) && (
+            <div className="flex gap-2 pb-3 border-b border-border">
+              {canCreateEditInvoice && (
+                <Button
+                  variant="outline"
+                  onClick={handleCreateEditInvoice}
+                  disabled={isApproving || isRejecting}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  {hasInvoice ? "Edit Invoice" : "Create Invoice"}
+                </Button>
+              )}
+              {canDownloadInvoice && (
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadInvoice}
+                  disabled={isDownloading || isApproving || isRejecting}
+                >
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Invoice
+                    </>
+                  )}
+                </Button>
+              )}
+              {canConfirmInvoice && (
+                <Button
+                  onClick={() => setConfirmationDialogOpen(true)}
+                  disabled={isConfirming || isApproving || isRejecting}
+                >
+                  {isConfirming ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Confirming...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Confirm Invoice
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
+          
+          {/* User Download Invoice Button */}
+          {!isAdmin && order.status === "approved" && (
+            <div className="flex gap-2 pb-3 border-b border-border">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (order.invoiceConfirmed) {
+                    handleDownloadInvoice();
+                  } else {
+                    toast({
+                      title: "Invoice not available",
+                      description: "Invoice is being prepared. Please check back later.",
+                      variant: "default",
+                    });
+                  }
+                }}
+                disabled={!order.invoiceConfirmed || isDownloading}
+                className="w-full"
+              >
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    {order.invoiceConfirmed ? "Download Invoice" : "Invoice Not Ready"}
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Order Actions */}
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
               disabled={isApproving || isRejecting}
             >
-              <XCircle className="mr-2 h-4 w-4" />
-              Reject Order
+              Close
             </Button>
-          )}
-          {canApprove && (
-            <Button onClick={handleApprove} disabled={isApproving || isRejecting}>
-              {isApproving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Approving...
-                </>
-              ) : (
-                'Approve Order'
-              )}
-            </Button>
-          )}
+            {canReject && (
+              <Button
+                variant="destructive"
+                onClick={() => setRejectionDialogOpen(true)}
+                disabled={isApproving || isRejecting}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Reject Order
+              </Button>
+            )}
+            {canApprove && (
+              <Button onClick={handleApprove} disabled={isApproving || isRejecting}>
+                {isApproving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  'Approve Order'
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
 
@@ -342,6 +531,13 @@ export const OrderDetailsModal = ({
         open={rejectionDialogOpen}
         onOpenChange={setRejectionDialogOpen}
         onReject={handleReject}
+      />
+
+      <InvoiceConfirmationDialog
+        open={confirmationDialogOpen}
+        onOpenChange={setConfirmationDialogOpen}
+        onConfirm={handleConfirmInvoice}
+        order={order}
       />
     </Dialog>
   );

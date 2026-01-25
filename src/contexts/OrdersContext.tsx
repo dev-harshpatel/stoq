@@ -8,8 +8,22 @@ import { ReactNode, createContext, useContext, useEffect, useState } from "react
 
 interface OrdersContextType {
   orders: Order[];
-  createOrder: (userId: string, items: OrderItem[]) => Promise<Order>;
-  updateOrderStatus: (orderId: string, status: OrderStatus, rejectionReason?: string, rejectionComment?: string) => Promise<void>;
+  createOrder: (userId: string, items: OrderItem[], subtotal?: number, taxRate?: number, taxAmount?: number) => Promise<Order>;
+  updateOrderStatus: (orderId: string, status: OrderStatus, rejectionReason?: string, rejectionComment?: string, discountAmount?: number) => Promise<void>;
+  updateInvoice: (orderId: string, invoiceData: {
+    invoiceNumber: string;
+    invoiceDate: string;
+    poNumber: string;
+    paymentTerms: string;
+    dueDate: string;
+    hstNumber: string;
+    invoiceNotes?: string | null;
+    invoiceTerms?: string | null;
+    discountAmount?: number;
+    discountType?: string;
+  }) => Promise<void>;
+  confirmInvoice: (orderId: string) => Promise<void>;
+  downloadInvoicePDF: (orderId: string) => Promise<void>;
   getUserOrders: (userId: string) => Order[];
   getAllOrders: () => Order[];
   getOrderById: (orderId: string) => Order | undefined;
@@ -87,23 +101,47 @@ const dbRowToOrder = (row: OrderRow): Order => {
     id: row.id,
     userId: row.user_id,
     items,
+    subtotal: Number((row as any).subtotal ?? row.total_price),
+    taxRate: (row as any).tax_rate ? Number((row as any).tax_rate) : null,
+    taxAmount: (row as any).tax_amount ? Number((row as any).tax_amount) : null,
     totalPrice: Number(row.total_price),
     status: row.status as OrderStatus,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     rejectionReason: (row as any).rejection_reason ?? null,
     rejectionComment: (row as any).rejection_comment ?? null,
+    invoiceNumber: (row as any).invoice_number ?? null,
+    invoiceDate: (row as any).invoice_date ?? null,
+    poNumber: (row as any).po_number ?? null,
+    paymentTerms: (row as any).payment_terms ?? null,
+    dueDate: (row as any).due_date ?? null,
+    hstNumber: (row as any).hst_number ?? null,
+    invoiceNotes: (row as any).invoice_notes ?? null,
+    invoiceTerms: (row as any).invoice_terms ?? null,
+    invoiceConfirmed: (row as any).invoice_confirmed ?? false,
+    invoiceConfirmedAt: (row as any).invoice_confirmed_at ?? null,
+    discountAmount: (row as any).discount_amount ? Number((row as any).discount_amount) : 0,
   };
 };
 
 const buildOrderInsert = (
   userId: string,
-  items: OrderItem[]
+  items: OrderItem[],
+  subtotal?: number,
+  taxRate?: number,
+  taxAmount?: number
 ): OrderInsert => {
-  const totalPrice = items.reduce(
+  // Calculate subtotal if not provided
+  const calculatedSubtotal = subtotal ?? items.reduce(
     (total, orderItem) => total + orderItem.item.pricePerUnit * orderItem.quantity,
     0
   );
+
+  // Calculate tax amount if not provided but tax rate is
+  const calculatedTaxAmount = taxAmount ?? (taxRate ? Math.round(calculatedSubtotal * taxRate * 100) / 100 : 0);
+  
+  // Total price includes tax
+  const totalPrice = calculatedSubtotal + calculatedTaxAmount;
 
   // Ensure items are properly formatted as JSON for Supabase
   // JSONB columns in Supabase accept plain JavaScript objects/arrays
@@ -123,6 +161,9 @@ const buildOrderInsert = (
     id: generateUUID(),
     user_id: userId,
     items: itemsJson,
+    subtotal: calculatedSubtotal,
+    tax_rate: taxRate ?? null,
+    tax_amount: calculatedTaxAmount > 0 ? calculatedTaxAmount : null,
     total_price: totalPrice,
     status: "pending",
     created_at: new Date().toISOString(),
@@ -201,12 +242,18 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     // Use user?.id to avoid re-fetching when user object reference changes but ID is the same
   }, [user?.id]);
 
-  const createOrder = async (userId: string, items: OrderItem[]): Promise<Order> => {
+  const createOrder = async (
+    userId: string, 
+    items: OrderItem[],
+    subtotal?: number,
+    taxRate?: number,
+    taxAmount?: number
+  ): Promise<Order> => {
     if (!items || items.length === 0) {
       throw new Error('Order must have at least one item');
     }
 
-    const newOrder = buildOrderInsert(userId, items);
+    const newOrder = buildOrderInsert(userId, items, subtotal, taxRate, taxAmount);
 
     try {
       // Use the newOrder directly - Supabase will handle JSON serialization
@@ -226,11 +273,21 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         return createdOrder;
       }
 
+      const fallbackSubtotal = subtotal ?? items.reduce(
+        (total, orderItem) => total + orderItem.item.pricePerUnit * orderItem.quantity,
+        0
+      );
+      const fallbackTaxAmount = taxAmount ?? (taxRate ? Math.round(fallbackSubtotal * taxRate * 100) / 100 : 0);
+      const fallbackTotalPrice = fallbackSubtotal + fallbackTaxAmount;
+
       return {
         id: newOrder.id ?? "",
         userId: newOrder.user_id,
         items,
-        totalPrice: Number(newOrder.total_price),
+        subtotal: Number((newOrder as any).subtotal ?? fallbackSubtotal),
+        taxRate: (newOrder as any).tax_rate ? Number((newOrder as any).tax_rate) : (taxRate ?? null),
+        taxAmount: (newOrder as any).tax_amount ? Number((newOrder as any).tax_amount) : (fallbackTaxAmount > 0 ? fallbackTaxAmount : null),
+        totalPrice: Number(newOrder.total_price ?? fallbackTotalPrice),
         status: (newOrder.status ?? 'pending') as OrderStatus,
         createdAt: newOrder.created_at ?? new Date().toISOString(),
         updatedAt: newOrder.updated_at ?? new Date().toISOString(),
@@ -244,7 +301,8 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     orderId: string,
     status: OrderStatus,
     rejectionReason?: string,
-    rejectionComment?: string
+    rejectionComment?: string,
+    discountAmount?: number
   ) => {
     try {
       const updateData: OrderUpdate = {
@@ -252,10 +310,26 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         updated_at: new Date().toISOString(),
       };
 
+      // Add discount if provided (only when approving)
+      if (status === 'approved' && discountAmount !== undefined) {
+        (updateData as any).discount_amount = discountAmount;
+        
+        // Recalculate total price with discount
+        const order = getOrderById(orderId);
+        if (order) {
+          const subtotal = order.subtotal;
+          const taxAmount = order.taxAmount || 0;
+          const newTotal = subtotal + taxAmount - discountAmount;
+          (updateData as any).total_price = Math.max(0, newTotal); // Ensure total is not negative
+        }
+      }
+
       // Add rejection fields if rejecting
       if (status === 'rejected') {
         (updateData as any).rejection_reason = rejectionReason || null;
         (updateData as any).rejection_comment = rejectionComment || null;
+        // Clear discount when rejecting
+        (updateData as any).discount_amount = 0;
       } else {
         // Clear rejection fields if status is not rejected
         (updateData as any).rejection_reason = null;
@@ -297,12 +371,140 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     return orders.find((order) => order.id === orderId);
   };
 
+  const updateInvoice = async (
+    orderId: string,
+    invoiceData: {
+      invoiceNumber: string;
+      invoiceDate: string;
+      poNumber: string;
+      paymentTerms: string;
+      dueDate: string;
+      hstNumber: string;
+      invoiceNotes?: string | null;
+      invoiceTerms?: string | null;
+      discountAmount?: number;
+      discountType?: string;
+    }
+  ): Promise<void> => {
+    try {
+      const order = getOrderById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      const discountAmount = invoiceData.discountAmount || 0;
+      const subtotal = order.subtotal;
+      const taxAmount = order.taxAmount || 0;
+      const newTotal = Math.max(0, subtotal + taxAmount - discountAmount);
+
+      const updateData: OrderUpdate = {
+        invoice_number: invoiceData.invoiceNumber,
+        invoice_date: invoiceData.invoiceDate,
+        po_number: invoiceData.poNumber,
+        payment_terms: invoiceData.paymentTerms,
+        due_date: invoiceData.dueDate,
+        hst_number: invoiceData.hstNumber,
+        invoice_notes: invoiceData.invoiceNotes ?? null,
+        invoice_terms: invoiceData.invoiceTerms ?? null,
+        discount_amount: discountAmount,
+        total_price: newTotal, // Update total with discount
+        invoice_confirmed: false, // Reset confirmation when updating
+        invoice_confirmed_at: null,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Note: discountType is not stored in DB, only the calculated discountAmount is stored
+      // The discountType is only used for UI calculation purposes
+
+      const { error } = await (supabase
+        .from('orders') as any)
+        .update(updateData)
+        .eq('id', orderId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Reload orders to get updated data
+      await loadOrders();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const confirmInvoice = async (orderId: string): Promise<void> => {
+    try {
+      const updateData: OrderUpdate = {
+        invoice_confirmed: true,
+        invoice_confirmed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await (supabase
+        .from('orders') as any)
+        .update(updateData)
+        .eq('id', orderId);
+
+      if (error) {
+        throw error;
+      }
+
+      // Reload orders to get updated data
+      await loadOrders();
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const downloadInvoicePDF = async (orderId: string): Promise<void> => {
+    try {
+      const order = getOrderById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      if (!order.invoiceNumber) {
+        throw new Error('Invoice not created yet');
+      }
+
+      // Import PDF generation function
+      const { generateInvoicePDF } = await import('@/lib/invoicePdfUtils');
+      const { getUserProfile } = await import('@/lib/supabase/utils');
+
+      // Get customer info
+      const customerProfile = await getUserProfile(order.userId);
+
+      // Prepare invoice data
+      const invoiceData = {
+        invoiceNumber: order.invoiceNumber,
+        invoiceDate: order.invoiceDate || order.createdAt,
+        poNumber: order.poNumber || '',
+        paymentTerms: order.paymentTerms || 'CHQ',
+        dueDate: order.dueDate || order.createdAt,
+        hstNumber: order.hstNumber || '',
+        invoiceNotes: order.invoiceNotes,
+        invoiceTerms: order.invoiceTerms,
+      };
+
+      // Generate and download PDF
+      await generateInvoicePDF(order, invoiceData, {
+        businessName: customerProfile?.businessName || null,
+        businessAddress: customerProfile?.businessAddress || null,
+      });
+    } catch (error) {
+      throw error;
+    }
+  };
+
   return (
     <OrdersContext.Provider
       value={{
         orders,
         createOrder,
         updateOrderStatus,
+        updateInvoice,
+        confirmInvoice,
+        downloadInvoicePDF,
         getUserOrders,
         getAllOrders,
         getOrderById,

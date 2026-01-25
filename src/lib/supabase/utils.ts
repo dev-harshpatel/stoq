@@ -21,6 +21,9 @@ const dbRowToUserProfile = (row: UserProfileRow): UserProfile => ({
   businessName: row.business_name,
   businessAddress: row.business_address,
   businessAddressComponents: row.business_address_components as Record<string, any> | null,
+  businessState: row.business_state,
+  businessCity: row.business_city,
+  businessCountry: row.business_country,
   businessYears: row.business_years,
   businessWebsite: row.business_website,
   businessEmail: row.business_email,
@@ -195,6 +198,9 @@ export const createUserProfileWithDetails = async (
     businessName?: string | null;
     businessAddress?: string | null;
     businessAddressComponents?: Record<string, any> | null;
+    businessState?: string | null;
+    businessCity?: string | null;
+    businessCountry?: string | null;
     businessYears?: number | null;
     businessWebsite?: string | null;
     businessEmail?: string | null;
@@ -214,6 +220,9 @@ export const createUserProfileWithDetails = async (
       business_name: details.businessName || null,
       business_address: details.businessAddress || null,
       business_address_components: details.businessAddressComponents || null,
+      business_state: details.businessState || null,
+      business_city: details.businessCity || null,
+      business_country: details.businessCountry || null,
       business_years: details.businessYears || null,
       business_website: details.businessWebsite || null,
       business_email: details.businessEmail || null,
@@ -252,6 +261,9 @@ export const createUserProfileWithDetails = async (
             businessName: details.businessName,
             businessAddress: details.businessAddress,
             businessAddressComponents: details.businessAddressComponents,
+            businessState: details.businessState,
+            businessCity: details.businessCity,
+            businessCountry: details.businessCountry,
             businessYears: details.businessYears,
             businessWebsite: details.businessWebsite,
             businessEmail: details.businessEmail,

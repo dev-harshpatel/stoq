@@ -41,6 +41,19 @@ export const businessDetailsSchema = z.object({
     .min(5, 'Please enter a valid address (at least 5 characters)')
     .max(200, 'Address is too long'),
   businessAddressComponents: z.record(z.any()).optional().nullable(),
+  businessState: z
+    .string()
+    .min(2, 'State/Province is required')
+    .max(100, 'State/Province name is too long'),
+  businessCity: z
+    .string()
+    .min(2, 'City is required')
+    .max(100, 'City name is too long'),
+  businessCountry: z
+    .enum(['Canada', 'USA'], {
+      errorMap: () => ({ message: 'Country must be Canada or USA' }),
+    })
+    .default('Canada'),
   businessYears: z
     .number()
     .int('Years must be a whole number')
