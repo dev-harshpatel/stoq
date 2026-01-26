@@ -81,6 +81,13 @@ export async function updateSession(request: NextRequest) {
   const isAdminRoute = pathname.startsWith('/admin')
   const isProtectedAdminRoute = isAdminRoute
 
+  // Redirect /admin/alerts to dashboard (page is no longer available)
+  if (pathname === '/admin/alerts') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/admin/dashboard'
+    return NextResponse.redirect(url)
+  }
+
   // Check if current path is a public route
   const isPublicRoute = publicRoutes.some(route =>
     route === pathname || (route === '/' && pathname === '/')

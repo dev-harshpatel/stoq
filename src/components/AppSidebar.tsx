@@ -1,7 +1,6 @@
 import { NavLink } from '@/components/NavLink';
 import {
   BarChart3,
-  Bell,
   ChevronLeft,
   LayoutDashboard,
   Package,
@@ -9,6 +8,7 @@ import {
   Settings,
   ShoppingBag,
   Upload,
+  Users,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ const navItems = [
   { label: 'Edit Products', icon: Pencil, href: '/admin/products' },
   { label: 'Upload Products', icon: Upload, href: '/admin/upload-products' },
   { label: 'Orders', icon: ShoppingBag, href: '/admin/orders' },
-  { label: 'Alerts', icon: Bell, href: '/admin/alerts' },
+  { label: 'Users', icon: Users, href: '/admin/users' },
   { label: 'Reports', icon: BarChart3, href: '/admin/reports' },
   { label: 'Settings', icon: Settings, href: '/admin/settings' },
 ];

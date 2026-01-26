@@ -376,3 +376,27 @@ export const updateUserProfileDetails = async (
 export const getUserProfileWithDetails = async (userId: string): Promise<UserProfile | null> => {
   return getUserProfile(userId);
 };
+
+/**
+ * Get all user profiles (admin only)
+ */
+export const getAllUserProfiles = async (): Promise<UserProfile[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data.map((row) => dbRowToUserProfile(row as UserProfileRow));
+  } catch (error) {
+    throw error;
+  }
+};
