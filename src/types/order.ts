@@ -31,6 +31,8 @@ export interface Order {
   invoiceConfirmed?: boolean;
   invoiceConfirmedAt?: string | null;
   discountAmount?: number;
+  discountType?: 'percentage' | 'cad';
+  shippingAmount?: number;
 }
 
 // Extended order with user profile info (for display)

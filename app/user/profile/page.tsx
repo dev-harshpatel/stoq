@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/auth/context'
 import { getUserProfileWithDetails, updateUserProfileDetails } from '@/lib/supabase/utils'
 import { UserProfile } from '@/types/user'
-import { profileFields, getFieldsBySection, type ProfileFieldConfig } from '@/lib/profileFields'
+import { getFieldsBySection, type ProfileFieldConfig } from '@/lib/profileFields'
 import { personalDetailsSchema, businessDetailsSchema } from '@/lib/validations/signup'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -18,13 +18,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form'
-import { GoogleAddressAutocomplete } from '@/components/GoogleAddressAutocomplete'
 import { Loader } from '@/components/Loader'
 import { UserLayout } from '@/components/UserLayout'
 import { toast } from 'sonner'
-import { User, Edit2, Save, X, MapPin, Building2, Loader2, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
+import { User, Edit2, Save, X, MapPin, Building2, Loader2, AlertCircle, CheckCircle2, XCircle, Mail, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
 // Combined schema for profile update
@@ -211,43 +209,35 @@ export default function ProfilePage() {
     }
 
     // Edit mode
-    if (field.type === 'address') {
+    // Business Name and Business Address are locked - only admin can change
+    if (field.key === 'businessName' || field.type === 'address') {
       return (
         <FormField
           key={field.key}
           control={form.control}
-          name="businessAddress"
-          render={({ field: formField }) => {
-            const addressValue = formField.value || ''
-            const addressError = form.formState.errors.businessAddress?.message
-
-            return (
-              <FormItem>
-                <FormControl>
-                  <GoogleAddressAutocomplete
-                    value={addressValue}
-                    onChange={(address, components) => {
-                      formField.onChange(address)
-                      if (components) {
-                        form.setValue('businessAddressComponents', components)
-                      }
-                    }}
-                    onError={(error) => {
-                      // Only set error if it's a validation error, not API configuration issues
-                      if (error && !error.includes('not configured') && !error.includes('unavailable')) {
-                        form.setError('businessAddress', { message: error })
-                      }
-                    }}
-                    label={field.label}
-                    placeholder={field.placeholder}
-                    required={field.required}
-                    error={addressError}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )
-          }}
+          name={field.key === 'businessName' ? 'businessName' : 'businessAddress'}
+          render={({ field: formField }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                {field.label}
+                <Lock className="h-3 w-3 text-muted-foreground" />
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="text"
+                  {...formField}
+                  value={formField.value as string || ''}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+              </FormControl>
+              <FormDescription className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Mail className="h-3 w-3" />
+                <span>To update this field, please contact admin at <a href="mailto:support@stoq.com" className="text-primary hover:underline">support@stoq.com</a></span>
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
         />
       )
     }

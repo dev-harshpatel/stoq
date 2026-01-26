@@ -21,6 +21,7 @@ interface OrdersContextType {
     invoiceTerms?: string | null;
     discountAmount?: number;
     discountType?: string;
+    shippingAmount?: number;
   }) => Promise<void>;
   confirmInvoice: (orderId: string) => Promise<void>;
   downloadInvoicePDF: (orderId: string) => Promise<void>;
@@ -121,6 +122,8 @@ const dbRowToOrder = (row: OrderRow): Order => {
     invoiceConfirmed: (row as any).invoice_confirmed ?? false,
     invoiceConfirmedAt: (row as any).invoice_confirmed_at ?? null,
     discountAmount: (row as any).discount_amount ? Number((row as any).discount_amount) : 0,
+    discountType: (row as any).discount_type as 'percentage' | 'cad' | undefined,
+    shippingAmount: (row as any).shipping_amount ? Number((row as any).shipping_amount) : 0,
   };
 };
 
@@ -384,6 +387,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       invoiceTerms?: string | null;
       discountAmount?: number;
       discountType?: string;
+      shippingAmount?: number;
     }
   ): Promise<void> => {
     try {
@@ -393,9 +397,17 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       }
 
       const discountAmount = invoiceData.discountAmount || 0;
+      const shippingAmount = invoiceData.shippingAmount || 0;
       const subtotal = order.subtotal;
-      const taxAmount = order.taxAmount || 0;
-      const newTotal = Math.max(0, subtotal + taxAmount - discountAmount);
+      const taxRate = order.taxRate || 0;
+      
+      // New calculation formula: 
+      // 1. Result = subtotal - discount + shipping
+      // 2. Tax = result * taxRate (tax applied to result, not subtotal)
+      // 3. Total = result + tax
+      const result = subtotal - discountAmount + shippingAmount;
+      const newTaxAmount = result * taxRate;
+      const newTotal = Math.max(0, result + newTaxAmount);
 
       const updateData: OrderUpdate = {
         invoice_number: invoiceData.invoiceNumber,
@@ -407,14 +419,14 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         invoice_notes: invoiceData.invoiceNotes ?? null,
         invoice_terms: invoiceData.invoiceTerms ?? null,
         discount_amount: discountAmount,
-        total_price: newTotal, // Update total with discount
+        discount_type: invoiceData.discountType || 'cad',
+        shipping_amount: shippingAmount,
+        tax_amount: newTaxAmount, // Update tax amount to reflect tax on result
+        total_price: newTotal, // Update total with new formula
         invoice_confirmed: false, // Reset confirmation when updating
         invoice_confirmed_at: null,
         updated_at: new Date().toISOString(),
       };
-
-      // Note: discountType is not stored in DB, only the calculated discountAmount is stored
-      // The discountType is only used for UI calculation purposes
 
       const { error } = await (supabase
         .from('orders') as any)

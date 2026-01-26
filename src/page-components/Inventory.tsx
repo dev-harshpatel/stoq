@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import { useState, useMemo } from 'react';
-import { FilterBar, FilterValues } from '@/components/FilterBar';
-import { ExportActions } from '@/components/ExportActions';
-import { InventoryTable } from '@/components/InventoryTable';
-import { Loader } from '@/components/Loader';
-import { useInventory } from '@/contexts/InventoryContext';
-import { InventoryItem, getStockStatus } from '@/data/inventory';
+import { useState, useMemo } from "react";
+import { FilterBar, FilterValues } from "@/components/FilterBar";
+import { ExportActions } from "@/components/ExportActions";
+import { InventoryTable } from "@/components/InventoryTable";
+import { Loader } from "@/components/Loader";
+import { useInventory } from "@/contexts/InventoryContext";
+import { InventoryItem, getStockStatus } from "@/data/inventory";
 
 const defaultFilters: FilterValues = {
-  search: '',
-  brand: 'all',
-  grade: 'all',
-  storage: 'all',
-  priceRange: 'all',
-  stockStatus: 'all',
+  search: "",
+  brand: "all",
+  grade: "all",
+  storage: "all",
+  priceRange: "all",
+  stockStatus: "all",
 };
 
 export default function Inventory() {
@@ -48,29 +48,30 @@ export default function Inventory() {
       ) {
         return false;
       }
-      if (filters.brand !== 'all' && item.brand !== filters.brand) {
+      if (filters.brand !== "all" && item.brand !== filters.brand) {
         return false;
       }
-      if (filters.grade !== 'all' && item.grade !== filters.grade) {
+      if (filters.grade !== "all" && item.grade !== filters.grade) {
         return false;
       }
-      if (filters.storage !== 'all' && item.storage !== filters.storage) {
+      if (filters.storage !== "all" && item.storage !== filters.storage) {
         return false;
       }
-      if (filters.priceRange !== 'all') {
+      if (filters.priceRange !== "all") {
         switch (filters.priceRange) {
-          case 'under200':
+          case "under200":
             if (item.pricePerUnit >= 200) return false;
             break;
-          case '200-400':
-            if (item.pricePerUnit < 200 || item.pricePerUnit > 400) return false;
+          case "200-400":
+            if (item.pricePerUnit < 200 || item.pricePerUnit > 400)
+              return false;
             break;
-          case '400+':
+          case "400+":
             if (item.pricePerUnit < 400) return false;
             break;
         }
       }
-      if (filters.stockStatus !== 'all') {
+      if (filters.stockStatus !== "all") {
         const stockStatus = getStockStatus(item.quantity);
         if (stockStatus !== filters.stockStatus) return false;
       }
@@ -93,7 +94,9 @@ export default function Inventory() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold text-foreground">Inventory</h2>
+            <h2 className="text-2xl font-semibold text-foreground">
+              Inventory
+            </h2>
             <p className="text-sm text-muted-foreground mt-1">
               {filteredItems.length} devices in stock
             </p>
@@ -112,8 +115,10 @@ export default function Inventory() {
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
-        <InventoryTable items={filteredItems} />
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
+        <div className="relative">
+          <InventoryTable items={filteredItems} />
+        </div>
       </div>
     </div>
   );

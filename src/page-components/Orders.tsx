@@ -194,7 +194,10 @@ export default function Orders() {
         <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
           {/* Orders Table */}
           {filteredOrders.length === 0 ? (
-            <EmptyState />
+            <EmptyState 
+              title="No orders found" 
+              description="There are no orders matching your current filter criteria." 
+            />
           ) : (
             <div className="overflow-hidden rounded-lg border border-border bg-card">
               <div className="overflow-x-auto">

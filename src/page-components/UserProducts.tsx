@@ -162,13 +162,12 @@ export default function UserProducts() {
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 min-h-0">
           {/* Desktop Table */}
-          <div className="hidden md:block overflow-hidden rounded-lg border border-border bg-card">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
+          <div className="hidden md:block rounded-lg border border-border bg-card overflow-auto max-h-[calc(100vh-280px)]">
+            <table className="w-full">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-border bg-muted">
                     <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
                       Device Name
                     </th>
@@ -271,8 +270,7 @@ export default function UserProducts() {
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
+            </table>
           </div>
 
           {/* Mobile Cards */}

@@ -356,7 +356,8 @@ export const OrderDetailsModal = ({
 
           {/* Order Total */}
           <div className="border-t border-border pt-4 space-y-2">
-            {order.subtotal !== undefined && order.subtotal !== order.totalPrice && (
+            {/* Subtotal (first line) */}
+            {order.subtotal !== undefined && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
                 <span className="font-medium text-foreground">
@@ -364,6 +365,43 @@ export const OrderDetailsModal = ({
                 </span>
               </div>
             )}
+            {/* Discount (second line) - show only if invoice is confirmed (for users) or always (for admin) */}
+            {order.discountAmount != null && order.discountAmount > 0 && (isAdmin || order.invoiceConfirmed) && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Discount:</span>
+                <span className="font-medium text-success">
+                  -{formatPrice(order.discountAmount)}
+                </span>
+              </div>
+            )}
+            {/* Shipping (third line) - show only if invoice is confirmed (for users) or always (for admin) */}
+            {order.shippingAmount != null && order.shippingAmount > 0 && (isAdmin || order.invoiceConfirmed) && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Shipping:</span>
+                <span className="font-medium text-foreground">
+                  {formatPrice(order.shippingAmount)}
+                </span>
+              </div>
+            )}
+            {/* Result (subtotal - discount + shipping) */}
+            {(() => {
+              const discount = (isAdmin || order.invoiceConfirmed) ? (order.discountAmount || 0) : 0;
+              const shipping = (isAdmin || order.invoiceConfirmed) ? (order.shippingAmount || 0) : 0;
+              const result = (order.subtotal || 0) - discount + shipping;
+              
+              if (discount > 0 || shipping > 0) {
+                return (
+                  <div className="flex items-center justify-between text-sm pt-1">
+                    <span className="text-muted-foreground font-medium">Result:</span>
+                    <span className="font-semibold text-foreground">
+                      {formatPrice(result)}
+                    </span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            {/* Tax (fourth line) - applied to result */}
             {order.taxAmount && order.taxRate && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
@@ -374,23 +412,15 @@ export const OrderDetailsModal = ({
                 </span>
               </div>
             )}
-            {/* Show discount only if invoice is confirmed (for users) or always (for admin) */}
-            {order.discountAmount && order.discountAmount > 0 && (isAdmin || order.invoiceConfirmed) && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Discount:</span>
-                <span className="font-medium text-success">
-                  -{formatPrice(order.discountAmount)}
-                </span>
-              </div>
-            )}
+            {/* Total (final amount) */}
             <div className="flex items-center justify-between pt-2 border-t border-border">
               <span className="text-lg font-semibold text-foreground">Total:</span>
               <span className="text-2xl font-bold text-primary">
                 {(() => {
-                  // For users: show total without discount until invoice is confirmed
-                  // For admins: always show the actual totalPrice (which includes discount if applied)
+                  // For users: show total without discount/shipping until invoice is confirmed
+                  // For admins: always show the actual totalPrice (which includes discount/shipping if applied)
                   if (!isAdmin && !order.invoiceConfirmed) {
-                    // Calculate total without discount for unconfirmed invoices (user view)
+                    // Calculate total without discount/shipping for unconfirmed invoices (user view)
                     const subtotal = order.subtotal || 0;
                     const taxAmount = order.taxAmount || 0;
                     return formatPrice(subtotal + taxAmount);

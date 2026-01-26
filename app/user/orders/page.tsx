@@ -168,7 +168,10 @@ export default function UserOrdersPage() {
         <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
           {/* Orders Table */}
           {filteredOrders.length === 0 ? (
-            <EmptyState />
+            <EmptyState 
+              title="No orders found" 
+              description="Please order something to see your orders here." 
+            />
           ) : (
             <div className="overflow-hidden rounded-lg border border-border bg-card">
               <div className="overflow-x-auto">
@@ -227,7 +230,7 @@ export default function UserOrdersPage() {
                         </td>
                         <td className="px-4 py-4 text-right">
                           <div className="flex flex-col items-end">
-                            {order.discountAmount && order.discountAmount > 0 && order.invoiceConfirmed && (
+                            {order.discountAmount != null && order.discountAmount > 0 && order.invoiceConfirmed && (
                               <span className="text-xs text-success mb-1">
                                 Discount: -{formatPrice(order.discountAmount)}
                               </span>

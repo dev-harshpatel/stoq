@@ -44,6 +44,7 @@ const invoiceSchema = z.object({
   invoiceTerms: z.string().optional(),
   discountType: z.enum(['percentage', 'cad']).optional(),
   discountAmount: z.string().optional(),
+  shippingAmount: z.string().optional(),
 });
 
 type InvoiceFormData = z.infer<typeof invoiceSchema>;
@@ -91,6 +92,7 @@ export default function InvoicePage() {
       invoiceTerms: DEFAULT_TERMS_AND_CONDITIONS,
       discountType: 'cad',
       discountAmount: '0',
+      shippingAmount: '0',
     },
   });
 
@@ -150,6 +152,25 @@ export default function InvoicePage() {
 
         if (currentOrder.invoiceNumber) {
           // Existing invoice - use current values, but use default terms if empty
+          // Try to determine discount type: if discountAmount matches a percentage of subtotal, it might be percentage
+          // For now, we'll use the stored discountType or default to 'cad'
+          const storedDiscountType = currentOrder.discountType || 'cad';
+          let discountAmountValue = '0';
+          let discountTypeValue = storedDiscountType;
+          
+          if (currentOrder.discountAmount && currentOrder.discountAmount > 0) {
+            // If we have a stored discountType, use it; otherwise try to infer
+            if (storedDiscountType === 'percentage') {
+              // Calculate what percentage the discount represents
+              const percentage = (currentOrder.discountAmount / currentOrder.subtotal) * 100;
+              discountAmountValue = percentage.toFixed(2);
+              discountTypeValue = 'percentage';
+            } else {
+              discountAmountValue = currentOrder.discountAmount.toString();
+              discountTypeValue = 'cad';
+            }
+          }
+          
           form.reset({
             invoiceNumber: currentOrder.invoiceNumber,
             invoiceDate: invoiceDate,
@@ -159,8 +180,9 @@ export default function InvoicePage() {
             hstNumber: currentOrder.hstNumber || '797155074RT0001',
             invoiceNotes: currentOrder.invoiceNotes || '',
             invoiceTerms: currentOrder.invoiceTerms || DEFAULT_TERMS_AND_CONDITIONS,
-            discountType: 'cad',
-            discountAmount: currentOrder.discountAmount ? currentOrder.discountAmount.toString() : '0',
+            discountType: discountTypeValue,
+            discountAmount: discountAmountValue,
+            shippingAmount: currentOrder.shippingAmount ? currentOrder.shippingAmount.toString() : '0',
           });
         } else {
           // New invoice - generate invoice number and PO
@@ -178,6 +200,7 @@ export default function InvoicePage() {
             invoiceTerms: DEFAULT_TERMS_AND_CONDITIONS,
             discountType: 'cad',
             discountAmount: currentOrder.discountAmount ? currentOrder.discountAmount.toString() : '0',
+            shippingAmount: currentOrder.shippingAmount ? currentOrder.shippingAmount.toString() : '0',
           });
         }
       } catch (error) {
@@ -215,6 +238,7 @@ export default function InvoicePage() {
     try {
       const discountType = data.discountType || 'cad';
       const discountValue = parseFloat(data.discountAmount || '0') || 0;
+      const shippingAmount = parseFloat(data.shippingAmount || '0') || 0;
       
       // Calculate final discount amount in CAD
       let finalDiscountAmount = 0;
@@ -239,23 +263,71 @@ export default function InvoicePage() {
         invoiceTerms: data.invoiceTerms || null,
         discountAmount: finalDiscountAmount,
         discountType: discountType,
+        shippingAmount: shippingAmount,
       });
 
-      // Wait for order to be updated in context (retry mechanism)
+      // Immediately update local order state with the saved invoiceNumber
+      // This ensures buttons appear right away without waiting for database refresh
+      setOrder({
+        ...order,
+        invoiceNumber: data.invoiceNumber,
+        invoiceDate: data.invoiceDate,
+        poNumber: data.poNumber,
+        paymentTerms: data.paymentTerms,
+        dueDate: data.dueDate,
+        hstNumber: data.hstNumber || null,
+        invoiceNotes: data.invoiceNotes || null,
+        invoiceTerms: data.invoiceTerms || null,
+        discountAmount: finalDiscountAmount,
+        discountType: discountType as 'percentage' | 'cad',
+        shippingAmount: shippingAmount,
+      });
+
+      // Wait for order to be updated in context (retry mechanism) for complete refresh
       let updatedOrder = getOrderById(orderId);
       let retries = 0;
       const maxRetries = 10;
       const retryDelay = 100; // 100ms between retries
       
-      while ((!updatedOrder || !updatedOrder.invoiceNumber) && retries < maxRetries) {
+      // Wait for the order to be refreshed in context (but don't block on invoiceNumber since we already have it)
+      while (!updatedOrder && retries < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, retryDelay));
         updatedOrder = getOrderById(orderId);
         retries++;
       }
 
-      // Update local state with the refreshed order
-      if (updatedOrder) {
+      // Update local state with the refreshed order ONLY if it has the invoiceNumber
+      // This prevents overwriting our immediate state update with stale data from the context
+      if (updatedOrder && updatedOrder.invoiceNumber) {
         setOrder(updatedOrder);
+        // Update form with the refreshed order data to ensure UI is in sync
+        const refreshedInvoiceDate = updatedOrder.invoiceDate || updatedOrder.createdAt.split('T')[0];
+        const refreshedPaymentTerms = updatedOrder.paymentTerms || 'CHQ';
+        const refreshedDueDate = updatedOrder.dueDate || calculateDueDate(refreshedInvoiceDate, refreshedPaymentTerms);
+        
+        // IMPORTANT: Preserve the discountType and discountAmount that were just saved
+        // Use the values from the form data (data parameter) which represents what was just saved
+        // This ensures we don't toggle between CAD and percentage
+        const savedDiscountType = discountType; // This is the type that was just saved
+        const savedDiscountAmount = data.discountAmount || '0'; // This is the amount the user entered
+        
+        // Get current form values to preserve other fields that weren't changed
+        const currentFormValues = form.getValues();
+        
+        // Only reset the form with updated values, preserving the discount type and amount that were just saved
+        form.reset({
+          invoiceNumber: updatedOrder.invoiceNumber || currentFormValues.invoiceNumber,
+          invoiceDate: refreshedInvoiceDate,
+          poNumber: updatedOrder.poNumber || currentFormValues.poNumber,
+          paymentTerms: refreshedPaymentTerms,
+          dueDate: refreshedDueDate,
+          hstNumber: updatedOrder.hstNumber || currentFormValues.hstNumber,
+          invoiceNotes: updatedOrder.invoiceNotes || currentFormValues.invoiceNotes,
+          invoiceTerms: updatedOrder.invoiceTerms || currentFormValues.invoiceTerms,
+          discountType: savedDiscountType, // Preserve the type that was just saved
+          discountAmount: savedDiscountAmount, // Preserve the amount that was just entered
+          shippingAmount: updatedOrder.shippingAmount ? updatedOrder.shippingAmount.toString() : (data.shippingAmount || '0'),
+        });
       }
 
       toast({
@@ -565,6 +637,26 @@ export default function InvoicePage() {
                 </div>
               </div>
 
+              <FormField
+                control={form.control}
+                name="shippingAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Shipping Amount (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <Button type="submit" disabled={isSaving} className="w-full">
                 {isSaving ? (
                   <>
@@ -610,26 +702,19 @@ export default function InvoicePage() {
             </div>
 
             <div className="border-t border-border pt-4 space-y-2">
+              {/* Subtotal (first line) */}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal:</span>
                 <span className="font-medium text-foreground">
                   {formatPrice(order.subtotal)}
                 </span>
               </div>
-              {order.taxAmount && order.taxRate && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    Tax ({(order.taxRate * 100).toFixed(2)}%):
-                  </span>
-                  <span className="font-medium text-foreground">
-                    {formatPrice(order.taxAmount)}
-                  </span>
-                </div>
-              )}
               {(() => {
                 const discountType = form.watch('discountType') || 'cad';
                 const discountValue = parseFloat(form.watch('discountAmount') || '0') || 0;
+                const shippingValue = parseFloat(form.watch('shippingAmount') || '0') || 0;
                 const currentDiscount = order.discountAmount || 0;
+                const currentShipping = order.shippingAmount || 0;
                 
                 // Calculate discount amount based on type
                 let calculatedDiscount = 0;
@@ -641,40 +726,84 @@ export default function InvoicePage() {
                   }
                 }
                 
-                // Use calculated discount if user is entering a value, otherwise use saved discount
+                // Use calculated values if user is entering, otherwise use saved values
                 const displayDiscount = calculatedDiscount > 0 ? calculatedDiscount : currentDiscount;
-                const calculatedTotal = order.subtotal + (order.taxAmount || 0) - displayDiscount;
+                const displayShipping = shippingValue > 0 ? shippingValue : currentShipping;
+                
+                // Calculate result: subtotal - discount + shipping
+                const result = order.subtotal - displayDiscount + displayShipping;
+                
+                // Calculate tax on result (not on subtotal)
+                const taxRate = order.taxRate || 0;
+                const calculatedTax = result * taxRate;
+                const currentTax = order.taxAmount || 0;
+                // Use calculated tax if values changed, otherwise use saved tax
+                const displayTax = (calculatedDiscount > 0 && calculatedDiscount !== currentDiscount) || 
+                                  (shippingValue > 0 && shippingValue !== currentShipping) 
+                                  ? calculatedTax 
+                                  : currentTax;
+                
+                // Final total: result + tax
+                const calculatedTotal = result + displayTax;
                 
                 return (
                   <>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Discount:</span>
-                      <span className="font-medium text-foreground">
-                        {displayDiscount > 0 ? (
-                          <span className="text-success">
-                            -{formatPrice(displayDiscount)}
-                            {discountValue > 0 && discountType === 'percentage' && (
-                              <span className="text-xs text-muted-foreground ml-1">
-                                ({discountValue}%)
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          formatPrice(0)
-                        )}
-                      </span>
-                    </div>
+                    {/* Discount (second line) */}
+                    {displayDiscount > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Discount:</span>
+                        <span className="font-medium text-success">
+                          -{formatPrice(displayDiscount)}
+                          {discountValue > 0 && discountType === 'percentage' && (
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({discountValue}%)
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                    {/* Shipping (third line) */}
+                    {displayShipping > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Shipping:</span>
+                        <span className="font-medium text-foreground">
+                          {formatPrice(displayShipping)}
+                        </span>
+                      </div>
+                    )}
+                    {/* Result (subtotal - discount + shipping) */}
+                    {(displayDiscount > 0 || displayShipping > 0) && (
+                      <div className="flex justify-between text-sm pt-1">
+                        <span className="text-muted-foreground font-medium">Result:</span>
+                        <span className="font-semibold text-foreground">
+                          {formatPrice(result)}
+                        </span>
+                      </div>
+                    )}
+                    {/* Tax (fourth line) - applied to result */}
+                    {order.taxRate && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Tax ({(order.taxRate * 100).toFixed(2)}%):
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {formatPrice(displayTax)}
+                        </span>
+                      </div>
+                    )}
+                    {/* Total (final amount) */}
                     <div className="flex justify-between pt-2 border-t border-border">
                       <span className="font-semibold text-foreground">Total:</span>
                       <span className="text-lg font-bold text-primary">
                         {formatPrice(Math.max(0, calculatedTotal))}
                       </span>
                     </div>
-                    {calculatedDiscount > 0 && calculatedDiscount !== currentDiscount && (
+                    {(calculatedDiscount > 0 && calculatedDiscount !== currentDiscount) || 
+                     (shippingValue > 0 && shippingValue !== currentShipping) ? (
                       <p className="text-xs text-muted-foreground italic">
                         * Total will update after saving
                       </p>
-                    )}
+                    ) : null}
                   </>
                 );
               })()}

@@ -116,69 +116,59 @@ export async function generateInvoicePDF(
       align: "right",
     });
 
-    // Bill To / Ship To Section
+    // Bill To / Ship To Section - Side by side layout
     yPos = margin + 35; // Position below company info
+    const addressSectionWidth = (pageWidth - (margin * 3)) / 2; // Two columns with margin between
+    const billToX = margin;
+    const shipToX = margin + addressSectionWidth + margin;
+    
+    // Bill To section (left side)
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("Bill To:", margin, yPos);
+    doc.text("Bill To:", billToX, yPos);
 
     yPos += 5;
     doc.setFont("helvetica", "normal");
     const billToName = customerInfo?.businessName || "Customer";
-    doc.text(billToName, margin, yPos);
+    doc.text(billToName, billToX, yPos);
 
     yPos += 5;
     const billToAddress = customerInfo?.businessAddress || "";
+    let billToMaxY = yPos;
     if (billToAddress) {
       // Split long addresses into multiple lines if needed
       const addressLines = billToAddress.split(",").map((line) => line.trim());
       addressLines.forEach((line, index) => {
         if (line) {
-          doc.text(line, margin, yPos + index * 5);
+          doc.text(line, billToX, yPos + index * 5);
+          billToMaxY = yPos + index * 5 + 5;
         }
       });
-      yPos += addressLines.length * 5;
     }
 
-    yPos += 10;
+    // Ship To section (right side) - start at same Y as Bill To
+    yPos = margin + 35;
     doc.setFont("helvetica", "bold");
-    doc.text("Ship To:", margin, yPos);
+    doc.text("Ship To:", shipToX, yPos);
 
     yPos += 5;
     doc.setFont("helvetica", "normal");
-    doc.text(billToName, margin, yPos);
+    doc.text(billToName, shipToX, yPos);
 
     yPos += 5;
+    let shipToMaxY = yPos;
     if (billToAddress) {
       const addressLines = billToAddress.split(",").map((line) => line.trim());
       addressLines.forEach((line, index) => {
         if (line) {
-          doc.text(line, margin, yPos + index * 5);
+          doc.text(line, shipToX, yPos + index * 5);
+          shipToMaxY = yPos + index * 5 + 5;
         }
       });
-      yPos += addressLines.length * 5;
     }
-
-    // Balance Due box - positioned to align with Bill To section (right side)
-    const balanceBoxWidth = 80;
-    const balanceBoxHeight = 15;
-    const balanceBoxX = pageWidth - margin - balanceBoxWidth;
-    const balanceBoxY = margin + 35; // Same Y position as Bill To
-
-    doc.setFillColor(240, 240, 240);
-    doc.rect(balanceBoxX, balanceBoxY, balanceBoxWidth, balanceBoxHeight, "F");
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("Balance Due:", balanceBoxX + 5, balanceBoxY + 7);
-    // Calculate final total (includes discount if applicable)
-    const balanceTotal = order.totalPrice; // Already includes discount
-    doc.text(
-      formatPrice(balanceTotal),
-      balanceBoxX + balanceBoxWidth - 5,
-      balanceBoxY + 7,
-      { align: "right" },
-    );
+    
+    // Update yPos to the maximum of both sections
+    yPos = Math.max(billToMaxY, shipToMaxY) + 10;
 
     // Items Table - ensure proper spacing from Bill To/Ship To
     yPos = Math.max(yPos, margin + 80) + 10; // Ensure minimum spacing
@@ -229,24 +219,14 @@ export async function generateInvoicePDF(
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
 
-    // Subtotal
+    // Subtotal (first line)
     doc.text("Subtotal:", summaryX, summaryY, { align: "right" });
     doc.text(formatPrice(order.subtotal), pageWidth - margin, summaryY, {
       align: "right",
     });
-
     summaryY += 5;
-    // Tax
-    if (order.taxAmount && order.taxRate) {
-      const taxPercent = (order.taxRate * 100).toFixed(2);
-      doc.text(`Tax (${taxPercent}%):`, summaryX, summaryY, { align: "right" });
-      doc.text(formatPrice(order.taxAmount), pageWidth - margin, summaryY, {
-        align: "right",
-      });
-      summaryY += 5;
-    }
 
-    // Discount (if applicable)
+    // Discount (second line)
     const discount = order.discountAmount || 0;
     if (discount > 0) {
       doc.text("Discount:", summaryX, summaryY, { align: "right" });
@@ -256,14 +236,64 @@ export async function generateInvoicePDF(
       summaryY += 5;
     }
 
-    // Total
+    // Shipping (third line)
+    const shipping = order.shippingAmount || 0;
+    if (shipping > 0) {
+      doc.text("Shipping:", summaryX, summaryY, { align: "right" });
+      doc.text(formatPrice(shipping), pageWidth - margin, summaryY, {
+        align: "right",
+      });
+      summaryY += 5;
+    }
+
+    // Result (subtotal - discount + shipping)
+    const result = order.subtotal - discount + shipping;
+    doc.setFont("helvetica", "bold");
+    doc.text("Result:", summaryX, summaryY, { align: "right" });
+    doc.text(formatPrice(result), pageWidth - margin, summaryY, {
+      align: "right",
+    });
+    summaryY += 5;
+
+    // Tax (fourth line) - applied to result
+    if (order.taxAmount && order.taxRate) {
+      doc.setFont("helvetica", "normal");
+      const taxPercent = (order.taxRate * 100).toFixed(2);
+      doc.text(`Tax (${taxPercent}%):`, summaryX, summaryY, { align: "right" });
+      doc.text(formatPrice(order.taxAmount), pageWidth - margin, summaryY, {
+        align: "right",
+      });
+      summaryY += 5;
+    }
+
+    // Total (final amount)
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.text("Total:", summaryX, summaryY, { align: "right" });
-    const finalTotal = order.totalPrice; // Already includes discount in calculation
+    const finalTotal = order.totalPrice; // Already includes discount, shipping, and tax in calculation
     doc.text(formatPrice(finalTotal), pageWidth - margin, summaryY, {
       align: "right",
     });
+    summaryY += 10;
+
+    // Balance Due box - positioned at the end of the page
+    const balanceBoxWidth = 80;
+    const balanceBoxHeight = 15;
+    const balanceBoxX = pageWidth - margin - balanceBoxWidth;
+    const balanceBoxY = summaryY;
+
+    doc.setFillColor(240, 240, 240);
+    doc.rect(balanceBoxX, balanceBoxY, balanceBoxWidth, balanceBoxHeight, "F");
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Balance Due:", balanceBoxX + 5, balanceBoxY + 7);
+    doc.text(
+      formatPrice(finalTotal),
+      balanceBoxX + balanceBoxWidth - 5,
+      balanceBoxY + 7,
+      { align: "right" },
+    );
 
     // Footer: Notes and Terms
     // Calculate footer position with more padding from bottom
