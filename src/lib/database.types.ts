@@ -155,6 +155,8 @@ export interface Database {
           invoice_confirmed?: boolean | null;
           invoice_confirmed_at?: string | null;
           discount_amount?: number | null;
+          discount_type?: string | null;
+          shipping_amount?: number | null;
         };
         Insert: {
           id?: string;
@@ -180,6 +182,8 @@ export interface Database {
           invoice_confirmed?: boolean | null;
           invoice_confirmed_at?: string | null;
           discount_amount?: number | null;
+          discount_type?: string | null;
+          shipping_amount?: number | null;
         };
         Update: {
           id?: string;
@@ -205,6 +209,8 @@ export interface Database {
           invoice_confirmed?: boolean | null;
           invoice_confirmed_at?: string | null;
           discount_amount?: number | null;
+          discount_type?: string | null;
+          shipping_amount?: number | null;
         };
         Relationships: [
           {
