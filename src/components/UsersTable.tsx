@@ -1,15 +1,43 @@
-import { UserProfile } from '@/types/user';
+import { UserProfile, ApprovalStatus } from '@/types/user';
 import { Badge } from './ui/badge';
 import { EmptyState } from './EmptyState';
+import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
-import { User, Mail, Building2, MapPin, Calendar } from 'lucide-react';
+import { User, Mail, Building2, MapPin, Calendar, Eye } from 'lucide-react';
 
 interface UsersTableProps {
   users: UserProfile[];
   className?: string;
+  onReviewUser?: (user: UserProfile) => void;
 }
 
-export function UsersTable({ users, className }: UsersTableProps) {
+const getStatusColor = (status: ApprovalStatus) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-warning/10 text-warning border-warning/20';
+    case 'approved':
+      return 'bg-success/10 text-success border-success/20';
+    case 'rejected':
+      return 'bg-destructive/10 text-destructive border-destructive/20';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+};
+
+const getStatusLabel = (status: ApprovalStatus) => {
+  switch (status) {
+    case 'pending':
+      return 'Pending';
+    case 'approved':
+      return 'Approved';
+    case 'rejected':
+      return 'Rejected';
+    default:
+      return status;
+  }
+};
+
+export function UsersTable({ users, className, onReviewUser }: UsersTableProps) {
   if (users.length === 0) {
     return <EmptyState />;
   }
@@ -46,8 +74,14 @@ export function UsersTable({ users, className }: UsersTableProps) {
                 <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                   Role
                 </th>
+                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  Status
+                </th>
                 <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
                   Joined
+                </th>
+                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -116,11 +150,32 @@ export function UsersTable({ users, className }: UsersTableProps) {
                         {user.role === 'admin' ? 'Admin' : 'User'}
                       </Badge>
                     </td>
+                    <td className="px-4 py-4 text-center">
+                      <Badge
+                        variant="outline"
+                        className={cn('text-xs', getStatusColor(user.approvalStatus))}
+                      >
+                        {getStatusLabel(user.approvalStatus)}
+                      </Badge>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4" />
                         <span>{formatDate(user.createdAt)}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {onReviewUser && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onReviewUser(user)}
+                          className="gap-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Review
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -154,14 +209,22 @@ export function UsersTable({ users, className }: UsersTableProps) {
                     <span className="text-xs text-muted-foreground">ID: {user.userId.slice(0, 8)}...</span>
                   </div>
                 </div>
-                <Badge
-                  variant={user.role === 'admin' ? 'default' : 'secondary'}
-                  className={cn(
-                    user.role === 'admin' && 'bg-primary text-primary-foreground'
-                  )}
-                >
-                  {user.role === 'admin' ? 'Admin' : 'User'}
-                </Badge>
+                <div className="flex flex-col gap-2 items-end">
+                  <Badge
+                    variant={user.role === 'admin' ? 'default' : 'secondary'}
+                    className={cn(
+                      user.role === 'admin' && 'bg-primary text-primary-foreground'
+                    )}
+                  >
+                    {user.role === 'admin' ? 'Admin' : 'User'}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn('text-xs', getStatusColor(user.approvalStatus))}
+                  >
+                    {getStatusLabel(user.approvalStatus)}
+                  </Badge>
+                </div>
               </div>
 
               <div className="space-y-2 text-sm">
@@ -189,6 +252,19 @@ export function UsersTable({ users, className }: UsersTableProps) {
                   <span>{formatDate(user.createdAt)}</span>
                 </div>
               </div>
+              {onReviewUser && (
+                <div className="pt-2 border-t border-border">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onReviewUser(user)}
+                    className="w-full gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Review Profile
+                  </Button>
+                </div>
+              )}
             </div>
           );
         })}

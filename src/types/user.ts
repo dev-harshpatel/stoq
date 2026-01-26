@@ -3,11 +3,14 @@
  */
 
 export type UserRole = 'user' | 'admin';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface UserProfile {
   id: string;
   userId: string;
   role: UserRole;
+  approvalStatus: ApprovalStatus;
+  approvalStatusUpdatedAt: string | null;
   firstName: string | null;
   lastName: string | null;
   phone: string | null;
@@ -28,6 +31,8 @@ export interface UserProfileInsert {
   id?: string;
   userId: string;
   role?: UserRole;
+  approvalStatus?: ApprovalStatus;
+  approvalStatusUpdatedAt?: string | null;
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;
@@ -48,6 +53,8 @@ export interface UserProfileUpdate {
   id?: string;
   userId?: string;
   role?: UserRole;
+  approvalStatus?: ApprovalStatus;
+  approvalStatusUpdatedAt?: string | null;
   firstName?: string | null;
   lastName?: string | null;
   phone?: string | null;

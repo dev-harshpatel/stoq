@@ -219,6 +219,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       if (!cartItem) return prev;
       
       // Calculate available quantity accounting for pending orders
+      // availableQuantity = how many MORE can be added (already accounts for current cart)
       const availableQuantity = getAvailableQuantityForUser(
         cartItem.item,
         user?.id || null,
@@ -226,9 +227,14 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         prev
       );
       
-      // Validate that quantity doesn't exceed available inventory
-      // (accounting for pending orders)
-      if (quantity > availableQuantity) {
+      // Get current quantity in cart for this item
+      const currentQuantity = cartItem.quantity;
+      
+      // Maximum allowed quantity = current quantity + available quantity
+      const maxAllowedQuantity = currentQuantity + availableQuantity;
+      
+      // Validate that new quantity doesn't exceed maximum allowed
+      if (quantity > maxAllowedQuantity) {
         // Don't update if it would exceed - this should be caught by UI validation
         // but serves as a safety check
         return prev;

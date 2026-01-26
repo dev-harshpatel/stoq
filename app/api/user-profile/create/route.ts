@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         role,
+        approval_status: 'pending',
+        approval_status_updated_at: null,
         first_name: firstName || null,
         last_name: lastName || null,
         phone: phone || null,

@@ -15,6 +15,8 @@ const dbRowToUserProfile = (row: UserProfileRow): UserProfile => ({
   id: row.id,
   userId: row.user_id,
   role: row.role,
+  approvalStatus: row.approval_status,
+  approvalStatusUpdatedAt: row.approval_status_updated_at,
   firstName: row.first_name,
   lastName: row.last_name,
   phone: row.phone,
@@ -214,6 +216,8 @@ export const createUserProfileWithDetails = async (
     const insertData = {
       user_id: userId,
       role: details.role || 'user',
+      approval_status: 'pending' as const,
+      approval_status_updated_at: null,
       first_name: details.firstName || null,
       last_name: details.lastName || null,
       phone: details.phone || null,
@@ -396,6 +400,41 @@ export const getAllUserProfiles = async (): Promise<UserProfile[]> => {
     }
 
     return data.map((row) => dbRowToUserProfile(row as UserProfileRow));
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Update user profile approval status (admin only)
+ * Uses API route to handle server-side admin operations
+ */
+export const updateUserProfileApprovalStatus = async (
+  userId: string,
+  status: 'pending' | 'approved' | 'rejected'
+): Promise<UserProfile | null> => {
+  try {
+    const response = await fetch('/api/user-profile/update-approval-status', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId, status }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to update approval status' }))
+      throw new Error(errorData.error || 'Failed to update approval status')
+    }
+
+    const { profile } = await response.json()
+    
+    if (!profile) {
+      return null;
+    }
+
+    const row = profile as UserProfileRow;
+    return dbRowToUserProfile(row);
   } catch (error) {
     throw error;
   }

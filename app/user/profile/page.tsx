@@ -22,9 +22,10 @@ import { GoogleAddressAutocomplete } from '@/components/GoogleAddressAutocomplet
 import { Loader } from '@/components/Loader'
 import { UserLayout } from '@/components/UserLayout'
 import { toast } from 'sonner'
-import { User, Edit2, Save, X, MapPin, Building2, Loader2 } from 'lucide-react'
+import { User, Edit2, Save, X, MapPin, Building2, Loader2, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
 // Combined schema for profile update
 // Make businessCity and businessCountry optional since they're read-only
@@ -424,6 +425,45 @@ export default function ProfilePage() {
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
           <div className="max-w-4xl mx-auto space-y-6 py-4">
+            {/* Approval Status Banner */}
+            {profile && (
+              <Alert
+                className={cn(
+                  profile.approvalStatus === 'pending' && 'border-warning/50 bg-warning/10',
+                  profile.approvalStatus === 'approved' && 'border-success/50 bg-success/10',
+                  profile.approvalStatus === 'rejected' && 'border-destructive/50 bg-destructive/10'
+                )}
+              >
+                {profile.approvalStatus === 'pending' && (
+                  <>
+                    <AlertCircle className="h-4 w-4 text-warning" />
+                    <AlertTitle className="text-warning">Profile Under Review</AlertTitle>
+                    <AlertDescription className="text-warning/90">
+                      Your profile is under review. Please wait for admin approval. You can explore products and add them to your cart, but you won't be able to place orders until your profile is approved.
+                    </AlertDescription>
+                  </>
+                )}
+                {profile.approvalStatus === 'approved' && (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <AlertTitle className="text-success">Profile Approved</AlertTitle>
+                    <AlertDescription className="text-success/90">
+                      Your profile has been approved. You can now place orders.
+                    </AlertDescription>
+                  </>
+                )}
+                {profile.approvalStatus === 'rejected' && (
+                  <>
+                    <XCircle className="h-4 w-4 text-destructive" />
+                    <AlertTitle className="text-destructive">Profile Rejected</AlertTitle>
+                    <AlertDescription className="text-destructive/90">
+                      Your profile has been rejected. Please contact support for assistance.
+                    </AlertDescription>
+                  </>
+                )}
+              </Alert>
+            )}
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
                 {/* Personal Details Card */}

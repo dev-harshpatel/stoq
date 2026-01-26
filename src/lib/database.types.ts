@@ -16,6 +16,8 @@ export interface Database {
           id: string;
           user_id: string;
           role: 'user' | 'admin';
+          approval_status: 'pending' | 'approved' | 'rejected';
+          approval_status_updated_at: string | null;
           first_name: string | null;
           last_name: string | null;
           phone: string | null;
@@ -36,6 +38,8 @@ export interface Database {
           id?: string;
           user_id: string;
           role?: 'user' | 'admin';
+          approval_status?: 'pending' | 'approved' | 'rejected';
+          approval_status_updated_at?: string | null;
           first_name?: string | null;
           last_name?: string | null;
           phone?: string | null;
@@ -56,6 +60,8 @@ export interface Database {
           id?: string;
           user_id?: string;
           role?: 'user' | 'admin';
+          approval_status?: 'pending' | 'approved' | 'rejected';
+          approval_status_updated_at?: string | null;
           first_name?: string | null;
           last_name?: string | null;
           phone?: string | null;

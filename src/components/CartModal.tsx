@@ -3,6 +3,8 @@
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/lib/auth/context";
 import { useOrders } from "@/contexts/OrdersContext";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { getAvailableQuantityForUser } from "@/lib/orderUtils";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +29,7 @@ interface CartModalProps {
 }
 
 export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
+  const { profile } = useUserProfile();
   const { 
     cartItems, 
     removeFromCart, 
@@ -41,7 +44,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     isTaxLoading,
   } = useCart();
   const { user } = useAuth();
-  const { createOrder } = useOrders();
+  const { createOrder, orders } = useOrders();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -92,6 +95,16 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       toast({
         title: "Error",
         description: "User information not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user profile is approved
+    if (profile && profile.approvalStatus !== 'approved') {
+      toast({
+        title: "Profile not approved",
+        description: "Your profile must be approved before placing orders. Please wait for admin approval.",
         variant: "destructive",
       });
       return;
@@ -189,13 +202,13 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                         onClick={() =>
                           updateQuantity(cartItem.item.id, cartItem.quantity - 1)
                         }
+                        disabled={cartItem.quantity <= 1}
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
                       <Input
                         type="number"
                         min="1"
-                        max={cartItem.item.quantity}
                         value={cartItem.quantity}
                         onChange={(e) => {
                           const newQuantity = Number.parseInt(e.target.value) || 1;
@@ -212,7 +225,22 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                         onClick={() =>
                           updateQuantity(cartItem.item.id, cartItem.quantity + 1)
                         }
-                        disabled={cartItem.quantity >= cartItem.item.quantity}
+                        disabled={(() => {
+                          // Calculate available quantity accounting for:
+                          // - Total inventory
+                          // - Items already in cart (including current item)
+                          // - Items in pending orders
+                          const availableQuantity = getAvailableQuantityForUser(
+                            cartItem.item,
+                            user?.id || null,
+                            orders || [],
+                            cartItems
+                          );
+                          // Disable if we can't add one more (current quantity + 1 would exceed available)
+                          // availableQuantity already accounts for current cart quantity
+                          // So if availableQuantity is 0, we can't add more
+                          return availableQuantity <= 0;
+                        })()}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>

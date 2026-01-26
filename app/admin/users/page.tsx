@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { UsersTable } from '@/components/UsersTable'
+import { UserDetailsModal } from '@/components/UserDetailsModal'
 import { UserProfile } from '@/types/user'
 import { getAllUserProfiles } from '@/lib/supabase/utils'
 import { Loader } from '@/components/Loader'
@@ -13,6 +14,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
     loadUsers()
@@ -102,8 +105,24 @@ export default function UsersPage() {
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
-        <UsersTable users={filteredUsers} />
+        <UsersTable 
+          users={filteredUsers} 
+          onReviewUser={(user) => {
+            setSelectedUser(user)
+            setIsModalOpen(true)
+          }}
+        />
       </div>
+
+      {/* User Details Modal */}
+      <UserDetailsModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        user={selectedUser}
+        onStatusUpdate={() => {
+          loadUsers()
+        }}
+      />
     </div>
   )
 }
