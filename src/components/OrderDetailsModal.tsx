@@ -18,6 +18,7 @@ import { useState, useEffect } from "react";
 import { Loader2, XCircle, AlertCircle, FileText, Download, CheckCircle2 } from "lucide-react";
 import { OrderRejectionDialog } from "@/components/OrderRejectionDialog";
 import { InvoiceConfirmationDialog } from "@/components/InvoiceConfirmationDialog";
+import { OutOfStockWarningDialog, InsufficientStockItem } from "@/components/OutOfStockWarningDialog";
 import { useRouter } from "next/navigation";
 
 interface OrderDetailsModalProps {
@@ -62,7 +63,7 @@ export const OrderDetailsModal = ({
   order,
 }: OrderDetailsModalProps) => {
   const { updateOrderStatus, downloadInvoicePDF, confirmInvoice } = useOrders();
-  const { decreaseQuantity } = useInventory();
+  const { decreaseQuantity, inventory } = useInventory();
   const { isAdmin } = useUserProfile();
   const { toast } = useToast();
   const router = useRouter();
@@ -73,6 +74,8 @@ export const OrderDetailsModal = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
+  const [stockWarningDialogOpen, setStockWarningDialogOpen] = useState(false);
+  const [insufficientStockItems, setInsufficientStockItems] = useState<InsufficientStockItem[]>([]);
 
   useEffect(() => {
     const fetchCustomerEmail = async () => {
@@ -103,20 +106,32 @@ export const OrderDetailsModal = ({
 
   if (!order) return null;
 
-  const handleApprove = async () => {
+  const checkStockAvailability = (): InsufficientStockItem[] => {
+    const items = Array.isArray(order.items) ? order.items : [];
+    const insufficientItems: InsufficientStockItem[] = [];
+
+    for (const orderItem of items) {
+      if (!orderItem?.item?.id || !orderItem?.quantity) continue;
+
+      const inventoryItem = inventory.find((inv) => inv.id === orderItem.item.id);
+      const availableQty = inventoryItem?.quantity ?? 0;
+
+      if (availableQty < orderItem.quantity) {
+        insufficientItems.push({
+          deviceName: orderItem.item.deviceName || "Unknown Device",
+          requestedQty: orderItem.quantity,
+          availableQty,
+        });
+      }
+    }
+
+    return insufficientItems;
+  };
+
+  const proceedWithApproval = async () => {
     setIsApproving(true);
     try {
       const items = Array.isArray(order.items) ? order.items : [];
-      
-      if (items.length === 0) {
-        toast({
-          title: "Error",
-          description: "Order has no items to approve.",
-          variant: "destructive",
-        });
-        setIsApproving(false);
-        return;
-      }
 
       // Decrease inventory quantities for each item in the order
       await Promise.all(
@@ -130,11 +145,12 @@ export const OrderDetailsModal = ({
 
       // Update order status (await to ensure it completes)
       await updateOrderStatus(order.id, "approved");
-      
+
       toast({
         title: "Order approved",
         description: `Order #${order.id.slice(-8).toUpperCase()} has been approved. Inventory quantities have been updated.`,
       });
+      setStockWarningDialogOpen(false);
       onOpenChange(false);
     } catch (error) {
       toast({
@@ -145,6 +161,46 @@ export const OrderDetailsModal = ({
     } finally {
       setIsApproving(false);
     }
+  };
+
+  const handleApprove = async () => {
+    const items = Array.isArray(order.items) ? order.items : [];
+
+    if (items.length === 0) {
+      toast({
+        title: "Error",
+        description: "Order has no items to approve.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check stock availability
+    const insufficientItems = checkStockAvailability();
+
+    if (insufficientItems.length > 0) {
+      // Show warning dialog
+      setInsufficientStockItems(insufficientItems);
+      setStockWarningDialogOpen(true);
+      return;
+    }
+
+    // No stock issues, proceed with approval
+    await proceedWithApproval();
+  };
+
+  const handleApproveAnyway = async () => {
+    await proceedWithApproval();
+  };
+
+  const handleRejectFromWarning = () => {
+    setStockWarningDialogOpen(false);
+    setRejectionDialogOpen(true);
+  };
+
+  const handleCancelWarning = () => {
+    setStockWarningDialogOpen(false);
+    setInsufficientStockItems([]);
   };
 
   const handleReject = async (reason: string, comment: string) => {
@@ -568,6 +624,16 @@ export const OrderDetailsModal = ({
         onOpenChange={setConfirmationDialogOpen}
         onConfirm={handleConfirmInvoice}
         order={order}
+      />
+
+      <OutOfStockWarningDialog
+        open={stockWarningDialogOpen}
+        onOpenChange={setStockWarningDialogOpen}
+        insufficientItems={insufficientStockItems}
+        onCancel={handleCancelWarning}
+        onReject={handleRejectFromWarning}
+        onApproveAnyway={handleApproveAnyway}
+        isApproving={isApproving}
       />
     </Dialog>
   );

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ShoppingCart, FileText } from "lucide-react";
+import { ShoppingCart, FileText, Heart } from "lucide-react";
 import { useInventory } from "@/contexts/InventoryContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
 import { Button } from "@/components/ui/button";
 import { FilterBar, FilterValues } from "@/components/FilterBar";
@@ -29,6 +30,7 @@ const defaultFilters: FilterValues = {
 
 export default function UserProducts() {
   const { inventory, isLoading } = useInventory();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
@@ -58,7 +60,7 @@ export default function UserProducts() {
   };
 
   const filteredItems = useMemo(() => {
-    return inventory.filter((item: InventoryItem) => {
+    const filtered = inventory.filter((item: InventoryItem) => {
       if (
         filters.search &&
         !item.deviceName.toLowerCase().includes(filters.search.toLowerCase())
@@ -94,6 +96,13 @@ export default function UserProducts() {
       }
       return true;
     });
+
+    // Sort by brand alphabetically when "All Brands" is selected
+    if (filters.brand === "all") {
+      return filtered.sort((a, b) => a.brand.localeCompare(b.brand));
+    }
+
+    return filtered;
   }, [inventory, filters]);
 
   const handleResetFilters = () => {
@@ -199,6 +208,7 @@ export default function UserProducts() {
                     const status = getStockStatus(item.quantity);
                     const isLowStock =
                       status === "low-stock" || status === "critical";
+                    const isOutOfStock = status === "out-of-stock";
 
                     return (
                       <tr
@@ -207,12 +217,16 @@ export default function UserProducts() {
                           "transition-colors hover:bg-table-hover cursor-pointer",
                           index % 2 === 1 && "bg-table-zebra",
                           isLowStock && "bg-destructive/[0.02]",
+                          isOutOfStock && "bg-muted/50",
                         )}
-                        onClick={() => handleBuyClick(item)}
+                        onClick={() => !isOutOfStock && handleBuyClick(item)}
                       >
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="font-medium text-foreground">
+                            <span className={cn(
+                              "font-medium",
+                              isOutOfStock ? "text-muted-foreground" : "text-foreground"
+                            )}>
                               {item.deviceName}
                             </span>
                             <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
@@ -221,19 +235,26 @@ export default function UserProducts() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-4 text-sm text-foreground">
+                        <td className={cn(
+                          "px-4 py-4 text-sm",
+                          isOutOfStock ? "text-muted-foreground" : "text-foreground"
+                        )}>
                           {item.brand}
                         </td>
                         <td className="px-4 py-4 text-center">
                           <GradeBadge grade={item.grade} />
                         </td>
-                        <td className="px-4 py-4 text-sm text-foreground">
+                        <td className={cn(
+                          "px-4 py-4 text-sm",
+                          isOutOfStock ? "text-muted-foreground" : "text-foreground"
+                        )}>
                           {item.storage}
                         </td>
                         <td className="px-4 py-4 text-center">
                           <span
                             className={cn(
                               "font-semibold",
+                              status === "out-of-stock" && "text-destructive",
                               status === "critical" && "text-destructive",
                               status === "low-stock" && "text-warning",
                               status === "in-stock" && "text-foreground",
@@ -244,7 +265,10 @@ export default function UserProducts() {
                         </td>
                         <td className="px-4 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <span className="font-medium text-foreground">
+                            <span className={cn(
+                              "font-medium",
+                              isOutOfStock ? "text-muted-foreground" : "text-foreground"
+                            )}>
                               {formatPrice(item.pricePerUnit)}
                             </span>
                             <PriceChangeIndicator change={item.priceChange} />
@@ -254,17 +278,41 @@ export default function UserProducts() {
                           <StatusBadge quantity={item.quantity} />
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleBuyClick(item);
-                            }}
-                            className="gap-2"
-                          >
-                            <ShoppingCart className="h-4 w-4" />
-                            Buy
-                          </Button>
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn(
+                                "h-8 w-8",
+                                isInWishlist(item.id)
+                                  ? "text-destructive hover:text-destructive"
+                                  : "text-muted-foreground hover:text-destructive"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleWishlist(item);
+                              }}
+                            >
+                              <Heart
+                                className={cn(
+                                  "h-4 w-4",
+                                  isInWishlist(item.id) && "fill-current"
+                                )}
+                              />
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isOutOfStock) handleBuyClick(item);
+                              }}
+                              disabled={isOutOfStock}
+                              className="gap-2"
+                            >
+                              <ShoppingCart className="h-4 w-4" />
+                              {isOutOfStock ? "Out of Stock" : "Buy"}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -279,6 +327,7 @@ export default function UserProducts() {
               const status = getStockStatus(item.quantity);
               const isLowStock =
                 status === "low-stock" || status === "critical";
+              const isOutOfStock = status === "out-of-stock";
 
               return (
                 <div
@@ -286,11 +335,15 @@ export default function UserProducts() {
                   className={cn(
                     "p-4 bg-card rounded-lg border border-border",
                     isLowStock && "border-destructive/20 bg-destructive/[0.02]",
+                    isOutOfStock && "bg-muted/50",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1">
-                      <h3 className="font-medium text-foreground">
+                      <h3 className={cn(
+                        "font-medium",
+                        isOutOfStock ? "text-muted-foreground" : "text-foreground"
+                      )}>
                         {item.deviceName}
                       </h3>
                       <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
@@ -306,7 +359,10 @@ export default function UserProducts() {
                       <span className="text-xs text-muted-foreground block mb-1">
                         Brand
                       </span>
-                      <span className="font-medium text-foreground">
+                      <span className={cn(
+                        "font-medium",
+                        isOutOfStock ? "text-muted-foreground" : "text-foreground"
+                      )}>
                         {item.brand}
                       </span>
                     </div>
@@ -320,7 +376,10 @@ export default function UserProducts() {
                       <span className="text-xs text-muted-foreground block mb-1">
                         Storage
                       </span>
-                      <span className="font-medium text-foreground">
+                      <span className={cn(
+                        "font-medium",
+                        isOutOfStock ? "text-muted-foreground" : "text-foreground"
+                      )}>
                         {item.storage}
                       </span>
                     </div>
@@ -331,6 +390,7 @@ export default function UserProducts() {
                       <span
                         className={cn(
                           "font-semibold",
+                          status === "out-of-stock" && "text-destructive",
                           status === "critical" && "text-destructive",
                           status === "low-stock" && "text-warning",
                           status === "in-stock" && "text-foreground",
@@ -344,7 +404,10 @@ export default function UserProducts() {
                         Price
                       </span>
                       <div className="flex items-center gap-1">
-                        <span className="font-medium text-foreground">
+                        <span className={cn(
+                          "font-medium",
+                          isOutOfStock ? "text-muted-foreground" : "text-foreground"
+                        )}>
                           ${item.pricePerUnit}
                         </span>
                         <PriceChangeIndicator change={item.priceChange} />
@@ -352,13 +415,34 @@ export default function UserProducts() {
                     </div>
                   </div>
 
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => handleBuyClick(item)}
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    Buy
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className={cn(
+                        "h-10 w-10 flex-shrink-0",
+                        isInWishlist(item.id)
+                          ? "text-destructive hover:text-destructive border-destructive/20"
+                          : "text-muted-foreground hover:text-destructive"
+                      )}
+                      onClick={() => toggleWishlist(item)}
+                    >
+                      <Heart
+                        className={cn(
+                          "h-5 w-5",
+                          isInWishlist(item.id) && "fill-current"
+                        )}
+                      />
+                    </Button>
+                    <Button
+                      className="flex-1 gap-2"
+                      onClick={() => !isOutOfStock && handleBuyClick(item)}
+                      disabled={isOutOfStock}
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      {isOutOfStock ? "Out of Stock" : "Buy"}
+                    </Button>
+                  </div>
                 </div>
               );
             })}
