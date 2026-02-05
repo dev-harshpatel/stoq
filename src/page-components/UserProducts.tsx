@@ -136,8 +136,8 @@ export default function UserProducts() {
   return (
     <>
       <div className="flex flex-col h-full">
-        {/* Sticky Header Section */}
-        <div className="sticky top-0 z-10 bg-background pb-4 space-y-4 border-b border-border mb-4">
+        {/* Header Section - Sticky on desktop only */}
+        <div className="lg:sticky lg:top-0 z-10 bg-background pb-4 space-y-4 border-b border-border mb-4">
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -322,7 +322,7 @@ export default function UserProducts() {
           </div>
 
           {/* Mobile Cards */}
-          <div className="md:hidden space-y-3">
+          <div className="md:hidden space-y-3 pb-6">
             {filteredItems.map((item) => {
               const status = getStockStatus(item.quantity);
               const isLowStock =

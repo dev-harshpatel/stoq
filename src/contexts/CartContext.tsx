@@ -148,7 +148,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   // Handle user login/logout - reload cart when user changes
   useEffect(() => {
     const currentUserId = user?.id || null;
-    
+
     // Only reload if user actually changed (login or logout)
     if (isInitialized && inventory.length > 0 && currentUserId !== lastUserId) {
       setLastUserId(currentUserId);

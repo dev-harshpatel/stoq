@@ -6,59 +6,14 @@ import {
   TrendingUp,
   AlertTriangle,
   DollarSign,
-  ArrowUpRight,
-  ArrowDownRight,
   ShoppingCart,
   Clock,
 } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useOrders } from '@/contexts/OrdersContext';
 import { getStockStatus, formatPrice } from '@/data/inventory';
-import { formatDateInOntario } from '@/lib/utils';
 import { Loader } from '@/components/Loader';
-import { cn } from '@/lib/utils';
-
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  change?: { value: string; positive: boolean };
-  icon: React.ReactNode;
-  accent?: 'primary' | 'success' | 'warning' | 'destructive';
-}
-
-function StatCard({ title, value, change, icon, accent = 'primary' }: StatCardProps) {
-  const accentStyles = {
-    primary: 'bg-primary/10 text-primary',
-    success: 'bg-success/10 text-success',
-    warning: 'bg-warning/10 text-warning',
-    destructive: 'bg-destructive/10 text-destructive',
-  };
-
-  return (
-    <div className="p-6 bg-card rounded-lg border border-border shadow-soft">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="text-2xl font-semibold text-foreground mt-1">{value}</p>
-          {change && (
-            <div className="flex items-center gap-1 mt-2 text-sm">
-              {change.positive ? (
-                <ArrowUpRight className="h-4 w-4 text-success" />
-              ) : (
-                <ArrowDownRight className="h-4 w-4 text-destructive" />
-              )}
-              <span className={change.positive ? 'text-success' : 'text-destructive'}>
-                {change.value}
-              </span>
-              <span className="text-muted-foreground">vs last week</span>
-            </div>
-          )}
-        </div>
-        <div className={cn('p-3 rounded-lg', accentStyles[accent])}>{icon}</div>
-      </div>
-    </div>
-  );
-}
+import { StatCard } from '@/components/StatCard';
 
 export default function Dashboard() {
   const { inventory, isLoading: inventoryLoading } = useInventory();

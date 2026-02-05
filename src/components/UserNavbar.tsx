@@ -1,6 +1,6 @@
 'use client'
 
-import { LogIn, LogOut, User, ShoppingCart, Package, Loader2, FileText, UserCircle, BookOpen, Mail, Menu, X, Heart } from "lucide-react";
+import { LogIn, LogOut, User, ShoppingCart, Package, Loader2, FileText, UserCircle, BookOpen, Mail, Menu, X, Heart, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -178,6 +178,13 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                         {getWishlistCount() > 99 ? "99+" : getWishlistCount()}
                       </Badge>
                     )}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push('/user/stats')}
+                    className="cursor-pointer"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    My Statistics
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => router.push('/user/orders')}
@@ -371,6 +378,16 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                       {getWishlistCount() > 99 ? "99+" : getWishlistCount()}
                     </Badge>
                   )}
+                </button>
+                <button
+                  onClick={() => {
+                    router.push('/user/stats');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-foreground hover:bg-muted"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  My Statistics
                 </button>
                 <button
                   onClick={() => {
