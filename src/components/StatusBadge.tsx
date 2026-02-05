@@ -19,6 +19,10 @@ const statusConfig: Record<StockStatus, { label: string; className: string }> = 
     label: 'Critical',
     className: 'bg-destructive/10 text-destructive border-destructive/20',
   },
+  'out-of-stock': {
+    label: 'Out of Stock',
+    className: 'bg-destructive/10 text-destructive border-destructive/20',
+  },
 };
 
 export function StatusBadge({ quantity, className }: StatusBadgeProps) {

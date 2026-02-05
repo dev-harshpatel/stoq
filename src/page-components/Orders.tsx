@@ -5,7 +5,8 @@ import { useOrders } from "@/contexts/OrdersContext";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, RotateCcw, Package, AlertCircle } from "lucide-react";
+import { Eye, RotateCcw, Package, AlertCircle, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/data/inventory";
 import { cn, formatDateInOntario } from "@/lib/utils";
 import { OrderDetailsModal } from "@/components/OrderDetailsModal";
@@ -53,6 +54,7 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [userEmails, setUserEmails] = useState<Record<string, string>>({});
   const [loadingEmails, setLoadingEmails] = useState(false);
 
@@ -64,12 +66,47 @@ export default function Orders() {
       filtered = filtered.filter((order) => order.status === statusFilter);
     }
 
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((order) => {
+        // Search by order ID
+        const orderId = order.id.slice(-8).toUpperCase();
+        if (orderId.toLowerCase().includes(query)) return true;
+
+        // Search by customer email
+        const customerEmail = userEmails[order.userId] || "";
+        if (customerEmail.toLowerCase().includes(query)) return true;
+
+        // Search by brand names
+        const brands = Array.isArray(order.items)
+          ? order.items.map((item) => item.item?.brand || "").join(" ")
+          : "";
+        if (brands.toLowerCase().includes(query)) return true;
+
+        // Search by device names
+        const deviceNames = Array.isArray(order.items)
+          ? order.items.map((item) => item.item?.deviceName || "").join(" ")
+          : "";
+        if (deviceNames.toLowerCase().includes(query)) return true;
+
+        // Search by date
+        const dateStr = formatDateInOntario(order.createdAt);
+        if (dateStr.toLowerCase().includes(query)) return true;
+
+        // Search by status
+        if (order.status.toLowerCase().includes(query)) return true;
+
+        return false;
+      });
+    }
+
     // Sort by date (newest first)
     return filtered.sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [allOrders, statusFilter]);
+  }, [allOrders, statusFilter, searchQuery, userEmails]);
 
   // Create a stable key based on unique user IDs to avoid unnecessary re-fetches
   const userIdsKey = useMemo(() => {
@@ -126,7 +163,10 @@ export default function Orders() {
 
   const handleResetFilter = () => {
     setStatusFilter("all");
+    setSearchQuery("");
   };
+
+  const hasActiveFilters = statusFilter !== "all" || searchQuery.trim() !== "";
 
   // Show loading state while orders are loading
   if (ordersLoading) {
@@ -149,13 +189,24 @@ export default function Orders() {
               <h2 className="text-2xl font-semibold text-foreground">Orders</h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {filteredOrders.length}{" "}
-                {statusFilter !== "all" ? "filtered" : "total"} orders
+                {hasActiveFilters ? "filtered" : "total"} orders
               </p>
             </div>
           </div>
 
-          {/* Status Filter */}
-          <div className="flex items-center gap-4">
+          {/* Search and Status Filter */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {/* Search Bar */}
+            <div className="relative flex-1 w-full sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by customer, order ID, brand, date..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-background border-border"
+              />
+            </div>
+
             <div className="flex items-center gap-2">
               <Select
                 value={statusFilter}
@@ -175,7 +226,7 @@ export default function Orders() {
                 </SelectContent>
               </Select>
 
-              {statusFilter !== "all" && (
+              {hasActiveFilters && (
                 <Button
                   variant="outline"
                   size="sm"

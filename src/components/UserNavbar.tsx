@@ -1,6 +1,6 @@
 'use client'
 
-import { LogIn, LogOut, User, ShoppingCart, Package, Loader2, FileText, UserCircle, BookOpen, Mail, Menu, X } from "lucide-react";
+import { LogIn, LogOut, User, ShoppingCart, Package, Loader2, FileText, UserCircle, BookOpen, Mail, Menu, X, Heart, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth/context";
 import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { cn } from "@/lib/utils";
 import { LoginModal } from "./LoginModal";
 import { SignupModal } from "./SignupModal";
@@ -29,6 +30,7 @@ interface UserNavbarProps {
 export const UserNavbar = ({ className }: UserNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getUniqueItemsCount } = useCart();
+  const { getWishlistCount } = useWishlist();
   const router = useRouter();
   const pathname = usePathname();
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -162,14 +164,36 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                     <UserCircle className="h-4 w-4 mr-2" />
                     Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
+                    onClick={() => router.push('/user/wishlist')}
+                    className="cursor-pointer"
+                  >
+                    <Heart className="h-4 w-4 mr-2" />
+                    Wishlist
+                    {getWishlistCount() > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs"
+                      >
+                        {getWishlistCount() > 99 ? "99+" : getWishlistCount()}
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => router.push('/user/stats')}
+                    className="cursor-pointer"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    My Statistics
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={() => router.push('/user/orders')}
                     className="cursor-pointer"
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     View Orders
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => router.push('/user/grades')}
                     className="cursor-pointer"
                   >
@@ -336,6 +360,34 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                 >
                   <UserCircle className="h-4 w-4" />
                   Profile
+                </button>
+                <button
+                  onClick={() => {
+                    router.push('/user/wishlist');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-foreground hover:bg-muted"
+                >
+                  <Heart className="h-4 w-4" />
+                  <span>Wishlist</span>
+                  {getWishlistCount() > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {getWishlistCount() > 99 ? "99+" : getWishlistCount()}
+                    </Badge>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    router.push('/user/stats');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-foreground hover:bg-muted"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  My Statistics
                 </button>
                 <button
                   onClick={() => {

@@ -132,6 +132,7 @@ export function FilterBar({
             <SelectItem value="in-stock">In Stock</SelectItem>
             <SelectItem value="low-stock">Low Stock</SelectItem>
             <SelectItem value="critical">Critical</SelectItem>
+            <SelectItem value="out-of-stock">Out of Stock</SelectItem>
           </SelectContent>
         </Select>
 
@@ -255,6 +256,7 @@ export function FilterBar({
                       <SelectItem value="in-stock">In Stock</SelectItem>
                       <SelectItem value="low-stock">Low Stock</SelectItem>
                       <SelectItem value="critical">Critical</SelectItem>
+                      <SelectItem value="out-of-stock">Out of Stock</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

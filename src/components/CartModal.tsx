@@ -4,6 +4,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/lib/auth/context";
 import { useOrders } from "@/contexts/OrdersContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
+import { useInventory } from "@/contexts/InventoryContext";
 import { getAvailableQuantityForUser } from "@/lib/orderUtils";
 import {
   Dialog,
@@ -45,6 +46,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
   } = useCart();
   const { user } = useAuth();
   const { createOrder, orders } = useOrders();
+  const { inventory } = useInventory();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -112,6 +114,48 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
     setIsLoading(true);
     try {
+      // Check stock availability before creating order
+      const outOfStockItems: string[] = [];
+      const insufficientStockItems: { name: string; requested: number; available: number }[] = [];
+
+      for (const cartItem of cartItems) {
+        // Get the latest inventory data
+        const latestItem = inventory.find(inv => inv.id === cartItem.item.id);
+
+        if (!latestItem || latestItem.quantity === 0) {
+          outOfStockItems.push(cartItem.item.deviceName);
+        } else if (latestItem.quantity < cartItem.quantity) {
+          insufficientStockItems.push({
+            name: cartItem.item.deviceName,
+            requested: cartItem.quantity,
+            available: latestItem.quantity,
+          });
+        }
+      }
+
+      if (outOfStockItems.length > 0) {
+        toast({
+          title: "Oops! You missed by a second",
+          description: `${outOfStockItems.join(', ')} ${outOfStockItems.length === 1 ? 'is' : 'are'} now out of stock. Please remove ${outOfStockItems.length === 1 ? 'it' : 'them'} from your cart.`,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (insufficientStockItems.length > 0) {
+        const itemDetails = insufficientStockItems
+          .map(item => `${item.name} (requested: ${item.requested}, available: ${item.available})`)
+          .join(', ');
+        toast({
+          title: "Oops! Stock changed",
+          description: `Some items have less stock than requested: ${itemDetails}. Please adjust quantities.`,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // Create order
       const orderItems = cartItems.map((cartItem) => ({
         item: cartItem.item,
@@ -120,7 +164,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
 
       // Include tax information in order
       const order = await createOrder(
-        user.id, 
+        user.id,
         orderItems,
         subtotal,
         taxRatePercent > 0 ? taxRatePercent / 100 : undefined,

@@ -12,7 +12,7 @@ export const UserLayout = ({ children }: UserLayoutProps) => {
     <div className="h-screen flex w-full bg-background overflow-hidden">
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <UserNavbar />
-        <main className="flex-1 p-4 lg:p-6 overflow-hidden">
+        <main className="flex-1 p-4 lg:p-6 overflow-y-auto lg:overflow-hidden">
           <div className="max-w-7xl mx-auto h-full">{children}</div>
         </main>
       </div>
