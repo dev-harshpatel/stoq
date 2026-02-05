@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/context';
 import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import { UploadHistory, BulkInsertResult } from '@/types/upload';
+import { dbRowToInventoryItem } from '@/lib/supabase/queries';
 
 interface InventoryContextType {
   inventory: InventoryItem[];
@@ -23,22 +24,9 @@ interface InventoryProviderProps {
   children: ReactNode;
 }
 
-type InventoryRow = Database['public']['Tables']['inventory']['Row'];
 type InventoryUpdate = Database['public']['Tables']['inventory']['Update'];
 
-const dbRowToInventoryItem = (row: InventoryRow): InventoryItem => ({
-  id: row.id,
-  deviceName: row.device_name,
-  brand: row.brand,
-  grade: row.grade as 'A' | 'B' | 'C' | 'D',
-  storage: row.storage,
-  quantity: row.quantity,
-  pricePerUnit: Number(row.price_per_unit),
-  lastUpdated: row.last_updated,
-  priceChange: (row.price_change ?? undefined) as 'up' | 'down' | 'stable' | undefined,
-});
-
-const toInventoryUpdate = (updates: Partial<InventoryItem>): InventoryUpdate => {
+export const toInventoryUpdate = (updates: Partial<InventoryItem>): InventoryUpdate => {
   const updateData: InventoryUpdate = {};
 
   if (updates.brand !== undefined) updateData.brand = updates.brand;

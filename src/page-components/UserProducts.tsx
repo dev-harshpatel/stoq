@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ShoppingCart, FileText, Heart } from "lucide-react";
-import { useInventory } from "@/contexts/InventoryContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
 import { Button } from "@/components/ui/button";
@@ -13,11 +12,19 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { PriceChangeIndicator } from "@/components/PriceChangeIndicator";
 import { EmptyState } from "@/components/EmptyState";
 import { Loader } from "@/components/Loader";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import { exportToPDF } from "@/lib/exportUtils";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/use-debounce";
+import { usePaginatedQuery } from "@/hooks/use-paginated-query";
+import {
+  fetchPaginatedInventory,
+  fetchFilterOptions,
+  fetchAllFilteredInventory,
+  InventoryFilters,
+} from "@/lib/supabase/queries";
+import { exportToPDF } from "@/lib/exportUtils";
 
 const defaultFilters: FilterValues = {
   search: "",
@@ -29,96 +36,71 @@ const defaultFilters: FilterValues = {
 };
 
 export default function UserProducts() {
-  const { inventory, isLoading } = useInventory();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
+  const [filterOptions, setFilterOptions] = useState<{
+    brands: string[];
+    storageOptions: string[];
+  }>({ brands: [], storageOptions: [] });
 
-  // Extract unique brands and storage options from inventory
-  const availableBrands = useMemo(() => {
-    const brands = new Set(inventory.map((item) => item.brand));
-    return Array.from(brands).sort();
-  }, [inventory]);
+  const debouncedSearch = useDebounce(filters.search, 300);
 
-  const availableStorage = useMemo(() => {
-    const storage = new Set(inventory.map((item) => item.storage));
-    return Array.from(storage).sort((a, b) => {
-      // Sort by numeric value if possible (e.g., "128GB" vs "256GB")
-      const numA = parseInt(a);
-      const numB = parseInt(b);
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB;
-      }
-      return a.localeCompare(b);
-    });
-  }, [inventory]);
+  useEffect(() => {
+    fetchFilterOptions().then(setFilterOptions);
+  }, []);
+
+  const serverFilters: InventoryFilters = {
+    search: debouncedSearch,
+    brand: filters.brand,
+    grade: filters.grade,
+    storage: filters.storage,
+    priceRange: filters.priceRange,
+    stockStatus: filters.stockStatus,
+  };
+
+  const fetchFn = useCallback(
+    async (range: { from: number; to: number }) => {
+      return fetchPaginatedInventory(serverFilters, range);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [debouncedSearch, filters.brand, filters.grade, filters.storage, filters.priceRange, filters.stockStatus]
+  );
+
+  const {
+    data: filteredItems,
+    totalCount,
+    currentPage,
+    totalPages,
+    isLoading,
+    setCurrentPage,
+    rangeText,
+  } = usePaginatedQuery<InventoryItem>({
+    fetchFn,
+    dependencies: [debouncedSearch, filters.brand, filters.grade, filters.storage, filters.priceRange, filters.stockStatus],
+    realtimeTable: "inventory",
+  });
 
   const handleBuyClick = (item: InventoryItem) => {
     setSelectedItem(item);
     setPurchaseModalOpen(true);
   };
 
-  const filteredItems = useMemo(() => {
-    const filtered = inventory.filter((item: InventoryItem) => {
-      if (
-        filters.search &&
-        !item.deviceName.toLowerCase().includes(filters.search.toLowerCase())
-      ) {
-        return false;
-      }
-      if (filters.brand !== "all" && item.brand !== filters.brand) {
-        return false;
-      }
-      if (filters.grade !== "all" && item.grade !== filters.grade) {
-        return false;
-      }
-      if (filters.storage !== "all" && item.storage !== filters.storage) {
-        return false;
-      }
-      if (filters.priceRange !== "all") {
-        switch (filters.priceRange) {
-          case "under200":
-            if (item.pricePerUnit >= 200) return false;
-            break;
-          case "200-400":
-            if (item.pricePerUnit < 200 || item.pricePerUnit > 400)
-              return false;
-            break;
-          case "400+":
-            if (item.pricePerUnit < 400) return false;
-            break;
-        }
-      }
-      if (filters.stockStatus !== "all") {
-        const stockStatus = getStockStatus(item.quantity);
-        if (stockStatus !== filters.stockStatus) return false;
-      }
-      return true;
-    });
-
-    // Sort by brand alphabetically when "All Brands" is selected
-    if (filters.brand === "all") {
-      return filtered.sort((a, b) => a.brand.localeCompare(b.brand));
-    }
-
-    return filtered;
-  }, [inventory, filters]);
-
   const handleResetFilters = () => {
     setFilters(defaultFilters);
   };
 
-  const handleExportPDF = () => {
-    if (filteredItems.length === 0) {
-      toast.error("No data to export", {
-        description: "Please ensure there are items to export",
-      });
-      return;
-    }
-
+  const handleExportPDF = async () => {
     try {
-      exportToPDF(filteredItems, "inventory");
+      const allItems = await fetchAllFilteredInventory(serverFilters);
+      if (allItems.length === 0) {
+        toast.error("No data to export", {
+          description: "Please ensure there are items to export",
+        });
+        return;
+      }
+      exportToPDF(allItems, "inventory");
       toast.success("Export successful", {
         description: "Your PDF file has been downloaded",
       });
@@ -129,7 +111,7 @@ export default function UserProducts() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && filteredItems.length === 0) {
     return <Loader size="lg" text="Loading products..." />;
   }
 
@@ -145,7 +127,7 @@ export default function UserProducts() {
                 Products
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {filteredItems.length} devices available
+                {totalCount} devices available
               </p>
             </div>
             <Button
@@ -162,8 +144,8 @@ export default function UserProducts() {
 
           {/* Filter Bar */}
           <FilterBar
-            brands={availableBrands}
-            storageOptions={availableStorage}
+            brands={filterOptions.brands}
+            storageOptions={filterOptions.storageOptions}
             filters={filters}
             onFiltersChange={setFilters}
             onReset={handleResetFilters}
@@ -448,7 +430,14 @@ export default function UserProducts() {
             })}
           </div>
 
-          {filteredItems.length === 0 && <EmptyState />}
+          {filteredItems.length === 0 && !isLoading && <EmptyState />}
+
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            rangeText={rangeText}
+          />
         </div>
       </div>
 

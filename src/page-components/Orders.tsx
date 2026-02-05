@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from "react";
-import { useOrders } from "@/contexts/OrdersContext";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +10,8 @@ import { formatPrice } from "@/data/inventory";
 import { cn, formatDateInOntario } from "@/lib/utils";
 import { OrderDetailsModal } from "@/components/OrderDetailsModal";
 import { EmptyState } from "@/components/EmptyState";
+import { PaginationControls } from "@/components/PaginationControls";
+import { Loader } from "@/components/Loader";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useDebounce } from "@/hooks/use-debounce";
+import { usePaginatedQuery } from "@/hooks/use-paginated-query";
+import { fetchPaginatedOrders, OrdersFilters } from "@/lib/supabase/queries";
 
 const getStatusColor = (status: OrderStatus) => {
   switch (status) {
@@ -50,7 +54,6 @@ const getStatusLabel = (status: OrderStatus) => {
 };
 
 export default function Orders() {
-  const { orders: allOrders, isLoading: ordersLoading } = useOrders();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
@@ -58,73 +61,49 @@ export default function Orders() {
   const [userEmails, setUserEmails] = useState<Record<string, string>>({});
   const [loadingEmails, setLoadingEmails] = useState(false);
 
-  const filteredOrders = useMemo(() => {
-    let filtered = [...allOrders];
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((order) => order.status === statusFilter);
-    }
+  const serverFilters: OrdersFilters = {
+    search: debouncedSearch,
+    status: statusFilter,
+  };
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((order) => {
-        // Search by order ID
-        const orderId = order.id.slice(-8).toUpperCase();
-        if (orderId.toLowerCase().includes(query)) return true;
+  const fetchFn = useCallback(
+    async (range: { from: number; to: number }) => {
+      return fetchPaginatedOrders(serverFilters, range);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [debouncedSearch, statusFilter]
+  );
 
-        // Search by customer email
-        const customerEmail = userEmails[order.userId] || "";
-        if (customerEmail.toLowerCase().includes(query)) return true;
+  const {
+    data: filteredOrders,
+    totalCount,
+    currentPage,
+    totalPages,
+    isLoading,
+    setCurrentPage,
+    rangeText,
+  } = usePaginatedQuery<Order>({
+    fetchFn,
+    dependencies: [debouncedSearch, statusFilter],
+    realtimeTable: "orders",
+  });
 
-        // Search by brand names
-        const brands = Array.isArray(order.items)
-          ? order.items.map((item) => item.item?.brand || "").join(" ")
-          : "";
-        if (brands.toLowerCase().includes(query)) return true;
-
-        // Search by device names
-        const deviceNames = Array.isArray(order.items)
-          ? order.items.map((item) => item.item?.deviceName || "").join(" ")
-          : "";
-        if (deviceNames.toLowerCase().includes(query)) return true;
-
-        // Search by date
-        const dateStr = formatDateInOntario(order.createdAt);
-        if (dateStr.toLowerCase().includes(query)) return true;
-
-        // Search by status
-        if (order.status.toLowerCase().includes(query)) return true;
-
-        return false;
-      });
-    }
-
-    // Sort by date (newest first)
-    return filtered.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [allOrders, statusFilter, searchQuery, userEmails]);
-
-  // Create a stable key based on unique user IDs to avoid unnecessary re-fetches
+  // Create a stable key based on unique user IDs from current page to fetch emails
   const userIdsKey = useMemo(() => {
     const uniqueUserIds = Array.from(
-      new Set(allOrders.map((order) => order.userId))
+      new Set(filteredOrders.map((order) => order.userId))
     ).sort();
     return uniqueUserIds.join(',');
-  }, [allOrders]);
+  }, [filteredOrders]);
 
-  // Fetch user emails for all unique user IDs
+  // Fetch user emails for unique user IDs on the current page
   useEffect(() => {
     const fetchUserEmails = async () => {
       if (!userIdsKey) return;
 
-      // Get unique user IDs from the key
       const uniqueUserIds = userIdsKey.split(',').filter(Boolean);
-
-      // Check which user IDs we need to fetch
       const missingUserIds = uniqueUserIds.filter(
         (userId) => !userEmails[userId]
       );
@@ -152,7 +131,6 @@ export default function Orders() {
     };
 
     fetchUserEmails();
-    // Only re-fetch when the set of user IDs changes, not when orders array reference changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userIdsKey]);
 
@@ -168,8 +146,7 @@ export default function Orders() {
 
   const hasActiveFilters = statusFilter !== "all" || searchQuery.trim() !== "";
 
-  // Show loading state while orders are loading
-  if (ordersLoading) {
+  if (isLoading && filteredOrders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
         <Package className="h-12 w-12 text-muted-foreground mb-4 animate-pulse" />
@@ -188,7 +165,7 @@ export default function Orders() {
             <div>
               <h2 className="text-2xl font-semibold text-foreground">Orders</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {filteredOrders.length}{" "}
+                {totalCount}{" "}
                 {hasActiveFilters ? "filtered" : "total"} orders
               </p>
             </div>
@@ -200,7 +177,7 @@ export default function Orders() {
             <div className="relative flex-1 w-full sm:max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by customer, order ID, brand, date..."
+                placeholder="Search by order ID, status..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 bg-background border-border"
@@ -244,129 +221,137 @@ export default function Orders() {
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
           {/* Orders Table */}
-          {filteredOrders.length === 0 ? (
-            <EmptyState 
-              title="No orders found" 
-              description="There are no orders matching your current filter criteria." 
+          {filteredOrders.length === 0 && !isLoading ? (
+            <EmptyState
+              title="No orders found"
+              description="There are no orders matching your current filter criteria."
             />
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                        Order ID
-                      </th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Customer
-                      </th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Brand
-                      </th>
-                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Items
-                      </th>
-                      <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Total
-                      </th>
-                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Status
-                      </th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Date
-                      </th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Notes
-                      </th>
-                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredOrders.map((order, index) => (
-                      <tr
-                        key={order.id}
-                        className={cn(
-                          "transition-colors hover:bg-table-hover",
-                          index % 2 === 1 && "bg-table-zebra"
-                        )}
-                      >
-                        <td className="px-6 py-4">
-                          <span className="font-medium text-foreground">
-                            #{order.id.slice(-8).toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-foreground">
-                          {userEmails[order.userId] || order.userId.slice(0, 8) + '...'}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-foreground">
-                          {Array.isArray(order.items) && order.items.length > 0
-                            ? Array.from(
-                                new Set(order.items.map((item) => item.item?.brand).filter(Boolean))
-                              ).join(", ")
-                            : "N/A"}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm text-foreground">
-                          {Array.isArray(order.items) ? order.items.length : 0} item(s)
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <span className="font-semibold text-foreground">
-                            {formatPrice(order.totalPrice)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              getStatusColor(order.status)
-                            )}
-                          >
-                            {getStatusLabel(order.status)}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-muted-foreground">
-                          {formatDateInOntario(order.createdAt)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) ? (
-                            <div className="flex items-start gap-2 max-w-xs">
-                              <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                              <div className="flex-1 space-y-1">
-                                {order.rejectionReason && (
-                                  <p className="text-xs text-foreground">
-                                    <span className="font-medium">Reason:</span> {order.rejectionReason}
-                                  </p>
-                                )}
-                                {order.rejectionComment && (
-                                  <p className="text-xs text-muted-foreground line-clamp-2">
-                                    {order.rejectionComment}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewOrder(order)}
-                            className="h-8 w-8"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </td>
+            <>
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                          Order ID
+                        </th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Customer
+                        </th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Brand
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Items
+                        </th>
+                        <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Total
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Status
+                        </th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Date
+                        </th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Notes
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                          Action
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filteredOrders.map((order, index) => (
+                        <tr
+                          key={order.id}
+                          className={cn(
+                            "transition-colors hover:bg-table-hover",
+                            index % 2 === 1 && "bg-table-zebra"
+                          )}
+                        >
+                          <td className="px-6 py-4">
+                            <span className="font-medium text-foreground">
+                              #{order.id.slice(-8).toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-foreground">
+                            {userEmails[order.userId] || order.userId.slice(0, 8) + '...'}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-foreground">
+                            {Array.isArray(order.items) && order.items.length > 0
+                              ? Array.from(
+                                  new Set(order.items.map((item) => item.item?.brand).filter(Boolean))
+                                ).join(", ")
+                              : "N/A"}
+                          </td>
+                          <td className="px-4 py-4 text-center text-sm text-foreground">
+                            {Array.isArray(order.items) ? order.items.length : 0} item(s)
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            <span className="font-semibold text-foreground">
+                              {formatPrice(order.totalPrice)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs",
+                                getStatusColor(order.status)
+                              )}
+                            >
+                              {getStatusLabel(order.status)}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-muted-foreground">
+                            {formatDateInOntario(order.createdAt)}
+                          </td>
+                          <td className="px-4 py-4">
+                            {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) ? (
+                              <div className="flex items-start gap-2 max-w-xs">
+                                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 space-y-1">
+                                  {order.rejectionReason && (
+                                    <p className="text-xs text-foreground">
+                                      <span className="font-medium">Reason:</span> {order.rejectionReason}
+                                    </p>
+                                  )}
+                                  {order.rejectionComment && (
+                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                      {order.rejectionComment}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewOrder(order)}
+                              className="h-8 w-8"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                rangeText={rangeText}
+              />
+            </>
           )}
         </div>
       </div>

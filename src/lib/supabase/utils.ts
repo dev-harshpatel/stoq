@@ -5,33 +5,9 @@
 import { supabase } from './client';
 import { UserProfile, UserRole } from '@/types/user';
 import { Database } from '@/lib/database.types';
+import { dbRowToUserProfile } from '@/lib/supabase/queries';
 
 type UserProfileRow = Database['public']['Tables']['user_profiles']['Row'];
-
-/**
- * Convert database row to UserProfile
- */
-const dbRowToUserProfile = (row: UserProfileRow): UserProfile => ({
-  id: row.id,
-  userId: row.user_id,
-  role: row.role,
-  approvalStatus: row.approval_status,
-  approvalStatusUpdatedAt: row.approval_status_updated_at,
-  firstName: row.first_name,
-  lastName: row.last_name,
-  phone: row.phone,
-  businessName: row.business_name,
-  businessAddress: row.business_address,
-  businessAddressComponents: row.business_address_components as Record<string, any> | null,
-  businessState: row.business_state,
-  businessCity: row.business_city,
-  businessCountry: row.business_country,
-  businessYears: row.business_years,
-  businessWebsite: row.business_website,
-  businessEmail: row.business_email,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
 
 /**
  * Get user profile by user ID

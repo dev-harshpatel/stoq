@@ -1,70 +1,47 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { UsersTable } from '@/components/UsersTable'
 import { UserDetailsModal } from '@/components/UserDetailsModal'
 import { UserProfile } from '@/types/user'
-import { getAllUserProfiles } from '@/lib/supabase/utils'
 import { Loader } from '@/components/Loader'
-import { toast } from 'sonner'
+import { PaginationControls } from '@/components/PaginationControls'
 import { Users, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { useDebounce } from '@/hooks/use-debounce'
+import { usePaginatedQuery } from '@/hooks/use-paginated-query'
+import { fetchPaginatedUsers } from '@/lib/supabase/queries'
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<UserProfile[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
+  const debouncedSearch = useDebounce(searchQuery, 300)
 
-  const loadUsers = async () => {
-    setIsLoading(true)
-    try {
-      const allUsers = await getAllUserProfiles()
-      setUsers(allUsers)
-    } catch (error) {
-      toast.error('Failed to load users', {
-        description: error instanceof Error ? error.message : 'Please try again later.',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const fetchFn = useCallback(
+    async (range: { from: number; to: number }) => {
+      return fetchPaginatedUsers(debouncedSearch, range)
+    },
+    [debouncedSearch]
+  )
 
-  // Filter users based on search query
-  const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return users
-    }
+  const {
+    data: users,
+    totalCount,
+    currentPage,
+    totalPages,
+    isLoading,
+    setCurrentPage,
+    refresh,
+    rangeText,
+  } = usePaginatedQuery<UserProfile>({
+    fetchFn,
+    dependencies: [debouncedSearch],
+    realtimeTable: 'user_profiles',
+  })
 
-    const query = searchQuery.toLowerCase().trim()
-    return users.filter((user) => {
-      const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').toLowerCase()
-      const businessName = (user.businessName || '').toLowerCase()
-      const businessEmail = (user.businessEmail || '').toLowerCase()
-      const phone = (user.phone || '').toLowerCase()
-      const location = [user.businessCity, user.businessState, user.businessCountry]
-        .filter(Boolean)
-        .join(', ')
-        .toLowerCase()
-      const userId = user.userId.toLowerCase()
-
-      return (
-        fullName.includes(query) ||
-        businessName.includes(query) ||
-        businessEmail.includes(query) ||
-        phone.includes(query) ||
-        location.includes(query) ||
-        userId.includes(query)
-      )
-    })
-  }, [users, searchQuery])
-
-  if (isLoading) {
+  if (isLoading && users.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader size="lg" text="Loading users..." />
@@ -84,9 +61,8 @@ export default function UsersPage() {
               Users
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
-              {searchQuery && ` found`}
-              {!searchQuery && ` registered`}
+              {totalCount} {totalCount === 1 ? 'user' : 'users'}
+              {searchQuery ? ` found` : ` registered`}
             </p>
           </div>
         </div>
@@ -105,12 +81,18 @@ export default function UsersPage() {
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
-        <UsersTable 
-          users={filteredUsers} 
+        <UsersTable
+          users={users}
           onReviewUser={(user) => {
             setSelectedUser(user)
             setIsModalOpen(true)
           }}
+        />
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          rangeText={rangeText}
         />
       </div>
 
@@ -120,7 +102,7 @@ export default function UsersPage() {
         onOpenChange={setIsModalOpen}
         user={selectedUser}
         onStatusUpdate={() => {
-          loadUsers()
+          refresh()
         }}
       />
     </div>

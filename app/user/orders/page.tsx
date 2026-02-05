@@ -4,8 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import { UserLayout } from '@/components/UserLayout'
-import { useState, useMemo } from "react";
-import { useOrders } from "@/contexts/OrdersContext";
+import { useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth/context";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import { formatPrice } from "@/data/inventory";
 import { cn, formatDateInOntario } from "@/lib/utils";
 import { OrderDetailsModal } from "@/components/OrderDetailsModal";
 import { EmptyState } from "@/components/EmptyState";
+import { PaginationControls } from "@/components/PaginationControls";
 import {
   Select,
   SelectContent,
@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePaginatedQuery } from "@/hooks/use-paginated-query";
+import { fetchPaginatedUserOrders } from "@/lib/supabase/queries";
 
 const getStatusColor = (status: OrderStatus) => {
   switch (status) {
@@ -54,31 +56,33 @@ const getStatusLabel = (status: OrderStatus) => {
 };
 
 export default function UserOrdersPage() {
-  const { getUserOrders, orders, isLoading: ordersLoading } = useOrders();
   const { user, loading: authLoading } = useAuth();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
 
-  const userOrders = useMemo(() => {
-    if (!user) return [];
-    return getUserOrders(user.id);
-  }, [user, orders, getUserOrders]);
+  const fetchFn = useCallback(
+    async (range: { from: number; to: number }) => {
+      if (!user) return { data: [], count: 0 };
+      return fetchPaginatedUserOrders(user.id, statusFilter, range);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user?.id, statusFilter]
+  );
 
-  const filteredOrders = useMemo(() => {
-    let filtered = [...userOrders];
-
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((order) => order.status === statusFilter);
-    }
-
-    // Sort by date (newest first)
-    return filtered.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [userOrders, statusFilter]);
+  const {
+    data: filteredOrders,
+    totalCount,
+    currentPage,
+    totalPages,
+    isLoading,
+    setCurrentPage,
+    rangeText,
+  } = usePaginatedQuery<Order>({
+    fetchFn,
+    dependencies: [user?.id, statusFilter],
+    realtimeTable: "orders",
+  });
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -90,7 +94,7 @@ export default function UserOrdersPage() {
   };
 
   // Show loading state while auth or orders are loading
-  if (authLoading || ordersLoading) {
+  if (authLoading || (isLoading && filteredOrders.length === 0)) {
     return (
       <UserLayout>
         <div className="flex flex-col items-center justify-center h-full text-center">
@@ -122,7 +126,7 @@ export default function UserOrdersPage() {
             <div>
               <h2 className="text-2xl font-semibold text-foreground">My Orders</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {filteredOrders.length}{" "}
+                {totalCount}{" "}
                 {statusFilter !== "all" ? "filtered" : "total"} orders
               </p>
             </div>
@@ -167,139 +171,147 @@ export default function UserOrdersPage() {
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
           {/* Orders Table */}
-          {filteredOrders.length === 0 ? (
-            <EmptyState 
-              title="No orders found" 
-              description="Please order something to see your orders here." 
+          {filteredOrders.length === 0 && !isLoading ? (
+            <EmptyState
+              title="No orders found"
+              description="Please order something to see your orders here."
             />
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border bg-card">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                        Order ID
-                      </th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Brand
-                      </th>
-                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Items
-                      </th>
-                      <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Total
-                      </th>
-                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Status
-                      </th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Date
-                      </th>
-                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                        Notes
-                      </th>
-                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {filteredOrders.map((order, index) => (
-                      <tr
-                        key={order.id}
-                        className={cn(
-                          "transition-colors hover:bg-muted/50",
-                          index % 2 === 1 && "bg-muted/30"
-                        )}
-                      >
-                        <td className="px-6 py-4">
-                          <span className="font-medium text-foreground">
-                            #{order.id.slice(-8).toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-foreground">
-                          {Array.isArray(order.items) && order.items.length > 0
-                            ? Array.from(
-                                new Set(order.items.map((item) => item.item?.brand).filter(Boolean))
-                              ).join(", ")
-                            : "N/A"}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm text-foreground">
-                          {Array.isArray(order.items) ? order.items.length : 0} item(s)
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <div className="flex flex-col items-end">
-                            {order.discountAmount != null && order.discountAmount > 0 && order.invoiceConfirmed && (
-                              <span className="text-xs text-success mb-1">
-                                Discount: -{formatPrice(order.discountAmount)}
-                              </span>
-                            )}
-                            <span className="font-semibold text-foreground">
-                              {(() => {
-                                // For users: show total without discount until invoice is confirmed
-                                if (!order.invoiceConfirmed) {
-                                  const subtotal = order.subtotal || 0;
-                                  const taxAmount = order.taxAmount || 0;
-                                  return formatPrice(subtotal + taxAmount);
-                                }
-                                // Show the actual totalPrice (which includes discount) when invoice is confirmed
-                                return formatPrice(order.totalPrice);
-                              })()}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              getStatusColor(order.status)
-                            )}
-                          >
-                            {getStatusLabel(order.status)}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-4 text-sm text-muted-foreground">
-                          {formatDateInOntario(order.createdAt)}
-                        </td>
-                        <td className="px-4 py-4">
-                          {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) ? (
-                            <div className="flex items-start gap-2 max-w-xs">
-                              <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                              <div className="flex-1 space-y-1">
-                                {order.rejectionReason && (
-                                  <p className="text-xs text-foreground">
-                                    <span className="font-medium">Reason:</span> {order.rejectionReason}
-                                  </p>
-                                )}
-                                {order.rejectionComment && (
-                                  <p className="text-xs text-muted-foreground line-clamp-2">
-                                    {order.rejectionComment}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewOrder(order)}
-                            className="h-8 w-8"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </td>
+            <>
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                          Order ID
+                        </th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Brand
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Items
+                        </th>
+                        <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Total
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Status
+                        </th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Date
+                        </th>
+                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                          Notes
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                          Action
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {filteredOrders.map((order, index) => (
+                        <tr
+                          key={order.id}
+                          className={cn(
+                            "transition-colors hover:bg-muted/50",
+                            index % 2 === 1 && "bg-muted/30"
+                          )}
+                        >
+                          <td className="px-6 py-4">
+                            <span className="font-medium text-foreground">
+                              #{order.id.slice(-8).toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-foreground">
+                            {Array.isArray(order.items) && order.items.length > 0
+                              ? Array.from(
+                                  new Set(order.items.map((item) => item.item?.brand).filter(Boolean))
+                                ).join(", ")
+                              : "N/A"}
+                          </td>
+                          <td className="px-4 py-4 text-center text-sm text-foreground">
+                            {Array.isArray(order.items) ? order.items.length : 0} item(s)
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            <div className="flex flex-col items-end">
+                              {order.discountAmount != null && order.discountAmount > 0 && order.invoiceConfirmed && (
+                                <span className="text-xs text-success mb-1">
+                                  Discount: -{formatPrice(order.discountAmount)}
+                                </span>
+                              )}
+                              <span className="font-semibold text-foreground">
+                                {(() => {
+                                  // For users: show total without discount until invoice is confirmed
+                                  if (!order.invoiceConfirmed) {
+                                    const subtotal = order.subtotal || 0;
+                                    const taxAmount = order.taxAmount || 0;
+                                    return formatPrice(subtotal + taxAmount);
+                                  }
+                                  // Show the actual totalPrice (which includes discount) when invoice is confirmed
+                                  return formatPrice(order.totalPrice);
+                                })()}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs",
+                                getStatusColor(order.status)
+                              )}
+                            >
+                              {getStatusLabel(order.status)}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-4 text-sm text-muted-foreground">
+                            {formatDateInOntario(order.createdAt)}
+                          </td>
+                          <td className="px-4 py-4">
+                            {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) ? (
+                              <div className="flex items-start gap-2 max-w-xs">
+                                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 space-y-1">
+                                  {order.rejectionReason && (
+                                    <p className="text-xs text-foreground">
+                                      <span className="font-medium">Reason:</span> {order.rejectionReason}
+                                    </p>
+                                  )}
+                                  {order.rejectionComment && (
+                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                      {order.rejectionComment}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewOrder(order)}
+                              className="h-8 w-8"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                rangeText={rangeText}
+              />
+            </>
           )}
         </div>
       </div>
