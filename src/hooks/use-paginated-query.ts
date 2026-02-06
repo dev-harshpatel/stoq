@@ -24,6 +24,7 @@ export interface UsePaginatedQueryReturn<T> {
   totalPages: number
   pageSize: number
   isLoading: boolean
+  isFetching: boolean
   setCurrentPage: (page: number) => void
   refresh: () => Promise<void>
   rangeText: string
@@ -37,15 +38,19 @@ export function usePaginatedQuery<T>(
   const [data, setData] = useState<T[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isFetching, setIsFetching] = useState(false)
+  const [hasInitialized, setHasInitialized] = useState(false)
   const fetchIdRef = useRef(0)
   const depsRef = useRef(dependencies)
+
+  // isLoading is true only on initial load (no data yet)
+  const isLoading = !hasInitialized && data.length === 0
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
   const fetchData = useCallback(async (page: number) => {
     const fetchId = ++fetchIdRef.current
-    setIsLoading(true)
+    setIsFetching(true)
 
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
@@ -55,15 +60,17 @@ export function usePaginatedQuery<T>(
       if (fetchId === fetchIdRef.current) {
         setData(result.data)
         setTotalCount(result.count)
+        setHasInitialized(true)
       }
     } catch (error) {
       if (fetchId === fetchIdRef.current) {
         setData([])
         setTotalCount(0)
+        setHasInitialized(true)
       }
     } finally {
       if (fetchId === fetchIdRef.current) {
-        setIsLoading(false)
+        setIsFetching(false)
       }
     }
   }, [fetchFn, pageSize])
@@ -127,6 +134,7 @@ export function usePaginatedQuery<T>(
     totalPages,
     pageSize,
     isLoading,
+    isFetching,
     setCurrentPage,
     refresh,
     rangeText,

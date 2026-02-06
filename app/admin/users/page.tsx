@@ -41,7 +41,7 @@ export default function UsersPage() {
     realtimeTable: 'user_profiles',
   })
 
-  if (isLoading && users.length === 0) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader size="lg" text="Loading users..." />
@@ -88,6 +88,10 @@ export default function UsersPage() {
             setIsModalOpen(true)
           }}
         />
+      </div>
+
+      {/* Pagination - Sticky at bottom */}
+      <div className="flex-shrink-0 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6">
         <PaginationControls
           currentPage={currentPage}
           totalPages={totalPages}

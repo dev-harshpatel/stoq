@@ -51,7 +51,7 @@ export function PaginationControls({
   return (
     <div
       className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-4 pt-4',
+        'flex flex-col sm:flex-row items-center justify-between gap-4 py-4',
         className
       )}
     >

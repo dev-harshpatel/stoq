@@ -74,7 +74,7 @@ export default function Inventory() {
     setFilters(defaultFilters);
   };
 
-  if (isLoading && data.length === 0) {
+  if (isLoading) {
     return <Loader size="lg" text="Loading inventory..." />;
   }
 
@@ -108,17 +108,19 @@ export default function Inventory() {
         />
       </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
-        <div className="relative">
-          <InventoryTable items={data} />
-          <PaginationControls
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            rangeText={rangeText}
-          />
-        </div>
+      {/* Content Area */}
+      <div className="flex-1 min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
+        <InventoryTable items={data} className="h-full" />
+      </div>
+
+      {/* Pagination - Sticky at bottom */}
+      <div className="flex-shrink-0 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6">
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          rangeText={rangeText}
+        />
       </div>
     </div>
   );

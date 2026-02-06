@@ -146,7 +146,7 @@ export default function Orders() {
 
   const hasActiveFilters = statusFilter !== "all" || searchQuery.trim() !== "";
 
-  if (isLoading && filteredOrders.length === 0) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
         <Package className="h-12 w-12 text-muted-foreground mb-4 animate-pulse" />
@@ -227,133 +227,137 @@ export default function Orders() {
               description="There are no orders matching your current filter criteria."
             />
           ) : (
-            <>
-              <div className="overflow-hidden rounded-lg border border-border bg-card">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border bg-muted/50">
-                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                          Order ID
-                        </th>
-                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                          Customer
-                        </th>
-                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                          Brand
-                        </th>
-                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                          Items
-                        </th>
-                        <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                          Total
-                        </th>
-                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                          Status
-                        </th>
-                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                          Date
-                        </th>
-                        <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                          Notes
-                        </th>
-                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {filteredOrders.map((order, index) => (
-                        <tr
-                          key={order.id}
-                          className={cn(
-                            "transition-colors hover:bg-table-hover",
-                            index % 2 === 1 && "bg-table-zebra"
-                          )}
-                        >
-                          <td className="px-6 py-4">
-                            <span className="font-medium text-foreground">
-                              #{order.id.slice(-8).toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-foreground">
-                            {userEmails[order.userId] || order.userId.slice(0, 8) + '...'}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-foreground">
-                            {Array.isArray(order.items) && order.items.length > 0
-                              ? Array.from(
-                                  new Set(order.items.map((item) => item.item?.brand).filter(Boolean))
-                                ).join(", ")
-                              : "N/A"}
-                          </td>
-                          <td className="px-4 py-4 text-center text-sm text-foreground">
-                            {Array.isArray(order.items) ? order.items.length : 0} item(s)
-                          </td>
-                          <td className="px-4 py-4 text-right">
-                            <span className="font-semibold text-foreground">
-                              {formatPrice(order.totalPrice)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-xs",
-                                getStatusColor(order.status)
-                              )}
-                            >
-                              {getStatusLabel(order.status)}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-4 text-sm text-muted-foreground">
-                            {formatDateInOntario(order.createdAt)}
-                          </td>
-                          <td className="px-4 py-4">
-                            {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) ? (
-                              <div className="flex items-start gap-2 max-w-xs">
-                                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                                <div className="flex-1 space-y-1">
-                                  {order.rejectionReason && (
-                                    <p className="text-xs text-foreground">
-                                      <span className="font-medium">Reason:</span> {order.rejectionReason}
-                                    </p>
-                                  )}
-                                  {order.rejectionComment && (
-                                    <p className="text-xs text-muted-foreground line-clamp-2">
-                                      {order.rejectionComment}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                        Order ID
+                      </th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                        Customer
+                      </th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                        Brand
+                      </th>
+                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                        Items
+                      </th>
+                      <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                        Total
+                      </th>
+                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                        Status
+                      </th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                        Date
+                      </th>
+                      <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                        Notes
+                      </th>
+                      <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredOrders.map((order, index) => (
+                      <tr
+                        key={order.id}
+                        className={cn(
+                          "transition-colors hover:bg-table-hover",
+                          index % 2 === 1 && "bg-table-zebra"
+                        )}
+                      >
+                        <td className="px-6 py-4">
+                          <span className="font-medium text-foreground">
+                            #{order.id.slice(-8).toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-foreground">
+                          {userEmails[order.userId] || order.userId.slice(0, 8) + '...'}
+                        </td>
+                        <td className="px-4 py-4 text-sm text-foreground">
+                          {Array.isArray(order.items) && order.items.length > 0
+                            ? Array.from(
+                                new Set(order.items.map((item) => item.item?.brand).filter(Boolean))
+                              ).join(", ")
+                            : "N/A"}
+                        </td>
+                        <td className="px-4 py-4 text-center text-sm text-foreground">
+                          {Array.isArray(order.items) ? order.items.length : 0} item(s)
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <span className="font-semibold text-foreground">
+                            {formatPrice(order.totalPrice)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-xs",
+                              getStatusColor(order.status)
                             )}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleViewOrder(order)}
-                              className="h-8 w-8"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          >
+                            {getStatusLabel(order.status)}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-4 text-sm text-muted-foreground">
+                          {formatDateInOntario(order.createdAt)}
+                        </td>
+                        <td className="px-4 py-4">
+                          {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) ? (
+                            <div className="flex items-start gap-2 max-w-xs">
+                              <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 space-y-1">
+                                {order.rejectionReason && (
+                                  <p className="text-xs text-foreground">
+                                    <span className="font-medium">Reason:</span> {order.rejectionReason}
+                                  </p>
+                                )}
+                                {order.rejectionComment && (
+                                  <p className="text-xs text-muted-foreground line-clamp-2">
+                                    {order.rejectionComment}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewOrder(order)}
+                            className="h-8 w-8"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <PaginationControls
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                rangeText={rangeText}
-              />
-            </>
+            </div>
           )}
         </div>
+
+        {/* Pagination - Sticky at bottom */}
+        {filteredOrders.length > 0 && (
+          <div className="flex-shrink-0 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6">
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              rangeText={rangeText}
+            />
+          </div>
+        )}
       </div>
 
       <OrderDetailsModal
