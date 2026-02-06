@@ -403,10 +403,18 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
 
   const downloadInvoicePDF = async (orderId: string): Promise<void> => {
     try {
-      const order = getOrderById(orderId);
-      if (!order) {
+      // Fetch fresh order data from database to ensure we have the latest invoice info
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError || !orderData) {
         throw new Error('Order not found');
       }
+
+      const order = dbRowToOrder(orderData);
 
       if (!order.invoiceNumber) {
         throw new Error('Invoice not created yet');
