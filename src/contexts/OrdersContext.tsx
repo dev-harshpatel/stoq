@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/context";
 import { Order, OrderItem, OrderStatus } from "@/types/order";
 import { ReactNode, createContext, useContext, useEffect, useState } from "react";
+import { dbRowToOrder } from "@/lib/supabase/queries";
 
 interface OrdersContextType {
   orders: Order[];
@@ -47,85 +48,7 @@ interface OrdersProviderProps {
 }
 
 type OrderInsert = Database["public"]["Tables"]["orders"]["Insert"];
-type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
 type OrderUpdate = Database["public"]["Tables"]["orders"]["Update"];
-
-const dbRowToOrder = (row: OrderRow): Order => {
-  // Parse items from JSON - handle string, object, or array
-  let items: OrderItem[] = [];
-  
-  if (row.items) {
-    try {
-      // If items is a string, parse it
-      if (typeof row.items === 'string') {
-        const parsed = JSON.parse(row.items);
-        items = Array.isArray(parsed) ? parsed : [parsed];
-      } 
-      // If items is already an array, use it directly
-      else if (Array.isArray(row.items)) {
-        items = row.items as unknown as OrderItem[];
-      }
-      // If items is an object (but not array), check if it's a single item or needs conversion
-      else if (typeof row.items === 'object' && row.items !== null) {
-        // Check if it has properties that suggest it's a single OrderItem
-        if ('item' in row.items && 'quantity' in row.items) {
-          items = [row.items as unknown as OrderItem];
-        } 
-        // Otherwise try to extract array from object values
-        else {
-          const values = Object.values(row.items);
-          if (values.length > 0 && Array.isArray(values[0])) {
-            items = values[0] as unknown as OrderItem[];
-          } else {
-            items = values.filter((v) =>
-              typeof v === 'object' && v !== null && 'item' in v && 'quantity' in v
-            ) as unknown as OrderItem[];
-          }
-        }
-      }
-    } catch (error) {
-      items = [];
-    }
-  }
-
-  // Validate that items array contains valid OrderItems
-  items = items.filter((item): item is OrderItem => 
-    item !== null && 
-    typeof item === 'object' && 
-    'item' in item && 
-    'quantity' in item &&
-    item.item !== null &&
-    typeof item.item === 'object'
-  );
-
-  return {
-    id: row.id,
-    userId: row.user_id,
-    items,
-    subtotal: Number((row as any).subtotal ?? row.total_price),
-    taxRate: (row as any).tax_rate ? Number((row as any).tax_rate) : null,
-    taxAmount: (row as any).tax_amount ? Number((row as any).tax_amount) : null,
-    totalPrice: Number(row.total_price),
-    status: row.status as OrderStatus,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    rejectionReason: (row as any).rejection_reason ?? null,
-    rejectionComment: (row as any).rejection_comment ?? null,
-    invoiceNumber: (row as any).invoice_number ?? null,
-    invoiceDate: (row as any).invoice_date ?? null,
-    poNumber: (row as any).po_number ?? null,
-    paymentTerms: (row as any).payment_terms ?? null,
-    dueDate: (row as any).due_date ?? null,
-    hstNumber: (row as any).hst_number ?? null,
-    invoiceNotes: (row as any).invoice_notes ?? null,
-    invoiceTerms: (row as any).invoice_terms ?? null,
-    invoiceConfirmed: (row as any).invoice_confirmed ?? false,
-    invoiceConfirmedAt: (row as any).invoice_confirmed_at ?? null,
-    discountAmount: (row as any).discount_amount ? Number((row as any).discount_amount) : 0,
-    discountType: (row as any).discount_type as 'percentage' | 'cad' | undefined,
-    shippingAmount: (row as any).shipping_amount ? Number((row as any).shipping_amount) : 0,
-  };
-};
 
 const buildOrderInsert = (
   userId: string,

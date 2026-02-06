@@ -1,12 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FilterBar, FilterValues } from "@/components/FilterBar";
 import { ExportActions } from "@/components/ExportActions";
 import { InventoryTable } from "@/components/InventoryTable";
+import { PaginationControls } from "@/components/PaginationControls";
 import { Loader } from "@/components/Loader";
-import { useInventory } from "@/contexts/InventoryContext";
-import { InventoryItem, getStockStatus } from "@/data/inventory";
+import { InventoryItem } from "@/data/inventory";
+import { useDebounce } from "@/hooks/use-debounce";
+import { usePaginatedQuery } from "@/hooks/use-paginated-query";
+import {
+  fetchPaginatedInventory,
+  fetchFilterOptions,
+  fetchAllFilteredInventory,
+  InventoryFilters,
+} from "@/lib/supabase/queries";
 
 const defaultFilters: FilterValues = {
   search: "",
@@ -18,66 +26,49 @@ const defaultFilters: FilterValues = {
 };
 
 export default function Inventory() {
-  const { inventory, isLoading } = useInventory();
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
+  const [filterOptions, setFilterOptions] = useState<{
+    brands: string[];
+    storageOptions: string[];
+  }>({ brands: [], storageOptions: [] });
 
-  // Extract unique brands and storage options from inventory
-  const availableBrands = useMemo(() => {
-    const brands = new Set(inventory.map((item) => item.brand));
-    return Array.from(brands).sort();
-  }, [inventory]);
+  const debouncedSearch = useDebounce(filters.search, 300);
 
-  const availableStorage = useMemo(() => {
-    const storage = new Set(inventory.map((item) => item.storage));
-    return Array.from(storage).sort((a, b) => {
-      // Sort by numeric value if possible (e.g., "128GB" vs "256GB")
-      const numA = parseInt(a);
-      const numB = parseInt(b);
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB;
-      }
-      return a.localeCompare(b);
-    });
-  }, [inventory]);
+  // Load filter dropdown options once on mount
+  useEffect(() => {
+    fetchFilterOptions().then(setFilterOptions);
+  }, []);
 
-  const filteredItems = useMemo(() => {
-    return inventory.filter((item: InventoryItem) => {
-      if (
-        filters.search &&
-        !item.deviceName.toLowerCase().includes(filters.search.toLowerCase())
-      ) {
-        return false;
-      }
-      if (filters.brand !== "all" && item.brand !== filters.brand) {
-        return false;
-      }
-      if (filters.grade !== "all" && item.grade !== filters.grade) {
-        return false;
-      }
-      if (filters.storage !== "all" && item.storage !== filters.storage) {
-        return false;
-      }
-      if (filters.priceRange !== "all") {
-        switch (filters.priceRange) {
-          case "under200":
-            if (item.pricePerUnit >= 200) return false;
-            break;
-          case "200-400":
-            if (item.pricePerUnit < 200 || item.pricePerUnit > 400)
-              return false;
-            break;
-          case "400+":
-            if (item.pricePerUnit < 400) return false;
-            break;
-        }
-      }
-      if (filters.stockStatus !== "all") {
-        const stockStatus = getStockStatus(item.quantity);
-        if (stockStatus !== filters.stockStatus) return false;
-      }
-      return true;
-    });
-  }, [filters, inventory]);
+  const serverFilters: InventoryFilters = {
+    search: debouncedSearch,
+    brand: filters.brand,
+    grade: filters.grade,
+    storage: filters.storage,
+    priceRange: filters.priceRange,
+    stockStatus: filters.stockStatus,
+  };
+
+  const fetchFn = useCallback(
+    async (range: { from: number; to: number }) => {
+      return fetchPaginatedInventory(serverFilters, range);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [debouncedSearch, filters.brand, filters.grade, filters.storage, filters.priceRange, filters.stockStatus]
+  );
+
+  const {
+    data,
+    totalCount,
+    currentPage,
+    totalPages,
+    isLoading,
+    setCurrentPage,
+    rangeText,
+  } = usePaginatedQuery<InventoryItem>({
+    fetchFn,
+    dependencies: [debouncedSearch, filters.brand, filters.grade, filters.storage, filters.priceRange, filters.stockStatus],
+    realtimeTable: "inventory",
+  });
 
   const handleResetFilters = () => {
     setFilters(defaultFilters);
@@ -98,10 +89,13 @@ export default function Inventory() {
               Inventory
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {filteredItems.length} devices in stock
+              {totalCount} devices in stock
             </p>
           </div>
-          <ExportActions data={filteredItems} filename="inventory" />
+          <ExportActions
+            onFetchAllData={() => fetchAllFilteredInventory(serverFilters)}
+            filename="inventory"
+          />
         </div>
 
         {/* Filter Bar */}
@@ -109,16 +103,24 @@ export default function Inventory() {
           filters={filters}
           onFiltersChange={setFilters}
           onReset={handleResetFilters}
-          brands={availableBrands}
-          storageOptions={availableStorage}
+          brands={filterOptions.brands}
+          storageOptions={filterOptions.storageOptions}
         />
       </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
-        <div className="relative">
-          <InventoryTable items={filteredItems} />
-        </div>
+      {/* Content Area */}
+      <div className="flex-1 min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
+        <InventoryTable items={data} className="h-full" />
+      </div>
+
+      {/* Pagination - Sticky at bottom */}
+      <div className="flex-shrink-0 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6">
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          rangeText={rangeText}
+        />
       </div>
     </div>
   );

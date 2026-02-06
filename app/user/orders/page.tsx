@@ -4,8 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import { UserLayout } from '@/components/UserLayout'
-import { useState, useMemo } from "react";
-import { useOrders } from "@/contexts/OrdersContext";
+import { useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth/context";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import { formatPrice } from "@/data/inventory";
 import { cn, formatDateInOntario } from "@/lib/utils";
 import { OrderDetailsModal } from "@/components/OrderDetailsModal";
 import { EmptyState } from "@/components/EmptyState";
+import { PaginationControls } from "@/components/PaginationControls";
 import {
   Select,
   SelectContent,
@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePaginatedQuery } from "@/hooks/use-paginated-query";
+import { fetchPaginatedUserOrders } from "@/lib/supabase/queries";
 
 const getStatusColor = (status: OrderStatus) => {
   switch (status) {
@@ -54,31 +56,33 @@ const getStatusLabel = (status: OrderStatus) => {
 };
 
 export default function UserOrdersPage() {
-  const { getUserOrders, orders, isLoading: ordersLoading } = useOrders();
   const { user, loading: authLoading } = useAuth();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
 
-  const userOrders = useMemo(() => {
-    if (!user) return [];
-    return getUserOrders(user.id);
-  }, [user, orders, getUserOrders]);
+  const fetchFn = useCallback(
+    async (range: { from: number; to: number }) => {
+      if (!user) return { data: [], count: 0 };
+      return fetchPaginatedUserOrders(user.id, statusFilter, range);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user?.id, statusFilter]
+  );
 
-  const filteredOrders = useMemo(() => {
-    let filtered = [...userOrders];
-
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((order) => order.status === statusFilter);
-    }
-
-    // Sort by date (newest first)
-    return filtered.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [userOrders, statusFilter]);
+  const {
+    data: filteredOrders,
+    totalCount,
+    currentPage,
+    totalPages,
+    isLoading,
+    setCurrentPage,
+    rangeText,
+  } = usePaginatedQuery<Order>({
+    fetchFn,
+    dependencies: [user?.id, statusFilter],
+    realtimeTable: "orders",
+  });
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -90,7 +94,7 @@ export default function UserOrdersPage() {
   };
 
   // Show loading state while auth or orders are loading
-  if (authLoading || ordersLoading) {
+  if (authLoading || isLoading) {
     return (
       <UserLayout>
         <div className="flex flex-col items-center justify-center h-full text-center">
@@ -122,7 +126,7 @@ export default function UserOrdersPage() {
             <div>
               <h2 className="text-2xl font-semibold text-foreground">My Orders</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {filteredOrders.length}{" "}
+                {totalCount}{" "}
                 {statusFilter !== "all" ? "filtered" : "total"} orders
               </p>
             </div>
@@ -167,10 +171,10 @@ export default function UserOrdersPage() {
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
           {/* Orders Table */}
-          {filteredOrders.length === 0 ? (
-            <EmptyState 
-              title="No orders found" 
-              description="Please order something to see your orders here." 
+          {filteredOrders.length === 0 && !isLoading ? (
+            <EmptyState
+              title="No orders found"
+              description="Please order something to see your orders here."
             />
           ) : (
             <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -302,6 +306,18 @@ export default function UserOrdersPage() {
             </div>
           )}
         </div>
+
+        {/* Pagination - Sticky at bottom */}
+        {filteredOrders.length > 0 && (
+          <div className="flex-shrink-0 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6">
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              rangeText={rangeText}
+            />
+          </div>
+        )}
       </div>
 
       <OrderDetailsModal
