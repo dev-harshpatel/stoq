@@ -1,10 +1,16 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User } from '@supabase/supabase-js';
-import { useAuth } from '@/lib/auth/context';
-import { UserProfile, UserRole } from '@/types/user';
-import { getUserProfile, upsertUserProfile } from '@/lib/supabase/utils';
+import {
+  ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { useAuth } from "@/lib/auth/context";
+import { UserProfile } from "@/types/user";
+import { getUserProfile, upsertUserProfile } from "@/lib/supabase/utils";
 
 interface UserProfileContextType {
   profile: UserProfile | null;
@@ -13,7 +19,9 @@ interface UserProfileContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const UserProfileContext = createContext<UserProfileContextType | undefined>(undefined);
+const UserProfileContext = createContext<UserProfileContextType | undefined>(
+  undefined,
+);
 
 interface UserProfileProviderProps {
   children: ReactNode;
@@ -23,6 +31,7 @@ export const UserProfileProvider = ({ children }: UserProfileProviderProps) => {
   const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const inFlightUserIdRef = useRef<string | null>(null);
 
   const loadProfile = async (userId: string | null) => {
     if (!userId) {
@@ -31,25 +40,32 @@ export const UserProfileProvider = ({ children }: UserProfileProviderProps) => {
       return;
     }
 
-    // Skip if we already have the profile for this user
-    if (profile?.id === userId) {
+    // Skip if we already have the profile for this auth user
+    if (profile?.userId === userId) {
       setIsLoading(false);
       return;
     }
 
+    // Avoid duplicate requests (dev StrictMode can trigger effects twice)
+    if (inFlightUserIdRef.current === userId) {
+      return;
+    }
+
     try {
+      inFlightUserIdRef.current = userId;
       setIsLoading(true);
       let userProfile = await getUserProfile(userId);
 
       // If profile doesn't exist, create one with default 'user' role
       if (!userProfile) {
-        userProfile = await upsertUserProfile(userId, 'user');
+        userProfile = await upsertUserProfile(userId, "user");
       }
 
       setProfile(userProfile);
-    } catch (error) {
+    } catch {
       setProfile(null);
     } finally {
+      inFlightUserIdRef.current = null;
       setIsLoading(false);
     }
   };
@@ -69,7 +85,7 @@ export const UserProfileProvider = ({ children }: UserProfileProviderProps) => {
     }
   };
 
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === "admin";
 
   return (
     <UserProfileContext.Provider
@@ -88,7 +104,7 @@ export const UserProfileProvider = ({ children }: UserProfileProviderProps) => {
 export const useUserProfile = () => {
   const context = useContext(UserProfileContext);
   if (context === undefined) {
-    throw new Error('useUserProfile must be used within a UserProfileProvider');
+    throw new Error("useUserProfile must be used within a UserProfileProvider");
   }
   return context;
 };

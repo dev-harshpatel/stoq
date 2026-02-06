@@ -1,10 +1,18 @@
-'use client'
+"use client";
 
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+} from "react";
 import { InventoryItem } from "@/data/inventory";
 import { useAuth } from "@/lib/auth/context";
 import { useInventory } from "@/contexts/InventoryContext";
 import { OrdersContext } from "@/contexts/OrdersContext";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 import {
   loadCartFromLocalStorage,
   saveCartToLocalStorage,
@@ -16,7 +24,6 @@ import {
   StoredCartItem,
 } from "@/lib/cartPersistence";
 import { getAvailableQuantityForUser } from "@/lib/orderUtils";
-import { getUserProfile } from "@/lib/supabase/utils";
 import { getTaxInfo, calculateTax } from "@/lib/taxUtils";
 
 export interface CartItem {
@@ -29,6 +36,7 @@ interface CartContextType {
   addToCart: (item: InventoryItem, quantity: number) => void;
   removeFromCart: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
+  updateItemPrice: (itemId: string, newPrice: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getUniqueItemsCount: () => number;
@@ -66,11 +74,12 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [taxRate, setTaxRate] = useState<number>(0);
   const [taxRatePercent, setTaxRatePercent] = useState<number>(0);
   const [taxAmount, setTaxAmount] = useState<number>(0);
-  const [taxType, setTaxType] = useState<string>('Tax');
+  const [taxType, setTaxType] = useState<string>("Tax");
   const [isTaxLoading, setIsTaxLoading] = useState(false);
   const { user } = useAuth();
+  const { profile } = useUserProfile();
   const { inventory } = useInventory();
-  
+
   // Safely get orders - may not be available in all contexts
   const ordersContext = useContext(OrdersContext);
   const orders = ordersContext?.orders || [];
@@ -81,16 +90,16 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const persistCart = useCallback(
     async (items: CartItem[]) => {
       const stored = cartItemsToStored(items);
-      
+
       // Always save to localStorage
       saveCartToLocalStorage(stored);
-      
+
       // If user is logged in, also save to database
       if (user?.id) {
         await saveCartToDatabase(user.id, stored);
       }
     },
-    [user]
+    [user],
   );
 
   /**
@@ -103,18 +112,18 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
 
     setIsLoading(true);
-    
+
     try {
       let storedItems: StoredCartItem[] = [];
-      
+
       if (user?.id) {
         // User is logged in - load from database
         const dbItems = await loadCartFromDatabase(user.id);
         const localItems = loadCartFromLocalStorage();
-        
+
         // Merge localStorage cart with database cart
         storedItems = mergeCarts(localItems, dbItems);
-        
+
         // Save merged cart back to both
         saveCartToLocalStorage(storedItems);
         await saveCartToDatabase(user.id, storedItems);
@@ -122,10 +131,10 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         // Guest user - load from localStorage only
         storedItems = loadCartFromLocalStorage();
       }
-      
+
       // Convert stored items to full cart items (with inventory data)
       const fullCartItems = await storedToCartItems(storedItems, inventory);
-      
+
       setCartItems(fullCartItems);
     } catch (error) {
       // On error, try to load from localStorage as fallback
@@ -161,19 +170,21 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const addToCart = (item: InventoryItem, quantity: number) => {
     setCartItems((prev) => {
-      const existingItem = prev.find((cartItem) => cartItem.item.id === item.id);
+      const existingItem = prev.find(
+        (cartItem) => cartItem.item.id === item.id,
+      );
       const existingQuantity = existingItem?.quantity || 0;
       const totalQuantity = existingQuantity + quantity;
-      
+
       // Calculate available quantity accounting for pending orders
       // Note: getAvailableQuantityForUser already accounts for items in cart (prev)
       const availableQuantity = getAvailableQuantityForUser(
         item,
         user?.id || null,
         orders,
-        prev
+        prev,
       );
-      
+
       // Available quantity already subtracts cart items, so we check if
       // the quantity we're trying to add exceeds what's available
       if (quantity > availableQuantity) {
@@ -181,22 +192,22 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         // but serves as a safety check
         return prev;
       }
-      
+
       let newItems: CartItem[];
-      
+
       if (existingItem) {
         newItems = prev.map((cartItem) =>
           cartItem.item.id === item.id
             ? { ...cartItem, quantity: cartItem.quantity + quantity }
-            : cartItem
+            : cartItem,
         );
       } else {
         newItems = [...prev, { item, quantity }];
       }
-      
+
       // Persist to localStorage and database
       persistCart(newItems);
-      
+
       return newItems;
     });
   };
@@ -217,31 +228,43 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     setCartItems((prev) => {
       const cartItem = prev.find((item) => item.item.id === itemId);
       if (!cartItem) return prev;
-      
+
       // Calculate available quantity accounting for pending orders
       // availableQuantity = how many MORE can be added (already accounts for current cart)
       const availableQuantity = getAvailableQuantityForUser(
         cartItem.item,
         user?.id || null,
         orders,
-        prev
+        prev,
       );
-      
+
       // Get current quantity in cart for this item
       const currentQuantity = cartItem.quantity;
-      
+
       // Maximum allowed quantity = current quantity + available quantity
       const maxAllowedQuantity = currentQuantity + availableQuantity;
-      
+
       // Validate that new quantity doesn't exceed maximum allowed
       if (quantity > maxAllowedQuantity) {
         // Don't update if it would exceed - this should be caught by UI validation
         // but serves as a safety check
         return prev;
       }
-      
+
       const newItems = prev.map((item) =>
-        item.item.id === itemId ? { ...item, quantity } : item
+        item.item.id === itemId ? { ...item, quantity } : item,
+      );
+      persistCart(newItems);
+      return newItems;
+    });
+  };
+
+  const updateItemPrice = (itemId: string, newPrice: number) => {
+    setCartItems((prev) => {
+      const newItems = prev.map((cartItem) =>
+        cartItem.item.id === itemId
+          ? { ...cartItem, item: { ...cartItem.item, pricePerUnit: newPrice } }
+          : cartItem,
       );
       persistCart(newItems);
       return newItems;
@@ -263,8 +286,9 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const getTotalPrice = () => {
     return cartItems.reduce(
-      (total, cartItem) => total + cartItem.item.pricePerUnit * cartItem.quantity,
-      0
+      (total, cartItem) =>
+        total + cartItem.item.pricePerUnit * cartItem.quantity,
+      0,
     );
   };
 
@@ -287,21 +311,18 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         setTaxRate(0);
         setTaxRatePercent(0);
         setTaxAmount(0);
-        setTaxType('Tax');
+        setTaxType("Tax");
         return;
       }
 
       setIsTaxLoading(true);
       try {
-        // Fetch user profile to get business location
-        const profile = await getUserProfile(user.id);
-        
-        if (!profile || !profile.businessCountry || !profile.businessState) {
+        if (!profile?.businessCountry || !profile.businessState) {
           // User hasn't set business location
           setTaxRate(0);
           setTaxRatePercent(0);
           setTaxAmount(0);
-          setTaxType('Tax');
+          setTaxType("Tax");
           return;
         }
 
@@ -309,7 +330,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         const taxInfo = await getTaxInfo(
           profile.businessCountry,
           profile.businessState,
-          profile.businessCity
+          profile.businessCity,
         );
 
         const subtotal = getSubtotal();
@@ -324,14 +345,20 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         setTaxRate(0);
         setTaxRatePercent(0);
         setTaxAmount(0);
-        setTaxType('Tax');
+        setTaxType("Tax");
       } finally {
         setIsTaxLoading(false);
       }
     };
 
     calculateTaxForCart();
-  }, [user?.id, cartItems]);
+  }, [
+    cartItems,
+    profile?.businessCity,
+    profile?.businessCountry,
+    profile?.businessState,
+    user?.id,
+  ]);
 
   return (
     <CartContext.Provider
@@ -340,6 +367,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         addToCart,
         removeFromCart,
         updateQuantity,
+        updateItemPrice,
         clearCart,
         getTotalItems,
         getUniqueItemsCount,
@@ -359,4 +387,3 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     </CartContext.Provider>
   );
 };
-

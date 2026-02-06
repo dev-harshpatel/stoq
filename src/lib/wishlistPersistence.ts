@@ -3,10 +3,11 @@
  * Handles localStorage and database sync for wishlist items
  */
 
-import { InventoryItem } from '@/data/inventory';
-import { supabase } from './supabase/client';
+import { InventoryItem } from "@/data/inventory";
+import { Database } from "@/lib/database.types";
+import { supabase } from "./supabase/client";
 
-const WISHLIST_STORAGE_KEY = 'stoq_wishlist_items';
+const WISHLIST_STORAGE_KEY = "stoq_wishlist_items";
 
 /**
  * Simplified wishlist item format for storage (only IDs)
@@ -15,11 +16,28 @@ export interface StoredWishlistItem {
   itemId: string;
 }
 
+type WishlistRow = Pick<
+  Database["public"]["Tables"]["user_profiles"]["Row"],
+  "wishlist_items"
+>;
+
+const isStoredWishlistItem = (value: unknown): value is StoredWishlistItem => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  if (!("itemId" in value)) {
+    return false;
+  }
+
+  return typeof (value as { itemId?: unknown }).itemId === "string";
+};
+
 /**
  * Load wishlist from localStorage
  */
 export const loadWishlistFromLocalStorage = (): StoredWishlistItem[] => {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === "undefined") return [];
 
   try {
     const stored = localStorage.getItem(WISHLIST_STORAGE_KEY);
@@ -35,8 +53,10 @@ export const loadWishlistFromLocalStorage = (): StoredWishlistItem[] => {
 /**
  * Save wishlist to localStorage
  */
-export const saveWishlistToLocalStorage = (items: StoredWishlistItem[]): void => {
-  if (typeof window === 'undefined') return;
+export const saveWishlistToLocalStorage = (
+  items: StoredWishlistItem[],
+): void => {
+  if (typeof window === "undefined") return;
 
   try {
     localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items));
@@ -48,7 +68,9 @@ export const saveWishlistToLocalStorage = (items: StoredWishlistItem[]): void =>
 /**
  * Convert InventoryItem[] to StoredWishlistItem[]
  */
-export const wishlistItemsToStored = (items: InventoryItem[]): StoredWishlistItem[] => {
+export const wishlistItemsToStored = (
+  items: InventoryItem[],
+): StoredWishlistItem[] => {
   return items.map((item) => ({
     itemId: item.id,
   }));
@@ -59,12 +81,14 @@ export const wishlistItemsToStored = (items: InventoryItem[]): StoredWishlistIte
  */
 export const storedToWishlistItems = async (
   stored: StoredWishlistItem[],
-  inventory: InventoryItem[]
+  inventory: InventoryItem[],
 ): Promise<InventoryItem[]> => {
   const wishlistItems: InventoryItem[] = [];
 
   for (const storedItem of stored) {
-    const inventoryItem = inventory.find((item) => item.id === storedItem.itemId);
+    const inventoryItem = inventory.find(
+      (item) => item.id === storedItem.itemId,
+    );
 
     // Only include items that still exist in inventory
     if (inventoryItem) {
@@ -78,22 +102,26 @@ export const storedToWishlistItems = async (
 /**
  * Load wishlist from database for logged-in user
  */
-export const loadWishlistFromDatabase = async (userId: string): Promise<StoredWishlistItem[]> => {
+export const loadWishlistFromDatabase = async (
+  userId: string,
+): Promise<StoredWishlistItem[]> => {
   try {
     const { data, error } = await supabase
-      .from('user_profiles')
-      .select('wishlist_items')
-      .eq('user_id', userId)
+      .from("user_profiles")
+      .select("wishlist_items")
+      .eq("user_id", userId)
       .single();
 
     if (error || !data) return [];
 
-    // Type assertion for wishlist_items field
-    const profileData = data as { wishlist_items: any };
-    const wishlistItems = profileData.wishlist_items;
-    if (!wishlistItems || !Array.isArray(wishlistItems)) return [];
+    const row = data as unknown as WishlistRow;
+    const wishlistItems = row.wishlist_items;
 
-    return wishlistItems as StoredWishlistItem[];
+    if (!Array.isArray(wishlistItems)) {
+      return [];
+    }
+
+    return (wishlistItems as unknown[]).filter(isStoredWishlistItem);
   } catch (error) {
     return [];
   }
@@ -104,13 +132,12 @@ export const loadWishlistFromDatabase = async (userId: string): Promise<StoredWi
  */
 export const saveWishlistToDatabase = async (
   userId: string,
-  items: StoredWishlistItem[]
+  items: StoredWishlistItem[],
 ): Promise<boolean> => {
   try {
-    const { error } = await (supabase
-      .from('user_profiles') as any)
+    const { error } = await (supabase.from("user_profiles") as any)
       .update({ wishlist_items: items })
-      .eq('user_id', userId);
+      .eq("user_id", userId);
 
     return !error;
   } catch (error) {
@@ -123,7 +150,7 @@ export const saveWishlistToDatabase = async (
  */
 export const mergeWishlists = (
   list1: StoredWishlistItem[],
-  list2: StoredWishlistItem[]
+  list2: StoredWishlistItem[],
 ): StoredWishlistItem[] => {
   const merged = new Set<string>();
 

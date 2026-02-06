@@ -4,6 +4,7 @@ import { InventoryItem } from '@/data/inventory';
 import { Database } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/context';
+import { useRefresh } from '@/contexts/RefreshContext';
 import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import { UploadHistory, BulkInsertResult } from '@/types/upload';
 import { dbRowToInventoryItem } from '@/lib/supabase/queries';
@@ -13,6 +14,7 @@ interface InventoryContextType {
   updateProduct: (id: string, updates: Partial<InventoryItem>) => Promise<void>;
   decreaseQuantity: (id: string, amount: number) => Promise<void>;
   resetInventory: () => Promise<void>;
+  refreshInventory: () => Promise<void>;
   bulkInsertProducts: (products: InventoryItem[]) => Promise<BulkInsertResult>;
   getUploadHistory: () => Promise<UploadHistory[]>;
   isLoading: boolean;
@@ -47,6 +49,7 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const { refreshKey } = useRefresh();
 
   // Load inventory from Supabase
   const loadInventory = async () => {
@@ -110,6 +113,14 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
     };
     // Use user?.id to avoid re-fetching when user object reference changes but ID is the same
   }, [user?.id]);
+
+  // Refresh inventory when RefreshContext triggers (auto-refresh or manual refresh)
+  useEffect(() => {
+    // Skip on initial mount (refreshKey starts at 0)
+    if (refreshKey > 0) {
+      loadInventory();
+    }
+  }, [refreshKey]);
 
   const updateProduct = async (id: string, updates: Partial<InventoryItem>) => {
     try {
@@ -186,6 +197,11 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
     setIsLoading(true);
     await loadInventory();
     setIsLoading(false);
+  };
+
+  // Silent refresh - doesn't show loading state (for auto-refresh)
+  const refreshInventory = async () => {
+    await loadInventory();
   };
 
   const bulkInsertProducts = async (products: InventoryItem[]): Promise<BulkInsertResult> => {
@@ -316,6 +332,7 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         updateProduct,
         decreaseQuantity,
         resetInventory,
+        refreshInventory,
         bulkInsertProducts,
         getUploadHistory,
         isLoading,

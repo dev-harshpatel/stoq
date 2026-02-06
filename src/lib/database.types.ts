@@ -15,8 +15,8 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          role: 'user' | 'admin';
-          approval_status: 'pending' | 'approved' | 'rejected';
+          role: "user" | "admin";
+          approval_status: "pending" | "approved" | "rejected";
           approval_status_updated_at: string | null;
           first_name: string | null;
           last_name: string | null;
@@ -31,14 +31,32 @@ export interface Database {
           business_website: string | null;
           business_email: string | null;
           cart_items: Json | null;
+          wishlist_items: Json | null;
+          // Shipping Address
+          shipping_address: string | null;
+          shipping_address_components: Json | null;
+          shipping_city: string | null;
+          shipping_state: string | null;
+          shipping_country: string | null;
+          shipping_postal_code: string | null;
+          // Billing Address
+          billing_address: string | null;
+          billing_address_components: Json | null;
+          billing_city: string | null;
+          billing_state: string | null;
+          billing_country: string | null;
+          billing_postal_code: string | null;
+          // Flags
+          shipping_same_as_business: boolean;
+          billing_same_as_business: boolean;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
-          role?: 'user' | 'admin';
-          approval_status?: 'pending' | 'approved' | 'rejected';
+          role?: "user" | "admin";
+          approval_status?: "pending" | "approved" | "rejected";
           approval_status_updated_at?: string | null;
           first_name?: string | null;
           last_name?: string | null;
@@ -53,14 +71,32 @@ export interface Database {
           business_website?: string | null;
           business_email?: string | null;
           cart_items?: Json | null;
+          wishlist_items?: Json | null;
+          // Shipping Address
+          shipping_address?: string | null;
+          shipping_address_components?: Json | null;
+          shipping_city?: string | null;
+          shipping_state?: string | null;
+          shipping_country?: string | null;
+          shipping_postal_code?: string | null;
+          // Billing Address
+          billing_address?: string | null;
+          billing_address_components?: Json | null;
+          billing_city?: string | null;
+          billing_state?: string | null;
+          billing_country?: string | null;
+          billing_postal_code?: string | null;
+          // Flags
+          shipping_same_as_business?: boolean;
+          billing_same_as_business?: boolean;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           user_id?: string;
-          role?: 'user' | 'admin';
-          approval_status?: 'pending' | 'approved' | 'rejected';
+          role?: "user" | "admin";
+          approval_status?: "pending" | "approved" | "rejected";
           approval_status_updated_at?: string | null;
           first_name?: string | null;
           last_name?: string | null;
@@ -75,16 +111,34 @@ export interface Database {
           business_website?: string | null;
           business_email?: string | null;
           cart_items?: Json | null;
+          wishlist_items?: Json | null;
+          // Shipping Address
+          shipping_address?: string | null;
+          shipping_address_components?: Json | null;
+          shipping_city?: string | null;
+          shipping_state?: string | null;
+          shipping_country?: string | null;
+          shipping_postal_code?: string | null;
+          // Billing Address
+          billing_address?: string | null;
+          billing_address_components?: Json | null;
+          billing_city?: string | null;
+          billing_state?: string | null;
+          billing_country?: string | null;
+          billing_postal_code?: string | null;
+          // Flags
+          shipping_same_as_business?: boolean;
+          billing_same_as_business?: boolean;
           created_at?: string;
           updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: 'user_profiles_user_id_fkey';
-            columns: ['user_id'];
+            foreignKeyName: "user_profiles_user_id_fkey";
+            columns: ["user_id"];
             isOneToOne: true;
-            referencedRelation: 'users';
-            referencedColumns: ['id'];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -157,6 +211,8 @@ export interface Database {
           discount_amount?: number | null;
           discount_type?: string | null;
           shipping_amount?: number | null;
+          shipping_address?: string | null;
+          billing_address?: string | null;
         };
         Insert: {
           id?: string;
@@ -184,6 +240,8 @@ export interface Database {
           discount_amount?: number | null;
           discount_type?: string | null;
           shipping_amount?: number | null;
+          shipping_address?: string | null;
+          billing_address?: string | null;
         };
         Update: {
           id?: string;
@@ -211,14 +269,16 @@ export interface Database {
           discount_amount?: number | null;
           discount_type?: string | null;
           shipping_amount?: number | null;
+          shipping_address?: string | null;
+          billing_address?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: 'orders_user_id_fkey';
-            columns: ['user_id'];
+            foreignKeyName: "orders_user_id_fkey";
+            columns: ["user_id"];
             isOneToOne: false;
-            referencedRelation: 'users';
-            referencedColumns: ['id'];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
           },
         ];
       };
@@ -229,4 +289,3 @@ export interface Database {
     CompositeTypes: Record<string, never>;
   };
 }
-

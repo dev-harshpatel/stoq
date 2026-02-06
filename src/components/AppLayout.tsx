@@ -1,9 +1,10 @@
 'use client'
 
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useCallback } from "react";
 import { Navbar } from "@/components/Navbar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { getOntarioTime } from "@/lib/utils";
+import { useRefresh } from "@/contexts/RefreshContext";
+import { useAutoRefresh } from "@/hooks/use-auto-refresh";
 // import { Footer } from '@/components/Footer';
 
 interface AppLayoutProps {
@@ -13,18 +14,21 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [lastRefreshed, setLastRefreshed] = useState(getOntarioTime());
+  const { triggerRefresh } = useRefresh();
 
-  useEffect(() => {
-    if (autoRefresh) {
-      const interval = setInterval(() => {
-        setLastRefreshed(getOntarioTime());
-      }, 60000); // Update every minute
+  const handleRefresh = useCallback(async () => {
+    triggerRefresh();
+  }, [triggerRefresh]);
 
-      return () => clearInterval(interval);
-    }
-  }, [autoRefresh]);
+  const {
+    autoRefresh,
+    setAutoRefresh,
+    lastRefreshed,
+    isRefreshing,
+    manualRefresh,
+  } = useAutoRefresh({
+    onRefresh: handleRefresh,
+  });
 
   return (
     <div className="h-screen flex w-full bg-background overflow-hidden">
@@ -41,7 +45,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           autoRefresh={autoRefresh}
           onAutoRefreshChange={setAutoRefresh}
           lastRefreshed={lastRefreshed}
-          onRefresh={() => setLastRefreshed(getOntarioTime())}
+          onRefresh={manualRefresh}
+          isRefreshing={isRefreshing}
         />
 
         <main className="flex-1 p-4 lg:p-6 overflow-hidden">

@@ -9,6 +9,7 @@ import { Loader } from "@/components/Loader";
 import { InventoryItem } from "@/data/inventory";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePaginatedQuery } from "@/hooks/use-paginated-query";
+import { useRefresh } from "@/contexts/RefreshContext";
 import {
   fetchPaginatedInventory,
   fetchFilterOptions,
@@ -26,6 +27,7 @@ const defaultFilters: FilterValues = {
 };
 
 export default function Inventory() {
+  const { refreshKey } = useRefresh();
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
   const [filterOptions, setFilterOptions] = useState<{
     brands: string[];
@@ -67,7 +69,8 @@ export default function Inventory() {
   } = usePaginatedQuery<InventoryItem>({
     fetchFn,
     dependencies: [debouncedSearch, filters.brand, filters.grade, filters.storage, filters.priceRange, filters.stockStatus],
-    realtimeTable: "inventory",
+    refreshKey,
+    // Note: realtimeTable removed to prevent double-fetching with RefreshContext
   });
 
   const handleResetFilters = () => {
