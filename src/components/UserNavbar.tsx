@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { LogIn, LogOut, User, ShoppingCart, Package, Loader2, FileText, UserCircle, BookOpen, Mail, Menu, X, Heart, BarChart3 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,26 +11,57 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/lib/auth/context";
+import { useNavigation } from "@/contexts/NavigationContext";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useAuth } from "@/lib/auth/context";
 import { cn } from "@/lib/utils";
-import { LoginModal } from "./LoginModal";
-import { SignupModal } from "./SignupModal";
 import { CartModal } from "./CartModal";
+import { LoginModal } from "./LoginModal";
 import { NavLink } from "./NavLink";
-import { useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { SignupModal } from "./SignupModal";
+import {
+  BarChart3,
+  BookOpen,
+  FileText,
+  Heart,
+  Loader2,
+  LogIn,
+  LogOut,
+  Mail,
+  Menu,
+  Package,
+  RefreshCw,
+  ShoppingCart,
+  User,
+  UserCircle,
+  X,
+} from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface UserNavbarProps {
   className?: string;
+  autoRefresh?: boolean;
+  onAutoRefreshChange?: (value: boolean) => void;
+  lastRefreshed?: string;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
-export const UserNavbar = ({ className }: UserNavbarProps) => {
+export const UserNavbar = ({
+  className,
+  autoRefresh = false,
+  onAutoRefreshChange,
+  lastRefreshed,
+  onRefresh,
+  isRefreshing = false,
+}: UserNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getUniqueItemsCount } = useCart();
   const { getWishlistCount } = useWishlist();
+  const { startNavigation } = useNavigation();
   const router = useRouter();
   const pathname = usePathname();
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -46,21 +77,48 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
     }
   }, [user]);
 
+  const handleNavigate = (href: string) => {
+    if (isPathActive(href)) {
+      return;
+    }
+
+    startNavigation();
+    router.push(href);
+  };
+
+  const isPathActive = (href: string) => {
+    if (!pathname) {
+      return false;
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
+  const getMenuItemClassName = (href: string) => {
+    const isActive = isPathActive(href);
+
+    return cn(
+      "cursor-pointer",
+      isActive && "bg-primary/10 text-primary font-medium pointer-events-none",
+    );
+  };
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
       await signOut();
-      toast.success('Logged out', {
-        description: 'You have been successfully logged out.',
+      toast.success("Logged out", {
+        description: "You have been successfully logged out.",
       });
       // Reset state before redirect to prevent stuck loader
       setIsLoggingOut(false);
       // Redirect to home page after successful logout
-      router.push('/');
+      handleNavigate("/");
       router.refresh();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to logout';
-      toast.error('Logout failed', {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to logout";
+      toast.error("Logout failed", {
         description: errorMessage,
       });
       setIsLoggingOut(false);
@@ -76,13 +134,13 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
       <header
         className={cn(
           "sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-sm",
-          className
+          className,
         )}
       >
         <div className="flex h-16 items-center justify-between px-4 lg:px-6">
           {/* Logo */}
           <button
-            onClick={() => router.push('/')}
+            onClick={() => handleNavigate("/")}
             className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer text-left"
             aria-label="Go to home page"
           >
@@ -94,35 +152,57 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
 
           {/* Desktop Navigation and Actions */}
           <div className="hidden md:flex items-center gap-4">
-            {/* Navigation Links */}
-            <nav className="flex items-center gap-6">
-              <NavLink
-                href="/user/grades"
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2",
-                  pathname === "/user/grades" ? "text-primary" : "text-muted-foreground"
-                )}
-                activeClassName="text-primary"
+            {/* Auto-refresh Controls */}
+            {lastRefreshed && (
+              <div className="hidden md:flex items-center gap-3 text-sm">
+                <span className="text-muted-foreground">Last refreshed:</span>
+                <span className="text-foreground font-medium">
+                  {lastRefreshed}
+                </span>
+              </div>
+            )}
+
+            {onAutoRefreshChange && (
+              <div className="hidden md:flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Auto-refresh
+                </span>
+                <Switch
+                  checked={autoRefresh}
+                  onCheckedChange={onAutoRefreshChange}
+                  className="data-[state=checked]:bg-primary"
+                />
+              </div>
+            )}
+
+            {onRefresh && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden md:flex"
+                onClick={onRefresh}
+                disabled={isRefreshing}
               >
-                <BookOpen className="h-4 w-4" />
-                Grades Guide
-              </NavLink>
-              <NavLink
-                href="/contact"
-                className={cn(
-                  "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2",
-                  pathname === "/contact" ? "text-primary" : "text-muted-foreground"
-                )}
-                activeClassName="text-primary"
-              >
-                <Mail className="h-4 w-4" />
-                Contact Us
-              </NavLink>
-            </nav>
+                <RefreshCw
+                  className={cn("h-4 w-4", isRefreshing && "animate-spin")}
+                />
+              </Button>
+            )}
+
+            {/* Vertical Divider */}
+            <div className="hidden md:block h-6 w-px bg-border" />
+
+            {/* Grades Guide Link */}
+            <Button
+              variant="ghost"
+              onClick={() => handleNavigate("/user/grades")}
+            >
+              Grades Guide
+            </Button>
 
             {/* Cart Button */}
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setCartModalOpen(true)}
               className="relative gap-2"
             >
@@ -144,29 +224,47 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="gap-2">
                     <User className="h-4 w-4" />
-                    <span className="hidden sm:inline">{user?.email?.split('@')[0] || 'User'}</span>
+                    <span className="hidden sm:inline">
+                      {user?.email?.split("@")[0] || "User"}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user?.email?.split('@')[0] || 'User'}</p>
+                      <p className="text-sm font-medium leading-none">
+                        {user?.email?.split("@")[0] || "User"}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
                       </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => router.push('/user/profile')}
-                    className="cursor-pointer"
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      if (isPathActive("/user/profile")) {
+                        e.preventDefault();
+                        return;
+                      }
+
+                      handleNavigate("/user/profile");
+                    }}
+                    className={getMenuItemClassName("/user/profile")}
                   >
                     <UserCircle className="h-4 w-4 mr-2" />
                     Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push('/user/wishlist')}
-                    className="cursor-pointer"
+                    onSelect={(e) => {
+                      if (isPathActive("/user/wishlist")) {
+                        e.preventDefault();
+                        return;
+                      }
+
+                      handleNavigate("/user/wishlist");
+                    }}
+                    className={getMenuItemClassName("/user/wishlist")}
                   >
                     <Heart className="h-4 w-4 mr-2" />
                     Wishlist
@@ -180,29 +278,64 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                     )}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push('/user/stats')}
-                    className="cursor-pointer"
+                    onSelect={(e) => {
+                      if (isPathActive("/user/stats")) {
+                        e.preventDefault();
+                        return;
+                      }
+
+                      handleNavigate("/user/stats");
+                    }}
+                    className={getMenuItemClassName("/user/stats")}
                   >
                     <BarChart3 className="h-4 w-4 mr-2" />
                     My Statistics
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push('/user/orders')}
-                    className="cursor-pointer"
+                    onSelect={(e) => {
+                      if (isPathActive("/user/orders")) {
+                        e.preventDefault();
+                        return;
+                      }
+
+                      handleNavigate("/user/orders");
+                    }}
+                    className={getMenuItemClassName("/user/orders")}
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     View Orders
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push('/user/grades')}
-                    className="cursor-pointer"
+                    onSelect={(e) => {
+                      if (isPathActive("/user/grades")) {
+                        e.preventDefault();
+                        return;
+                      }
+
+                      handleNavigate("/user/grades");
+                    }}
+                    className={getMenuItemClassName("/user/grades")}
                   >
                     <BookOpen className="h-4 w-4 mr-2" />
-                    Product Grades Guide
+                    Grades Guide
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      if (isPathActive("/contact")) {
+                        e.preventDefault();
+                        return;
+                      }
+
+                      handleNavigate("/contact");
+                    }}
+                    className={getMenuItemClassName("/contact")}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Contact Us
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={handleLogout} 
+                  <DropdownMenuItem
+                    onClick={handleLogout}
                     disabled={isLoggingOut}
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
@@ -231,8 +364,8 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                   <UserCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   <span>Sign Up</span>
                 </Button>
-                <Button 
-                  onClick={() => setLoginModalOpen(true)} 
+                <Button
+                  onClick={() => setLoginModalOpen(true)}
                   className="gap-1.5 text-xs sm:text-sm"
                   size="sm"
                 >
@@ -251,7 +384,11 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </Button>
         </div>
       </header>
@@ -268,7 +405,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
       <div
         className={cn(
           "md:hidden fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-card border-r border-border shadow-lg overflow-y-auto z-[9999] transition-transform duration-300 ease-out",
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex flex-col h-full">
@@ -288,36 +425,75 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
 
           {/* Menu Content */}
           <nav className="flex flex-col p-4 space-y-1 flex-1">
+            {/* Auto-refresh Controls for Mobile */}
+            {(onAutoRefreshChange || onRefresh) && (
+              <>
+                <div className="px-3 py-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">
+                    Data Refresh
+                  </p>
+                  {lastRefreshed && (
+                    <p className="text-sm text-foreground mt-1">
+                      Last refreshed: {lastRefreshed}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center justify-between px-3 py-2.5">
+                  {onAutoRefreshChange && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-foreground">
+                        Auto-refresh
+                      </span>
+                      <Switch
+                        checked={autoRefresh}
+                        onCheckedChange={onAutoRefreshChange}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                    </div>
+                  )}
+                  {onRefresh && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onRefresh}
+                      disabled={isRefreshing}
+                      className="gap-2"
+                    >
+                      <RefreshCw
+                        className={cn(
+                          "h-4 w-4",
+                          isRefreshing && "animate-spin",
+                        )}
+                      />
+                      Refresh
+                    </Button>
+                  )}
+                </div>
+                <div className="border-t border-border my-2" />
+              </>
+            )}
+
             {/* Navigation Links */}
             <button
               onClick={() => {
-                router.push('/user/grades');
+                if (isPathActive("/user/grades")) {
+                  setMobileMenuOpen(false);
+                  return;
+                }
+
+                handleNavigate("/user/grades");
                 setMobileMenuOpen(false);
               }}
               className={cn(
                 "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
-                pathname === "/user/grades" 
-                  ? "text-primary bg-primary/10" 
-                  : "text-foreground hover:bg-muted"
+                isPathActive("/user/grades")
+                  ? "text-primary bg-primary/10"
+                  : "text-foreground hover:bg-muted",
+                isPathActive("/user/grades") && "pointer-events-none",
               )}
             >
               <BookOpen className="h-4 w-4" />
               Grades Guide
-            </button>
-            <button
-              onClick={() => {
-                router.push('/contact');
-                setMobileMenuOpen(false);
-              }}
-              className={cn(
-                "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
-                pathname === "/contact" 
-                  ? "text-primary bg-primary/10" 
-                  : "text-foreground hover:bg-muted"
-              )}
-            >
-              <Mail className="h-4 w-4" />
-              Contact Us
             </button>
 
             {/* Cart Button */}
@@ -347,26 +523,50 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             {isAuthenticated ? (
               <>
                 <div className="px-3 py-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase">Account</p>
-                  <p className="text-sm font-medium text-foreground mt-1">{user?.email?.split('@')[0] || 'User'}</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase">
+                    Account
+                  </p>
+                  <p className="text-sm font-medium text-foreground mt-1">
+                    {user?.email?.split("@")[0] || "User"}
+                  </p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <button
                   onClick={() => {
-                    router.push('/user/profile');
+                    if (isPathActive("/user/profile")) {
+                      setMobileMenuOpen(false);
+                      return;
+                    }
+
+                    handleNavigate("/user/profile");
                     setMobileMenuOpen(false);
                   }}
-                  className="text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-foreground hover:bg-muted"
+                  className={cn(
+                    "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
+                    isPathActive("/user/profile")
+                      ? "text-primary bg-primary/10 pointer-events-none"
+                      : "text-foreground hover:bg-muted",
+                  )}
                 >
                   <UserCircle className="h-4 w-4" />
                   Profile
                 </button>
                 <button
                   onClick={() => {
-                    router.push('/user/wishlist');
+                    if (isPathActive("/user/wishlist")) {
+                      setMobileMenuOpen(false);
+                      return;
+                    }
+
+                    handleNavigate("/user/wishlist");
                     setMobileMenuOpen(false);
                   }}
-                  className="text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-foreground hover:bg-muted"
+                  className={cn(
+                    "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
+                    isPathActive("/user/wishlist")
+                      ? "text-primary bg-primary/10 pointer-events-none"
+                      : "text-foreground hover:bg-muted",
+                  )}
                 >
                   <Heart className="h-4 w-4" />
                   <span>Wishlist</span>
@@ -381,23 +581,64 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                 </button>
                 <button
                   onClick={() => {
-                    router.push('/user/stats');
+                    if (isPathActive("/user/stats")) {
+                      setMobileMenuOpen(false);
+                      return;
+                    }
+
+                    handleNavigate("/user/stats");
                     setMobileMenuOpen(false);
                   }}
-                  className="text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-foreground hover:bg-muted"
+                  className={cn(
+                    "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
+                    isPathActive("/user/stats")
+                      ? "text-primary bg-primary/10 pointer-events-none"
+                      : "text-foreground hover:bg-muted",
+                  )}
                 >
                   <BarChart3 className="h-4 w-4" />
                   My Statistics
                 </button>
                 <button
                   onClick={() => {
-                    router.push('/user/orders');
+                    if (isPathActive("/user/orders")) {
+                      setMobileMenuOpen(false);
+                      return;
+                    }
+
+                    handleNavigate("/user/orders");
                     setMobileMenuOpen(false);
                   }}
-                  className="text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left text-foreground hover:bg-muted"
+                  className={cn(
+                    "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
+                    isPathActive("/user/orders")
+                      ? "text-primary bg-primary/10 pointer-events-none"
+                      : "text-foreground hover:bg-muted",
+                  )}
                 >
                   <FileText className="h-4 w-4" />
                   View Orders
+                </button>
+                <button
+                  onClick={() => {
+                    if (isPathActive("/contact")) {
+                      setMobileMenuOpen(false);
+                      return;
+                    }
+
+                    handleNavigate("/contact");
+                    setMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
+                    isPathActive("/contact")
+                      ? "text-primary bg-primary/10"
+                      : "text-foreground hover:bg-muted",
+                    isPathActive("/contact") && "pointer-events-none",
+                  )}
+                >
+                  <Mail className="h-4 w-4" />
+                  Contact Us
                 </button>
                 <div className="border-t border-border my-2" />
                 <button
@@ -451,24 +692,24 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
       <LoginModal
         open={loginModalOpen}
         onOpenChange={(open) => {
-          setLoginModalOpen(open)
+          setLoginModalOpen(open);
           if (!open) {
             // Close signup modal if login modal is closed
-            setSignupModalOpen(false)
+            setSignupModalOpen(false);
           }
         }}
         onSignupClick={() => {
-          setLoginModalOpen(false)
-          setSignupModalOpen(true)
+          setLoginModalOpen(false);
+          setSignupModalOpen(true);
         }}
       />
       <SignupModal
         open={signupModalOpen}
         onOpenChange={(open) => {
-          setSignupModalOpen(open)
+          setSignupModalOpen(open);
           if (!open) {
             // Close login modal if signup modal is closed
-            setLoginModalOpen(false)
+            setLoginModalOpen(false);
           }
         }}
       />
@@ -476,4 +717,3 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
     </>
   );
 };
-

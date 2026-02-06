@@ -7,9 +7,14 @@ import { Order, OrderItem, OrderStatus } from "@/types/order";
 import { ReactNode, createContext, useContext, useEffect, useState } from "react";
 import { dbRowToOrder } from "@/lib/supabase/queries";
 
+export interface OrderAddresses {
+  shippingAddress: string | null;
+  billingAddress: string | null;
+}
+
 interface OrdersContextType {
   orders: Order[];
-  createOrder: (userId: string, items: OrderItem[], subtotal?: number, taxRate?: number, taxAmount?: number) => Promise<Order>;
+  createOrder: (userId: string, items: OrderItem[], subtotal?: number, taxRate?: number, taxAmount?: number, addresses?: OrderAddresses) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: OrderStatus, rejectionReason?: string, rejectionComment?: string, discountAmount?: number) => Promise<void>;
   updateInvoice: (orderId: string, invoiceData: {
     invoiceNumber: string;
@@ -55,7 +60,8 @@ const buildOrderInsert = (
   items: OrderItem[],
   subtotal?: number,
   taxRate?: number,
-  taxAmount?: number
+  taxAmount?: number,
+  addresses?: OrderAddresses
 ): OrderInsert => {
   // Calculate subtotal if not provided
   const calculatedSubtotal = subtotal ?? items.reduce(
@@ -94,6 +100,9 @@ const buildOrderInsert = (
     status: "pending",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    // Addresses
+    shipping_address: addresses?.shippingAddress ?? null,
+    billing_address: addresses?.billingAddress ?? null,
   };
 };
 
@@ -169,17 +178,18 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
   }, [user?.id]);
 
   const createOrder = async (
-    userId: string, 
+    userId: string,
     items: OrderItem[],
     subtotal?: number,
     taxRate?: number,
-    taxAmount?: number
+    taxAmount?: number,
+    addresses?: OrderAddresses
   ): Promise<Order> => {
     if (!items || items.length === 0) {
       throw new Error('Order must have at least one item');
     }
 
-    const newOrder = buildOrderInsert(userId, items, subtotal, taxRate, taxAmount);
+    const newOrder = buildOrderInsert(userId, items, subtotal, taxRate, taxAmount, addresses);
 
     try {
       // Use the newOrder directly - Supabase will handle JSON serialization

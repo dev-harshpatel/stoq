@@ -1,29 +1,64 @@
-'use client'
+"use client";
 
 // Force dynamic rendering to prevent static generation issues
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useAuth } from '@/lib/auth/context'
-import { getUserProfileWithDetails, updateUserProfileDetails } from '@/lib/supabase/utils'
-import { UserProfile } from '@/types/user'
-import { getFieldsBySection, type ProfileFieldConfig } from '@/lib/profileFields'
-import { personalDetailsSchema, businessDetailsSchema } from '@/lib/validations/signup'
-import { z } from 'zod'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from '@/components/ui/form'
-import { Loader } from '@/components/Loader'
-import { UserLayout } from '@/components/UserLayout'
-import { toast } from 'sonner'
-import { User, Edit2, Save, X, MapPin, Building2, Loader2, AlertCircle, CheckCircle2, XCircle, Mail, Lock } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@/lib/auth/context";
+import { updateUserProfileDetails } from "@/lib/supabase/utils";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { UserProfile } from "@/types/user";
+import {
+  getFieldsBySection,
+  type ProfileFieldConfig,
+} from "@/lib/profileFields";
+import {
+  personalDetailsSchema,
+  businessDetailsSchema,
+} from "@/lib/validations/signup";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
+import { Loader } from "@/components/Loader";
+import { UserLayout } from "@/components/UserLayout";
+import { toast } from "sonner";
+import {
+  User,
+  Edit2,
+  Save,
+  X,
+  MapPin,
+  Building2,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Mail,
+  Lock,
+} from "lucide-react";
+import { ShippingBillingCard } from "@/components/ShippingBillingCard";
+import { cn } from "@/lib/utils";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // Combined schema for profile update
 // Make businessCity and businessCountry optional since they're read-only
@@ -31,93 +66,122 @@ const profileUpdateSchema = z.object({
   ...personalDetailsSchema.shape,
   businessName: businessDetailsSchema.shape.businessName,
   businessAddress: businessDetailsSchema.shape.businessAddress,
-  businessAddressComponents: businessDetailsSchema.shape.businessAddressComponents,
+  businessAddressComponents:
+    businessDetailsSchema.shape.businessAddressComponents,
   businessState: businessDetailsSchema.shape.businessState,
   businessCity: z.string().min(2).max(100).optional(),
-  businessCountry: z.enum(['Canada', 'USA']).optional(),
+  businessCountry: z.enum(["Canada", "USA"]).optional(),
   businessYears: businessDetailsSchema.shape.businessYears,
   businessWebsite: businessDetailsSchema.shape.businessWebsite,
   businessEmail: businessDetailsSchema.shape.businessEmail,
-})
+});
 
-type ProfileFormData = z.infer<typeof profileUpdateSchema>
+type ProfileFormData = z.infer<typeof profileUpdateSchema>;
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const { user, loading: authLoading } = useAuth()
-  const router = useRouter()
+  const [localProfile, setLocalProfile] = useState<UserProfile | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { user, loading: authLoading } = useAuth();
+  const {
+    isLoading: profileLoading,
+    profile: contextProfile,
+    refreshProfile,
+  } = useUserProfile();
+  const router = useRouter();
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileUpdateSchema),
-    mode: 'onChange',
+    mode: "onChange",
     shouldUnregister: false,
-  })
+  });
 
   useEffect(() => {
     // Wait for auth to finish loading before checking user
     if (authLoading) {
-      return
+      return;
     }
 
     // Only redirect if auth has finished loading and user is still null
     if (!user) {
-      router.push('/')
-      return
+      router.push("/");
+      return;
+    }
+  }, [user, authLoading, router]);
+
+  const profile = localProfile ?? contextProfile;
+
+  useEffect(() => {
+    const storageKey = "stoq:user-profile:scrollTop";
+    const el = scrollContainerRef.current;
+    if (!el) {
+      return;
     }
 
-    loadProfile()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading, router])
+    const savedValue = sessionStorage.getItem(storageKey);
+    const savedScrollTop = savedValue ? Number(savedValue) : 0;
 
-  const loadProfile = async () => {
-    if (!user) return
+    // Restore scroll after paint so layout is ready
+    requestAnimationFrame(() => {
+      el.scrollTop = Number.isFinite(savedScrollTop) ? savedScrollTop : 0;
+    });
 
-    setIsLoading(true)
-    try {
-      const userProfile = await getUserProfileWithDetails(user.id)
-      if (userProfile) {
-        setProfile(userProfile)
-        // Populate form with existing data
-        form.reset({
-          firstName: userProfile.firstName || '',
-          lastName: userProfile.lastName || '',
-          phone: userProfile.phone && userProfile.phone.startsWith('+1') 
-            ? userProfile.phone 
-            : userProfile.phone 
-              ? '+1' + userProfile.phone.replace(/^\+1/, '')
-              : '+1',
-          businessName: userProfile.businessName || '',
-          businessAddress: userProfile.businessAddress || '',
-          businessAddressComponents: userProfile.businessAddressComponents,
-          businessState: userProfile.businessState || '',
-          businessCity: userProfile.businessCity || '',
-          businessCountry: (userProfile.businessCountry as 'Canada' | 'USA') || 'Canada',
-          businessYears: userProfile.businessYears || 0,
-          businessWebsite: userProfile.businessWebsite || '',
-          businessEmail: userProfile.businessEmail || '',
-        })
-      }
-    } catch (error) {
-      toast.error('Failed to load profile', {
-        description: 'Please try refreshing the page.',
-      })
-    } finally {
-      setIsLoading(false)
+    return () => {
+      sessionStorage.setItem(storageKey, String(el.scrollTop));
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!contextProfile) {
+      return;
     }
-  }
+
+    // Keep local profile in sync unless user is actively editing
+    if (isEditing) {
+      return;
+    }
+
+    setLocalProfile(contextProfile);
+  }, [contextProfile, isEditing]);
+
+  useEffect(() => {
+    if (!profile || isEditing) {
+      return;
+    }
+
+    // Populate form with existing data
+    form.reset({
+      firstName: profile.firstName || "",
+      lastName: profile.lastName || "",
+      phone:
+        profile.phone && profile.phone.startsWith("+1")
+          ? profile.phone
+          : profile.phone
+            ? "+1" + profile.phone.replace(/^\+1/, "")
+            : "+1",
+      businessName: profile.businessName || "",
+      businessAddress: profile.businessAddress || "",
+      businessAddressComponents: profile.businessAddressComponents,
+      businessState: profile.businessState || "",
+      businessCity: profile.businessCity || "",
+      businessCountry:
+        (profile.businessCountry as "Canada" | "USA") || "Canada",
+      businessYears: profile.businessYears || 0,
+      businessWebsite: profile.businessWebsite || "",
+      businessEmail: profile.businessEmail || "",
+    });
+  }, [form, isEditing, profile]);
 
   const handleSave = async (data: ProfileFormData) => {
     if (!user) {
-      toast.error('Error', {
-        description: 'You must be logged in to update your profile.',
-      })
-      return
+      toast.error("Error", {
+        description: "You must be logged in to update your profile.",
+      });
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       // Don't allow updating Country and City (used for tax calculation)
       const updatedProfile = await updateUserProfileDetails(user.id, {
@@ -131,71 +195,88 @@ export default function ProfilePage() {
         businessYears: data.businessYears || null,
         businessWebsite: data.businessWebsite || null,
         businessEmail: data.businessEmail || null,
-      })
+      });
 
       if (updatedProfile) {
-        setProfile(updatedProfile)
-        setIsEditing(false)
-        toast.success('Profile updated', {
-          description: 'Your profile has been updated successfully.',
-        })
-        // Reload profile to get latest data
-        await loadProfile()
+        setLocalProfile(updatedProfile);
+        setIsEditing(false);
+        toast.success("Profile updated", {
+          description: "Your profile has been updated successfully.",
+        });
+        // Sync shared profile state
+        await refreshProfile();
       } else {
-        throw new Error('Failed to update profile - no data returned')
+        throw new Error("Failed to update profile - no data returned");
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update profile. Please try again.';
-      toast.error('Update failed', {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to update profile. Please try again.";
+      toast.error("Update failed", {
         description: errorMessage,
-      })
+      });
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleCancel = () => {
     if (profile) {
       form.reset({
-        firstName: profile.firstName || '',
-        lastName: profile.lastName || '',
-        phone: profile.phone || '',
-        businessName: profile.businessName || '',
-        businessAddress: profile.businessAddress || '',
+        firstName: profile.firstName || "",
+        lastName: profile.lastName || "",
+        phone: profile.phone || "",
+        businessName: profile.businessName || "",
+        businessAddress: profile.businessAddress || "",
         businessAddressComponents: profile.businessAddressComponents,
-        businessState: profile.businessState || '',
-        businessCity: profile.businessCity || '',
-        businessCountry: (profile.businessCountry as 'Canada' | 'USA') || 'Canada',
+        businessState: profile.businessState || "",
+        businessCity: profile.businessCity || "",
+        businessCountry:
+          (profile.businessCountry as "Canada" | "USA") || "Canada",
         businessYears: profile.businessYears || 0,
-        businessWebsite: profile.businessWebsite || '',
-        businessEmail: profile.businessEmail || '',
-      })
+        businessWebsite: profile.businessWebsite || "",
+        businessEmail: profile.businessEmail || "",
+      });
     }
-    setIsEditing(false)
-  }
+    setIsEditing(false);
+  };
 
   const renderField = (field: ProfileFieldConfig) => {
-    const value = profile?.[field.key as keyof UserProfile] as string | number | null | undefined
+    const value = profile?.[field.key as keyof UserProfile] as
+      | string
+      | number
+      | null
+      | undefined;
 
     if (!isEditing) {
       // View mode
       return (
         <div key={field.key} className="space-y-1">
-          <Label className="text-sm font-medium text-muted-foreground">{field.label}</Label>
+          <Label className="text-sm font-medium text-muted-foreground">
+            {field.label}
+          </Label>
           <p className="text-sm text-foreground">
-            {value !== null && value !== undefined && value !== '' ? (
-              field.type === 'address' ? (
+            {value !== null && value !== undefined && value !== "" ? (
+              field.type === "address" ? (
                 <span className="flex items-start gap-2">
                   <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
                   <span>{value}</span>
                 </span>
-              ) : field.key === 'phone' ? (
+              ) : field.key === "phone" ? (
                 // Ensure phone number always shows with +1 prefix
-                value.toString().startsWith('+1') ? value : '+1' + value.toString().replace(/^\+1/, '')
-              ) : (field.key === 'businessCountry' || field.key === 'businessCity') ? (
+                value.toString().startsWith("+1") ? (
+                  value
+                ) : (
+                  "+1" + value.toString().replace(/^\+1/, "")
+                )
+              ) : field.key === "businessCountry" ||
+                field.key === "businessCity" ? (
                 <span className="flex items-center gap-2">
                   <span>{value}</span>
-                  <span className="text-xs text-muted-foreground italic">(Used for tax calculation)</span>
+                  <span className="text-xs text-muted-foreground italic">
+                    (Used for tax calculation)
+                  </span>
                 </span>
               ) : (
                 value
@@ -205,17 +286,19 @@ export default function ProfilePage() {
             )}
           </p>
         </div>
-      )
+      );
     }
 
     // Edit mode
     // Business Name and Business Address are locked - only admin can change
-    if (field.key === 'businessName' || field.type === 'address') {
+    if (field.key === "businessName" || field.type === "address") {
       return (
         <FormField
           key={field.key}
           control={form.control}
-          name={field.key === 'businessName' ? 'businessName' : 'businessAddress'}
+          name={
+            field.key === "businessName" ? "businessName" : "businessAddress"
+          }
           render={({ field: formField }) => (
             <FormItem>
               <FormLabel className="flex items-center gap-2">
@@ -226,24 +309,32 @@ export default function ProfilePage() {
                 <Input
                   type="text"
                   {...formField}
-                  value={formField.value as string || ''}
+                  value={(formField.value as string) || ""}
                   disabled
                   className="bg-muted cursor-not-allowed"
                 />
               </FormControl>
               <FormDescription className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Mail className="h-3 w-3" />
-                <span>To update this field, please contact admin at <a href="mailto:support@stoq.com" className="text-primary hover:underline">support@stoq.com</a></span>
+                <span>
+                  To update this field, please contact admin at{" "}
+                  <a
+                    href="mailto:support@stoq.com"
+                    className="text-primary hover:underline"
+                  >
+                    support@stoq.com
+                  </a>
+                </span>
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-      )
+      );
     }
 
     // Country and City are read-only (used for tax calculation)
-    if (field.key === 'businessCountry' || field.key === 'businessCity') {
+    if (field.key === "businessCountry" || field.key === "businessCity") {
       // Show as read-only field in edit mode
       return (
         <FormField
@@ -254,13 +345,15 @@ export default function ProfilePage() {
             <FormItem>
               <FormLabel>
                 {field.label}
-                {field.required && <span className="text-destructive ml-1">*</span>}
+                {field.required && (
+                  <span className="text-destructive ml-1">*</span>
+                )}
               </FormLabel>
               <FormControl>
                 <Input
                   type="text"
                   {...formField}
-                  value={formField.value as string || ''}
+                  value={(formField.value as string) || ""}
                   disabled
                   className="bg-muted cursor-not-allowed"
                 />
@@ -274,11 +367,11 @@ export default function ProfilePage() {
             </FormItem>
           )}
         />
-      )
+      );
     }
 
     // Special handling for phone field with +1 prefix
-    if (field.key === 'phone' && field.type === 'tel') {
+    if (field.key === "phone" && field.type === "tel") {
       return (
         <FormField
           key={field.key}
@@ -286,15 +379,22 @@ export default function ProfilePage() {
           name={field.key as keyof ProfileFormData}
           render={({ field: formField }) => {
             // Extract the number part (everything after +1)
-            const displayValue = formField.value && typeof formField.value === 'string' && formField.value.startsWith('+1')
-              ? formField.value.slice(2).trim()
-              : (formField.value && typeof formField.value === 'string' ? formField.value.replace(/^\+1/, '').trim() : '')
-            
+            const displayValue =
+              formField.value &&
+              typeof formField.value === "string" &&
+              formField.value.startsWith("+1")
+                ? formField.value.slice(2).trim()
+                : formField.value && typeof formField.value === "string"
+                  ? formField.value.replace(/^\+1/, "").trim()
+                  : "";
+
             return (
               <FormItem>
                 <FormLabel>
                   {field.label}
-                  {field.required && <span className="text-destructive ml-1">*</span>}
+                  {field.required && (
+                    <span className="text-destructive ml-1">*</span>
+                  )}
                 </FormLabel>
                 <FormControl>
                   <div className="flex items-center">
@@ -307,9 +407,9 @@ export default function ProfilePage() {
                       className="rounded-l-none"
                       value={displayValue}
                       onChange={(e) => {
-                        const value = e.target.value
+                        const value = e.target.value;
                         // Always prepend +1 to the value
-                        formField.onChange('+1' + value)
+                        formField.onChange("+1" + value);
                       }}
                       onBlur={formField.onBlur}
                     />
@@ -320,10 +420,10 @@ export default function ProfilePage() {
                 </FormDescription>
                 <FormMessage />
               </FormItem>
-            )
+            );
           }}
         />
-      )
+      );
     }
 
     return (
@@ -335,7 +435,9 @@ export default function ProfilePage() {
           <FormItem>
             <FormLabel>
               {field.label}
-              {field.required && <span className="text-destructive ml-1">*</span>}
+              {field.required && (
+                <span className="text-destructive ml-1">*</span>
+              )}
             </FormLabel>
             <FormControl>
               <Input
@@ -343,34 +445,37 @@ export default function ProfilePage() {
                 placeholder={field.placeholder}
                 {...formField}
                 value={
-                  typeof formField.value === 'string' || typeof formField.value === 'number'
-                    ? formField.value || ''
-                    : ''
+                  typeof formField.value === "string" ||
+                  typeof formField.value === "number"
+                    ? formField.value || ""
+                    : ""
                 }
                 onChange={(e) => {
-                  if (field.type === 'number') {
-                    formField.onChange(parseInt(e.target.value) || 0)
+                  if (field.type === "number") {
+                    formField.onChange(parseInt(e.target.value) || 0);
                   } else {
-                    formField.onChange(e.target.value)
+                    formField.onChange(e.target.value);
                   }
                 }}
               />
             </FormControl>
-            {field.description && <FormDescription>{field.description}</FormDescription>}
+            {field.description && (
+              <FormDescription>{field.description}</FormDescription>
+            )}
             <FormMessage />
           </FormItem>
         )}
       />
-    )
-  }
+    );
+  };
 
-  // Show loading while auth is loading or profile is loading
-  if (authLoading || isLoading) {
+  // Show loading while auth or profile is loading
+  if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader size="lg" text="Loading profile..." />
       </div>
-    )
+    );
   }
 
   if (!profile) {
@@ -384,11 +489,11 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  const personalFields = getFieldsBySection('personal')
-  const businessFields = getFieldsBySection('business')
+  const personalFields = getFieldsBySection("personal");
+  const businessFields = getFieldsBySection("business");
 
   return (
     <UserLayout>
@@ -398,7 +503,9 @@ export default function ProfilePage() {
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">Profile</h1>
+              <h1 className="text-2xl font-semibold text-foreground">
+                Profile
+              </h1>
               <p className="text-sm text-muted-foreground mt-1">
                 Manage your personal and business information
               </p>
@@ -413,41 +520,57 @@ export default function ProfilePage() {
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6"
+        >
           <div className="max-w-4xl mx-auto space-y-6 py-4">
             {/* Approval Status Banner */}
             {profile && (
               <Alert
                 className={cn(
-                  profile.approvalStatus === 'pending' && 'border-warning/50 bg-warning/10',
-                  profile.approvalStatus === 'approved' && 'border-success/50 bg-success/10',
-                  profile.approvalStatus === 'rejected' && 'border-destructive/50 bg-destructive/10'
+                  profile.approvalStatus === "pending" &&
+                    "border-warning/50 bg-warning/10",
+                  profile.approvalStatus === "approved" &&
+                    "border-success/50 bg-success/10",
+                  profile.approvalStatus === "rejected" &&
+                    "border-destructive/50 bg-destructive/10",
                 )}
               >
-                {profile.approvalStatus === 'pending' && (
+                {profile.approvalStatus === "pending" && (
                   <>
                     <AlertCircle className="h-4 w-4 text-warning" />
-                    <AlertTitle className="text-warning">Profile Under Review</AlertTitle>
+                    <AlertTitle className="text-warning">
+                      Profile Under Review
+                    </AlertTitle>
                     <AlertDescription className="text-warning/90">
-                      Your profile is under review. Please wait for admin approval. You can explore products and add them to your cart, but you won't be able to place orders until your profile is approved.
+                      Your profile is under review. Please wait for admin
+                      approval. You can explore products and add them to your
+                      cart, but you won't be able to place orders until your
+                      profile is approved.
                     </AlertDescription>
                   </>
                 )}
-                {profile.approvalStatus === 'approved' && (
+                {profile.approvalStatus === "approved" && (
                   <>
                     <CheckCircle2 className="h-4 w-4 text-success" />
-                    <AlertTitle className="text-success">Profile Approved</AlertTitle>
+                    <AlertTitle className="text-success">
+                      Profile Approved
+                    </AlertTitle>
                     <AlertDescription className="text-success/90">
                       Your profile has been approved. You can now place orders.
                     </AlertDescription>
                   </>
                 )}
-                {profile.approvalStatus === 'rejected' && (
+                {profile.approvalStatus === "rejected" && (
                   <>
                     <XCircle className="h-4 w-4 text-destructive" />
-                    <AlertTitle className="text-destructive">Profile Rejected</AlertTitle>
+                    <AlertTitle className="text-destructive">
+                      Profile Rejected
+                    </AlertTitle>
                     <AlertDescription className="text-destructive/90">
-                      Your profile has been rejected. Please contact support for assistance.
+                      Your profile has been rejected. Please contact support for
+                      assistance.
                     </AlertDescription>
                   </>
                 )}
@@ -455,7 +578,10 @@ export default function ProfilePage() {
             )}
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(handleSave)}
+                className="space-y-6"
+              >
                 {/* Personal Details Card */}
                 <Card>
                   <CardHeader>
@@ -496,6 +622,17 @@ export default function ProfilePage() {
                   </CardContent>
                 </Card>
 
+                {/* Shipping & Billing Addresses Card */}
+                {profile && user && (
+                  <ShippingBillingCard
+                    profile={profile}
+                    userId={user.id}
+                    onProfileUpdate={(updatedProfile) =>
+                      setLocalProfile(updatedProfile)
+                    }
+                  />
+                )}
+
                 {/* Action Buttons */}
                 {isEditing && (
                   <div className="flex flex-col sm:flex-row justify-end gap-4 pb-4">
@@ -509,11 +646,7 @@ export default function ProfilePage() {
                       <X className="h-4 w-4" />
                       Cancel
                     </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={isSaving} 
-                      className="gap-2"
-                    >
+                    <Button type="submit" disabled={isSaving} className="gap-2">
                       {isSaving ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -534,5 +667,5 @@ export default function ProfilePage() {
         </div>
       </div>
     </UserLayout>
-  )
+  );
 }

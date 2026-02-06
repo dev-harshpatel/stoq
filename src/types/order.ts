@@ -33,6 +33,9 @@ export interface Order {
   discountAmount?: number;
   discountType?: 'percentage' | 'cad';
   shippingAmount?: number;
+  // Addresses (full address string only)
+  shippingAddress?: string | null;
+  billingAddress?: string | null;
 }
 
 // Extended order with user profile info (for display)

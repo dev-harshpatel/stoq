@@ -1,73 +1,167 @@
-# Welcome to your Lovable project
+# Stoq — Inventory & Order Management
 
-## Project info
+Stoq is a **Next.js (App Router)** inventory + order management app backed by **Supabase**.  
+It includes a public browsing experience, a user area, and a protected admin panel for managing inventory and orders.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+- **Inventory browsing** (public)
+- **Cart + checkout flow**
+- **Orders**
+  - Users can create/view their own orders
+  - Admins can view/update all orders
+- **Role-based access**
+  - Admin routes under `/admin/*` are protected
+  - Role is stored in `public.user_profiles.role` (`user` / `admin`)
+- **Supabase RLS** (Row Level Security) for `user_profiles`, `inventory`, and `orders`
+- **Modern UI** using Tailwind + shadcn/ui + Radix primitives
 
-There are several ways of editing your application.
+## Tech stack
 
-**Use Lovable**
+- **Next.js 14** (App Router), **React 18**, **TypeScript**
+- **Supabase** (`@supabase/supabase-js`, `@supabase/ssr`)
+- **Tailwind CSS** + **shadcn/ui**
+- **Lucide** icons, **Sonner** toasts
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Routes
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Public**
+  - `/` — home
+  - `/user` — user products page
+- **Admin**
+  - `/admin/login` — admin login (public)
+  - `/admin/*` — protected admin area (requires auth + admin role)
 
-**Use your preferred IDE**
+Route protection is implemented via:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- **Middleware**: `src/lib/supabase/middleware.ts`
+- **Client guard**: `src/lib/auth/AuthGuard.tsx` (wired in `app/admin/layout.tsx`)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+More details: `PROTECTED_ROUTES.md`
 
-Follow these steps:
+## Getting started
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 1) Install dependencies
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+npm install
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 2) Configure environment variables
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Copy the example env file:
+
+```bash
+copy .env.example .env.local
+```
+
+Required variables:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+> **Note:** Never commit `.env.local`. Use your hosting provider’s env settings for production.
+
+### 3) Run migrations
+
+You can run migrations from the Supabase Dashboard **SQL Editor** (recommended), in order:
+
+- `supabase/migrations/001_initial_schema.sql`
+- `supabase/migrations/002_rls_policies.sql`
+- `supabase/migrations/003_fix_rls_recursion.sql`
+- `supabase/migrations/004_verify_and_fix_orders.sql`
+
+Or use the helper scripts:
+
+```bash
+npm run migrate
+npm run migrate:show
+```
+
+More details: `MIGRATION_GUIDE.md`
+
+### 4) Seed the database
+
+```bash
+npm run seed
+```
+
+This creates sample users, inventory, and orders, including:
+
+- **Admin**: `admin@stoq.com` / `admin123`
+- **Users**: `user1@example.com` / `user123`, `user2@example.com` / `user123`
+
+### 5) Start the app
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Open `http://localhost:3000`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Useful scripts
 
-**Use GitHub Codespaces**
+```bash
+npm run dev           # start local dev server
+npm run build         # production build
+npm run start         # start production server
+npm run lint          # run eslint
+npm run migrate       # run/verify migrations (helper)
+npm run migrate:show  # print migration SQL
+npm run seed          # create demo users + data
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Data model (high-level)
 
-## What technologies are used for this project?
+- **`auth.users`** (Supabase Auth): stores user accounts (email/password hash, etc.)
+- **`public.user_profiles`**: app profile + role + business fields + cart snapshot
+- **`public.inventory`**: inventory items
+- **`public.orders`**: user orders (JSONB items + totals + status)
 
-This project is built with:
+> If you don’t “see users” in the Table Editor, check **Supabase Dashboard → Authentication → Users**.  
+> The Table Editor defaults to the `public` schema.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Troubleshooting
 
-## How can I deploy this project?
+### Admin login shows “Access denied”
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+This happens when `public.user_profiles.role` for your admin user is not `admin`.
 
-## Can I connect a custom domain to my Lovable project?
+- Run:
 
-Yes, you can!
+```bash
+npm run seed
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+The seed script ensures the admin profile exists and sets the role to `admin`.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### RLS recursion / policy issues
+
+If you see errors related to infinite recursion or RLS policy checks, ensure you applied:
+
+- `supabase/migrations/003_fix_rls_recursion.sql`
+
+See: `FIX_RECURSION.md`
+
+## Deployment
+
+This repo includes a `vercel.json` with:
+
+```json
+{ "framework": "nextjs" }
+```
+
+Deploy on Vercel (or similar) and configure the same environment variables in your hosting provider.
+
+## Project structure (quick)
+
+- `app/` — Next.js App Router routes
+- `src/components/` — shared UI components
+- `src/page-components/` — page-level components
+- `src/contexts/` — app state contexts (auth, profile, inventory, orders, cart)
+- `src/lib/supabase/` — Supabase client/server helpers + middleware
+- `supabase/` — migrations + scripts (seed/migrate)

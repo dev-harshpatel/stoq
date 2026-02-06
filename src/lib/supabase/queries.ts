@@ -90,6 +90,8 @@ export const dbRowToOrder = (row: OrderRow): Order => {
     discountAmount: (row as any).discount_amount ? Number((row as any).discount_amount) : 0,
     discountType: (row as any).discount_type as 'percentage' | 'cad' | undefined,
     shippingAmount: (row as any).shipping_amount ? Number((row as any).shipping_amount) : 0,
+    shippingAddress: (row as any).shipping_address ?? null,
+    billingAddress: (row as any).billing_address ?? null,
   }
 }
 
@@ -111,6 +113,23 @@ export const dbRowToUserProfile = (row: UserProfileRow): UserProfile => ({
   businessYears: row.business_years,
   businessWebsite: row.business_website,
   businessEmail: row.business_email,
+  // Shipping Address
+  shippingAddress: (row as any).shipping_address ?? null,
+  shippingAddressComponents: (row as any).shipping_address_components as Record<string, any> | null ?? null,
+  shippingCity: (row as any).shipping_city ?? null,
+  shippingState: (row as any).shipping_state ?? null,
+  shippingCountry: (row as any).shipping_country ?? null,
+  shippingPostalCode: (row as any).shipping_postal_code ?? null,
+  // Billing Address
+  billingAddress: (row as any).billing_address ?? null,
+  billingAddressComponents: (row as any).billing_address_components as Record<string, any> | null ?? null,
+  billingCity: (row as any).billing_city ?? null,
+  billingState: (row as any).billing_state ?? null,
+  billingCountry: (row as any).billing_country ?? null,
+  billingPostalCode: (row as any).billing_postal_code ?? null,
+  // Flags
+  shippingSameAsBusiness: (row as any).shipping_same_as_business ?? false,
+  billingSameAsBusiness: (row as any).billing_same_as_business ?? false,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 })
@@ -354,4 +373,39 @@ export async function fetchPaginatedUsers(
     data: (data || []).map((row: any) => dbRowToUserProfile(row as UserProfileRow)),
     count: count || 0,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Cart price verification
+// ---------------------------------------------------------------------------
+
+export interface LatestInventoryPrice {
+  id: string
+  deviceName: string
+  pricePerUnit: number
+  quantity: number
+}
+
+/**
+ * Fetch the latest prices and quantities for specific inventory items
+ * Used to verify cart items before checkout
+ */
+export async function fetchLatestPricesForItems(
+  itemIds: string[]
+): Promise<LatestInventoryPrice[]> {
+  if (itemIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('inventory')
+    .select('id, device_name, price_per_unit, quantity')
+    .in('id', itemIds)
+
+  if (error) throw error
+
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    deviceName: row.device_name,
+    pricePerUnit: Number(row.price_per_unit),
+    quantity: row.quantity,
+  }))
 }

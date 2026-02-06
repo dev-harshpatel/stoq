@@ -1,7 +1,7 @@
-import { RefreshCw, Menu, User, LogOut, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { RefreshCw, Menu, User, LogOut, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,13 +9,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/lib/auth/context';
-import { useUserProfile } from '@/contexts/UserProfileContext';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { useState } from 'react';
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/auth/context";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { useNavigation } from "@/contexts/NavigationContext";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -23,6 +24,7 @@ interface NavbarProps {
   onAutoRefreshChange: (value: boolean) => void;
   lastRefreshed: string;
   onRefresh?: () => void;
+  isRefreshing?: boolean;
   className?: string;
 }
 
@@ -32,10 +34,12 @@ export function Navbar({
   onAutoRefreshChange,
   lastRefreshed,
   onRefresh,
+  isRefreshing = false,
   className,
 }: NavbarProps) {
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
+  const { startNavigation } = useNavigation();
   const router = useRouter();
   const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -45,16 +49,18 @@ export function Navbar({
     try {
       await signOut();
       toast({
-        title: 'Logged out',
-        description: 'You have been successfully logged out.',
+        title: "Logged out",
+        description: "You have been successfully logged out.",
       });
-      router.push('/');
+      startNavigation();
+      router.push("/");
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to logout';
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to logout";
       toast({
-        title: 'Error',
+        title: "Error",
         description: errorMessage,
-        variant: 'destructive',
+        variant: "destructive",
       });
       setIsLoggingOut(false);
     }
@@ -64,18 +70,18 @@ export function Navbar({
     if (user?.email) {
       return user.email.substring(0, 2).toUpperCase();
     }
-    return 'AD';
+    return "AD";
   };
 
   const getUserEmail = () => {
-    return user?.email || 'Admin';
+    return user?.email || "Admin";
   };
 
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-sm',
-        className
+        "sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-sm",
+        className,
       )}
     >
       <div className="flex h-16 items-center justify-between px-4 lg:px-6">
@@ -112,13 +118,16 @@ export function Navbar({
             />
           </div>
 
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="hidden sm:flex"
             onClick={onRefresh}
+            disabled={isRefreshing}
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw
+              className={cn("h-4 w-4", isRefreshing && "animate-spin")}
+            />
           </Button>
 
           <DropdownMenu>
@@ -134,9 +143,11 @@ export function Navbar({
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{getUserEmail()}</p>
+                  <p className="text-sm font-medium leading-none">
+                    {getUserEmail()}
+                  </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {profile?.role === 'admin' ? 'Administrator' : 'User'}
+                    {profile?.role === "admin" ? "Administrator" : "User"}
                   </p>
                 </div>
               </DropdownMenuLabel>

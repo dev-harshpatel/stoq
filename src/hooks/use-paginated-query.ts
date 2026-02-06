@@ -15,6 +15,7 @@ export interface UsePaginatedQueryOptions<T> {
   dependencies?: any[]
   realtimeTable?: string
   pageSize?: number
+  refreshKey?: number
 }
 
 export interface UsePaginatedQueryReturn<T> {
@@ -33,7 +34,7 @@ export interface UsePaginatedQueryReturn<T> {
 export function usePaginatedQuery<T>(
   options: UsePaginatedQueryOptions<T>
 ): UsePaginatedQueryReturn<T> {
-  const { fetchFn, dependencies = [], realtimeTable, pageSize = PAGE_SIZE } = options
+  const { fetchFn, dependencies = [], realtimeTable, pageSize = PAGE_SIZE, refreshKey = 0 } = options
 
   const [data, setData] = useState<T[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -86,10 +87,10 @@ export function usePaginatedQuery<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [depsKey])
 
-  // Fetch data when page changes or fetchFn changes
+  // Fetch data when page changes, fetchFn changes, or refreshKey changes
   useEffect(() => {
     fetchData(currentPage)
-  }, [currentPage, fetchData])
+  }, [currentPage, fetchData, refreshKey])
 
   // Real-time subscription
   useEffect(() => {

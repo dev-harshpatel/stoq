@@ -6,7 +6,8 @@
       "Bash(dir:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npm run build:*)"
     ]
   },
   "statusLine": {

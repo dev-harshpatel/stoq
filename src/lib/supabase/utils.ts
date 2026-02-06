@@ -307,16 +307,36 @@ export const updateUserProfileDetails = async (
     businessYears?: number | null;
     businessWebsite?: string | null;
     businessEmail?: string | null;
+    // Shipping Address
+    shippingAddress?: string | null;
+    shippingAddressComponents?: Record<string, any> | null;
+    shippingCity?: string | null;
+    shippingState?: string | null;
+    shippingCountry?: string | null;
+    shippingPostalCode?: string | null;
+    // Billing Address
+    billingAddress?: string | null;
+    billingAddressComponents?: Record<string, any> | null;
+    billingCity?: string | null;
+    billingState?: string | null;
+    billingCountry?: string | null;
+    billingPostalCode?: string | null;
+    // Flags
+    shippingSameAsBusiness?: boolean;
+    billingSameAsBusiness?: boolean;
   }
 ): Promise<UserProfile | null> => {
   try {
     const updateData: any = {
       updated_at: new Date().toISOString(),
     };
-    
+
+    // Personal details
     if (details.firstName !== undefined) updateData.first_name = details.firstName;
     if (details.lastName !== undefined) updateData.last_name = details.lastName;
     if (details.phone !== undefined) updateData.phone = details.phone;
+
+    // Business details
     if (details.businessName !== undefined) updateData.business_name = details.businessName;
     if (details.businessAddress !== undefined) updateData.business_address = details.businessAddress;
     if (details.businessAddressComponents !== undefined) {
@@ -327,7 +347,31 @@ export const updateUserProfileDetails = async (
     if (details.businessYears !== undefined) updateData.business_years = details.businessYears;
     if (details.businessWebsite !== undefined) updateData.business_website = details.businessWebsite;
     if (details.businessEmail !== undefined) updateData.business_email = details.businessEmail;
-    
+
+    // Shipping address
+    if (details.shippingAddress !== undefined) updateData.shipping_address = details.shippingAddress;
+    if (details.shippingAddressComponents !== undefined) {
+      updateData.shipping_address_components = details.shippingAddressComponents;
+    }
+    if (details.shippingCity !== undefined) updateData.shipping_city = details.shippingCity;
+    if (details.shippingState !== undefined) updateData.shipping_state = details.shippingState;
+    if (details.shippingCountry !== undefined) updateData.shipping_country = details.shippingCountry;
+    if (details.shippingPostalCode !== undefined) updateData.shipping_postal_code = details.shippingPostalCode;
+
+    // Billing address
+    if (details.billingAddress !== undefined) updateData.billing_address = details.billingAddress;
+    if (details.billingAddressComponents !== undefined) {
+      updateData.billing_address_components = details.billingAddressComponents;
+    }
+    if (details.billingCity !== undefined) updateData.billing_city = details.billingCity;
+    if (details.billingState !== undefined) updateData.billing_state = details.billingState;
+    if (details.billingCountry !== undefined) updateData.billing_country = details.billingCountry;
+    if (details.billingPostalCode !== undefined) updateData.billing_postal_code = details.billingPostalCode;
+
+    // Flags
+    if (details.shippingSameAsBusiness !== undefined) updateData.shipping_same_as_business = details.shippingSameAsBusiness;
+    if (details.billingSameAsBusiness !== undefined) updateData.billing_same_as_business = details.billingSameAsBusiness;
+
     const { data, error } = await (supabase
       .from('user_profiles') as any)
       .update(updateData)
