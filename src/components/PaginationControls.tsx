@@ -51,48 +51,52 @@ export function PaginationControls({
   return (
     <div
       className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-4 py-4',
+        'flex flex-col sm:flex-row items-center justify-between gap-4 py-4 w-full max-w-full min-w-0',
         className
       )}
     >
-      <p className="text-sm text-muted-foreground">Showing {rangeText}</p>
-      <Pagination className="w-auto mx-0">
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious
-              onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
-              className={cn(
-                currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'
-              )}
-            />
-          </PaginationItem>
-
-          {getPageNumbers().map((page, idx) => (
-            <PaginationItem key={`${page}-${idx}`}>
-              {page === 'ellipsis' ? (
-                <PaginationEllipsis />
-              ) : (
-                <PaginationLink
-                  isActive={page === currentPage}
-                  onClick={() => onPageChange(page)}
-                  className="cursor-pointer"
-                >
-                  {page}
-                </PaginationLink>
-              )}
+      <p className="text-sm text-muted-foreground shrink-0">Showing {rangeText}</p>
+      <div className="w-full sm:w-auto max-w-full min-w-0">
+        <Pagination className="w-auto mx-0 min-w-0">
+          <PaginationContent className="flex-wrap justify-center gap-1 sm:gap-1">
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
+                className={cn(
+                  'min-w-0',
+                  currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'
+                )}
+              />
             </PaginationItem>
-          ))}
 
-          <PaginationItem>
-            <PaginationNext
-              onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
-              className={cn(
-                currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'
-              )}
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+            {getPageNumbers().map((page, idx) => (
+              <PaginationItem key={`${page}-${idx}`}>
+                {page === 'ellipsis' ? (
+                  <PaginationEllipsis />
+                ) : (
+                  <PaginationLink
+                    isActive={page === currentPage}
+                    onClick={() => onPageChange(page)}
+                    className="cursor-pointer shrink-0"
+                  >
+                    {page}
+                  </PaginationLink>
+                )}
+              </PaginationItem>
+            ))}
+
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
+                className={cn(
+                  'min-w-0',
+                  currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'
+                )}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
     </div>
   )
 }

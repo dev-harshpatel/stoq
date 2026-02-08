@@ -90,8 +90,8 @@ export default function UsersPage() {
         />
       </div>
 
-      {/* Pagination - Sticky at bottom */}
-      <div className="flex-shrink-0 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6">
+      {/* Pagination - Sticky at bottom so it stays visible when scrolling on mobile */}
+      <div className="flex-shrink-0 sticky bottom-0 z-10 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6 py-2">
         <PaginationControls
           currentPage={currentPage}
           totalPages={totalPages}
