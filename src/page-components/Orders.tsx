@@ -359,9 +359,9 @@ export default function Orders() {
           )}
         </div>
 
-        {/* Pagination - Sticky at bottom */}
+        {/* Pagination - Sticky at bottom so it stays visible when scrolling on mobile */}
         {filteredOrders.length > 0 && (
-          <div className="flex-shrink-0 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6">
+          <div className="flex-shrink-0 sticky bottom-0 z-10 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6 py-2">
             <PaginationControls
               currentPage={currentPage}
               totalPages={totalPages}
