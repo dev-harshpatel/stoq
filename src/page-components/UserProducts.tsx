@@ -518,8 +518,8 @@ export default function UserProducts() {
           {filteredItems.length === 0 && !isFetching && <EmptyState />}
         </div>
 
-        {/* Pagination - Sticky at bottom */}
-        <div className="flex-shrink-0 bg-background border-t border-border -mx-4 lg:-mx-6 px-4 lg:px-6">
+        {/* Pagination - Fixed at bottom on mobile, sticky on desktop */}
+        <div className="fixed bottom-0 left-0 right-0 z-10 bg-background border-t border-border px-4 py-2 lg:sticky lg:bottom-0 lg:-mx-6 lg:px-6 lg:relative lg:left-auto lg:right-auto">
           <PaginationControls
             currentPage={currentPage}
             totalPages={totalPages}
