@@ -10,6 +10,7 @@
     "migrate": "tsx supabase/scripts/migrate.ts",
     "migrate:show": "tsx supabase/scripts/migrate.ts --show",
     "migrate:record": "tsx supabase/scripts/migrate.ts record",
+    "reset-inventory": "tsx supabase/scripts/reset-inventory.ts",
     "seed": "tsx supabase/scripts/seed.ts"
   },
   "dependencies": {

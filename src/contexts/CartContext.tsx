@@ -263,7 +263,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     setCartItems((prev) => {
       const newItems = prev.map((cartItem) =>
         cartItem.item.id === itemId
-          ? { ...cartItem, item: { ...cartItem.item, pricePerUnit: newPrice } }
+          ? { ...cartItem, item: { ...cartItem.item, sellingPrice: newPrice } }
           : cartItem,
       );
       persistCart(newItems);
@@ -287,7 +287,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const getTotalPrice = () => {
     return cartItems.reduce(
       (total, cartItem) =>
-        total + cartItem.item.pricePerUnit * cartItem.quantity,
+        total + cartItem.item.sellingPrice * cartItem.quantity,
       0,
     );
   };

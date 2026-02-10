@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { ParsedProduct } from '@/types/upload';
+import { calculatePricePerUnit } from '@/data/inventory';
 
 /**
  * Parse Excel file and extract product data
@@ -47,7 +48,9 @@ export async function parseExcelFile(file: File): Promise<ParsedProduct[]> {
         const gradeIndex = findColumnIndex(headers, ['grade']);
         const storageIndex = findColumnIndex(headers, ['storage']);
         const quantityIndex = findColumnIndex(headers, ['quantity', 'qty']);
-        const priceIndex = findColumnIndex(headers, ['price per unit', 'price', 'priceperunit', 'price_per_unit']);
+        const purchasePriceIndex = findColumnIndex(headers, ['purchase price', 'purchaseprice', 'purchase_price']);
+        const sellingPriceIndex = findColumnIndex(headers, ['selling price', 'sellingprice', 'selling_price', 'price per unit', 'price', 'priceperunit', 'price_per_unit']);
+        const hstIndex = findColumnIndex(headers, ['hst', 'tax']);
         const lastUpdatedIndex = findColumnIndex(headers, ['last updated', 'lastupdated', 'last_updated', 'updated']);
 
         // Validate required columns
@@ -57,7 +60,9 @@ export async function parseExcelFile(file: File): Promise<ParsedProduct[]> {
         if (gradeIndex === -1) missingColumns.push('Grade');
         if (storageIndex === -1) missingColumns.push('Storage');
         if (quantityIndex === -1) missingColumns.push('Quantity');
-        if (priceIndex === -1) missingColumns.push('Price Per Unit');
+        if (purchasePriceIndex === -1) missingColumns.push('Purchase Price');
+        if (sellingPriceIndex === -1) missingColumns.push('Selling Price');
+        if (hstIndex === -1) missingColumns.push('HST');
 
         if (missingColumns.length > 0) {
           reject(new Error(`Missing required columns: ${missingColumns.join(', ')}`));
@@ -81,7 +86,9 @@ export async function parseExcelFile(file: File): Promise<ParsedProduct[]> {
             grade: String(row[gradeIndex] || '').trim().toUpperCase() as 'A' | 'B' | 'C' | 'D',
             storage: String(row[storageIndex] || '').trim(),
             quantity: parseNumber(row[quantityIndex]),
-            pricePerUnit: parseNumber(row[priceIndex]),
+            purchasePrice: parseNumber(row[purchasePriceIndex]),
+            sellingPrice: parseNumber(row[sellingPriceIndex]),
+            hst: parseNumber(row[hstIndex]),
             lastUpdated: lastUpdatedIndex >= 0 ? String(row[lastUpdatedIndex] || '').trim() : undefined,
             rowNumber,
             errors: [],
@@ -179,13 +186,31 @@ export function validateProductData(data: Partial<ParsedProduct>): {
     errors.push('Quantity must be >= 0');
   }
 
-  // Price validation
-  if (data.pricePerUnit === undefined || data.pricePerUnit === null) {
-    errors.push('Price Per Unit is required');
-  } else if (typeof data.pricePerUnit !== 'number' || isNaN(data.pricePerUnit)) {
-    errors.push('Price Per Unit must be a valid number');
-  } else if (data.pricePerUnit <= 0) {
-    errors.push('Price Per Unit must be > 0');
+  // Purchase Price validation
+  if (data.purchasePrice === undefined || data.purchasePrice === null) {
+    errors.push('Purchase Price is required');
+  } else if (typeof data.purchasePrice !== 'number' || isNaN(data.purchasePrice)) {
+    errors.push('Purchase Price must be a valid number');
+  } else if (data.purchasePrice < 0) {
+    errors.push('Purchase Price must be >= 0');
+  }
+
+  // Selling Price validation
+  if (data.sellingPrice === undefined || data.sellingPrice === null) {
+    errors.push('Selling Price is required');
+  } else if (typeof data.sellingPrice !== 'number' || isNaN(data.sellingPrice)) {
+    errors.push('Selling Price must be a valid number');
+  } else if (data.sellingPrice <= 0) {
+    errors.push('Selling Price must be > 0');
+  }
+
+  // HST validation
+  if (data.hst === undefined || data.hst === null) {
+    errors.push('HST is required');
+  } else if (typeof data.hst !== 'number' || isNaN(data.hst)) {
+    errors.push('HST must be a valid number');
+  } else if (data.hst < 0) {
+    errors.push('HST must be >= 0');
   }
 
   return {
@@ -195,9 +220,9 @@ export function validateProductData(data: Partial<ParsedProduct>): {
 }
 
 /**
- * Map parsed product to InventoryItem format
+ * Map parsed product to database format
  * @param parsed - Parsed product from Excel
- * @returns InventoryItem ready for database insertion
+ * @returns Object ready for database insertion
  */
 export function mapToInventoryItem(parsed: ParsedProduct): {
   device_name: string;
@@ -206,6 +231,9 @@ export function mapToInventoryItem(parsed: ParsedProduct): {
   storage: string;
   quantity: number;
   price_per_unit: number;
+  purchase_price: number;
+  selling_price: number;
+  hst: number;
   last_updated: string;
 } {
   // Format last updated date
@@ -228,13 +256,19 @@ export function mapToInventoryItem(parsed: ParsedProduct): {
     }
   }
 
+  // Auto-calculate price per unit: (purchasePrice / quantity) * (1 + hst/100)
+  const pricePerUnit = calculatePricePerUnit(parsed.purchasePrice, parsed.quantity, parsed.hst);
+
   return {
     device_name: parsed.deviceName,
     brand: parsed.brand,
     grade: parsed.grade,
     storage: parsed.storage,
     quantity: parsed.quantity,
-    price_per_unit: parsed.pricePerUnit,
+    price_per_unit: pricePerUnit,
+    purchase_price: parsed.purchasePrice,
+    selling_price: parsed.sellingPrice,
+    hst: parsed.hst,
     last_updated: lastUpdated,
   };
 }

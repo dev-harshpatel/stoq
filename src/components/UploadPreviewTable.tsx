@@ -73,7 +73,13 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                   Quantity
                 </th>
                 <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-                  Price/Unit
+                  Purchase Price
+                </th>
+                <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  Selling Price
+                </th>
+                <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  HST
                 </th>
                 <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
                   Status
@@ -130,7 +136,17 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                     </td>
                     <td className="px-4 py-4 text-right">
                       <span className="font-medium text-foreground">
-                        {formatPrice(product.pricePerUnit)}
+                        {formatPrice(product.purchasePrice)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <span className="font-medium text-foreground">
+                        {formatPrice(product.sellingPrice)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <span className="font-medium text-foreground">
+                        {formatPrice(product.hst)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -226,9 +242,21 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                   <span className="font-semibold text-foreground">{product.quantity}</span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">Price/Unit</span>
+                  <span className="text-xs text-muted-foreground block mb-1">Purchase Price</span>
                   <span className="font-medium text-foreground">
-                    {formatPrice(product.pricePerUnit)}
+                    {formatPrice(product.purchasePrice)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">Selling Price</span>
+                  <span className="font-medium text-foreground">
+                    {formatPrice(product.sellingPrice)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">HST</span>
+                  <span className="font-medium text-foreground">
+                    {formatPrice(product.hst)}
                   </span>
                 </div>
               </div>

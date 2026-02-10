@@ -14,7 +14,7 @@ import {
 import { useInventory } from "@/contexts/InventoryContext";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePaginatedQuery } from "@/hooks/use-paginated-query";
-import { InventoryItem } from "@/data/inventory";
+import { InventoryItem, calculatePricePerUnit, formatPrice } from "@/data/inventory";
 import {
   fetchFilterOptions,
   fetchPaginatedInventory,
@@ -67,7 +67,16 @@ const ProductsTableSkeleton = ({ rows }: { rows: number }) => {
               Quantity
             </th>
             <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+              Purchase Price
+            </th>
+            <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+              HST %
+            </th>
+            <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
               Price/Unit
+            </th>
+            <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+              Selling Price
             </th>
             <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
               Actions
@@ -97,7 +106,16 @@ const ProductsTableSkeleton = ({ rows }: { rows: number }) => {
                 <div className="mx-auto h-9 w-24 rounded-md bg-muted" />
               </td>
               <td className="px-4 py-4">
-                <div className="ml-auto h-9 w-32 rounded-md bg-muted" />
+                <div className="ml-auto h-9 w-28 rounded-md bg-muted" />
+              </td>
+              <td className="px-4 py-4">
+                <div className="ml-auto h-9 w-20 rounded-md bg-muted" />
+              </td>
+              <td className="px-4 py-4">
+                <div className="ml-auto h-9 w-24 rounded-md bg-muted" />
+              </td>
+              <td className="px-4 py-4">
+                <div className="ml-auto h-9 w-28 rounded-md bg-muted" />
               </td>
               <td className="px-6 py-4">
                 <div className="mx-auto h-9 w-24 rounded-md bg-muted" />
@@ -191,6 +209,15 @@ export default function ProductManagement() {
   const handleSave = async (id: string) => {
     const updates = editedProducts[id];
     if (updates) {
+      // Get current product + pending edits to recalculate price per unit
+      const product = filteredItems.find((p) => p.id === id);
+      if (product) {
+        const qty = (updates.quantity ?? product.quantity) as number;
+        const pp = (updates.purchasePrice ?? product.purchasePrice ?? 0) as number;
+        const h = (updates.hst ?? product.hst ?? 0) as number;
+        // Always recalculate price per unit when saving
+        updates.pricePerUnit = calculatePricePerUnit(pp, qty, h);
+      }
       await updateProduct(id, updates);
       setEditedProducts((prev) => {
         const newState = { ...prev };
@@ -294,7 +321,16 @@ export default function ProductManagement() {
                     Quantity
                   </th>
                   <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    Purchase Price
+                  </th>
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    HST %
+                  </th>
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                     Price/Unit
+                  </th>
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    Selling Price
                   </th>
                   <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
                     Actions
@@ -316,10 +352,20 @@ export default function ProductManagement() {
                     | "D";
                   const storage = getFieldValue(product, "storage") as string;
                   const quantity = getFieldValue(product, "quantity") as number;
-                  const pricePerUnit = getFieldValue(
+                  const purchasePrice = (getFieldValue(
                     product,
-                    "pricePerUnit",
+                    "purchasePrice",
+                  ) ?? 0) as number;
+                  const hst = (getFieldValue(
+                    product,
+                    "hst",
+                  ) ?? 0) as number;
+                  const sellingPrice = getFieldValue(
+                    product,
+                    "sellingPrice",
                   ) as number;
+                  // Auto-calculate price per unit from formula
+                  const calculatedPricePerUnit = calculatePricePerUnit(purchasePrice, quantity, hst);
 
                   return (
                     <tr
@@ -411,11 +457,54 @@ export default function ProductManagement() {
                           <span className="text-muted-foreground">$</span>
                           <Input
                             type="number"
-                            value={pricePerUnit}
+                            value={purchasePrice}
                             onChange={(e) =>
                               handleFieldChange(
                                 product.id,
-                                "pricePerUnit",
+                                "purchasePrice",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
+                            className="w-28 text-right"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <Input
+                            type="number"
+                            value={hst}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                product.id,
+                                "hst",
+                                parseFloat(e.target.value) || 0,
+                              )
+                            }
+                            className="w-20 text-right"
+                            min="0"
+                            step="0.01"
+                          />
+                          <span className="text-muted-foreground">%</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-sm text-muted-foreground font-medium">
+                          {formatPrice(calculatedPricePerUnit)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-muted-foreground">$</span>
+                          <Input
+                            type="number"
+                            value={sellingPrice}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                product.id,
+                                "sellingPrice",
                                 parseFloat(e.target.value) || 0,
                               )
                             }

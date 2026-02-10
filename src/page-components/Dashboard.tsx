@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useMemo } from 'react';
+import { useMemo } from "react";
 import {
   Package,
   TrendingUp,
@@ -8,12 +8,12 @@ import {
   DollarSign,
   ShoppingCart,
   Clock,
-} from 'lucide-react';
-import { useInventory } from '@/contexts/InventoryContext';
-import { useOrders } from '@/contexts/OrdersContext';
-import { getStockStatus, formatPrice } from '@/data/inventory';
-import { Loader } from '@/components/Loader';
-import { StatCard } from '@/components/StatCard';
+} from "lucide-react";
+import { useInventory } from "@/contexts/InventoryContext";
+import { useOrders } from "@/contexts/OrdersContext";
+import { getStockStatus, formatPrice } from "@/data/inventory";
+import { Loader } from "@/components/Loader";
+import { StatCard } from "@/components/StatCard";
 
 export default function Dashboard() {
   const { inventory, isLoading: inventoryLoading } = useInventory();
@@ -23,20 +23,22 @@ export default function Dashboard() {
     const totalDevices = inventory.length;
     const totalUnits = inventory.reduce((sum, item) => sum + item.quantity, 0);
     const totalValue = inventory.reduce(
-      (sum, item) => sum + item.quantity * item.pricePerUnit,
-      0
+      (sum, item) => sum + item.quantity * item.sellingPrice,
+      0,
     );
     const lowStockItems = inventory.filter(
-      (item) => getStockStatus(item.quantity) !== 'in-stock'
+      (item) => getStockStatus(item.quantity) !== "in-stock",
     ).length;
 
     // Order statistics
     const totalOrders = orders.length;
-    const pendingOrders = orders.filter((o) => o.status === 'pending').length;
+    const pendingOrders = orders.filter((o) => o.status === "pending").length;
     const totalRevenue = orders
-      .filter((o) => o.status === 'approved' || o.status === 'completed')
+      .filter((o) => o.status === "approved" || o.status === "completed")
       .reduce((sum, order) => sum + order.totalPrice, 0);
-    const completedOrders = orders.filter((o) => o.status === 'completed').length;
+    const completedOrders = orders.filter(
+      (o) => o.status === "completed",
+    ).length;
 
     return {
       totalDevices,
@@ -62,7 +64,10 @@ export default function Dashboard() {
 
     // Add recent orders
     const recentOrders = [...orders]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
       .slice(0, 3);
 
     recentOrders.forEach((order) => {
@@ -73,7 +78,7 @@ export default function Dashboard() {
       const diffHours = Math.floor(diffMs / 3600000);
       const diffDays = Math.floor(diffMs / 86400000);
 
-      let timeAgo = '';
+      let timeAgo = "";
       if (diffMins < 60) {
         timeAgo = `${diffMins}m ago`;
       } else if (diffHours < 24) {
@@ -84,28 +89,32 @@ export default function Dashboard() {
 
       const items = Array.isArray(order.items) ? order.items : [];
       const firstItem = items[0];
-      const deviceName = firstItem?.item?.deviceName || 'Multiple items';
+      const deviceName =
+        firstItem?.item?.deviceName ??
+        (firstItem?.item as { device_name?: string } | undefined)
+          ?.device_name ??
+        (items.length > 1 ? "Multiple items" : "Order");
       const itemsCount = items.length;
       activities.push({
-        action: `New order ${order.status === 'pending' ? 'received' : order.status}`,
-        device: deviceName + (itemsCount > 1 ? ` +${itemsCount - 1} more` : ''),
+        action: `New order ${order.status === "pending" ? "received" : order.status}`,
+        device: deviceName + (itemsCount > 1 ? ` +${itemsCount - 1} more` : ""),
         time: timeAgo,
-        type: 'order',
+        type: "order",
         timestamp: orderDate.getTime(),
       });
     });
 
     // Add low stock items
     const lowStockItems = inventory
-      .filter((item) => getStockStatus(item.quantity) !== 'in-stock')
+      .filter((item) => getStockStatus(item.quantity) !== "in-stock")
       .slice(0, 2);
 
     lowStockItems.forEach((item) => {
       activities.push({
-        action: 'Low stock alert',
+        action: "Low stock alert",
         device: item.deviceName,
-        time: item.lastUpdated || 'Recently',
-        type: 'alert',
+        time: item.lastUpdated || "Recently",
+        type: "alert",
         timestamp: Date.now() - 3600000, // 1 hour ago as fallback
       });
     });
@@ -119,7 +128,7 @@ export default function Dashboard() {
 
   const topDevices = useMemo(() => {
     return inventory
-      .sort((a, b) => b.quantity * b.pricePerUnit - a.quantity * a.pricePerUnit)
+      .sort((a, b) => b.quantity * b.sellingPrice - a.quantity * a.sellingPrice)
       .slice(0, 5);
   }, [inventory]);
 
@@ -208,12 +217,21 @@ export default function Dashboard() {
             <div className="divide-y divide-border">
               {recentActivity.length > 0 ? (
                 recentActivity.map((activity, idx) => (
-                  <div key={idx} className="px-6 py-4 flex items-center justify-between">
+                  <div
+                    key={idx}
+                    className="px-6 py-4 flex items-center justify-between"
+                  >
                     <div>
-                      <p className="text-sm font-medium text-foreground">{activity.action}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{activity.device}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {activity.action}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {activity.device}
+                      </p>
                     </div>
-                    <span className="text-xs text-muted-foreground">{activity.time}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {activity.time}
+                    </span>
                   </div>
                 ))
               ) : (
@@ -234,20 +252,26 @@ export default function Dashboard() {
             <div className="divide-y divide-border">
               {topDevices.length > 0 ? (
                 topDevices.map((device, idx) => (
-                  <div key={device.id} className="px-6 py-4 flex items-center justify-between">
+                  <div
+                    key={device.id}
+                    className="px-6 py-4 flex items-center justify-between"
+                  >
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-medium text-muted-foreground w-5">
                         #{idx + 1}
                       </span>
                       <div>
-                        <p className="text-sm font-medium text-foreground">{device.deviceName}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {device.deviceName}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {device.quantity} units × {formatPrice(device.pricePerUnit)}
+                          {device.quantity} units ×{" "}
+                          {formatPrice(device.sellingPrice)}
                         </p>
                       </div>
                     </div>
                     <span className="text-sm font-semibold text-foreground">
-                      {formatPrice(device.quantity * device.pricePerUnit)}
+                      {formatPrice(device.quantity * device.sellingPrice)}
                     </span>
                   </div>
                 ))

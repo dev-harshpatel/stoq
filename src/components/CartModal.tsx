@@ -170,14 +170,14 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
           }
 
           // Check for price changes
-          if (latestItem.pricePerUnit !== cartItem.item.pricePerUnit) {
+          if (latestItem.sellingPrice !== cartItem.item.sellingPrice) {
             detectedPriceChanges.push({
               itemId: cartItem.item.id,
               deviceName: cartItem.item.deviceName,
               storage: cartItem.item.storage,
               grade: cartItem.item.grade,
-              oldPrice: cartItem.item.pricePerUnit,
-              newPrice: latestItem.pricePerUnit,
+              oldPrice: cartItem.item.sellingPrice,
+              newPrice: latestItem.sellingPrice,
               quantity: cartItem.quantity,
             });
           }
@@ -244,7 +244,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
         const newPrice = priceOverrides?.get(cartItem.item.id);
         const itemWithUpdatedPrice =
           newPrice !== undefined
-            ? { ...cartItem.item, pricePerUnit: newPrice }
+            ? { ...cartItem.item, sellingPrice: newPrice }
             : cartItem.item;
 
         return {
@@ -256,7 +256,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       // Calculate subtotal with updated prices
       const orderSubtotal = orderItems.reduce(
         (total, orderItem) =>
-          total + orderItem.item.pricePerUnit * orderItem.quantity,
+          total + orderItem.item.sellingPrice * orderItem.quantity,
         0,
       );
 
@@ -322,11 +322,11 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       const pricesChangedAgain: PriceChange[] = [];
       for (const change of priceChanges) {
         const currentPrice = latestPrices.find((p) => p.id === change.itemId);
-        if (currentPrice && currentPrice.pricePerUnit !== change.newPrice) {
+        if (currentPrice && currentPrice.sellingPrice !== change.newPrice) {
           pricesChangedAgain.push({
             ...change,
             oldPrice: change.newPrice, // The price user agreed to
-            newPrice: currentPrice.pricePerUnit, // The new current price
+            newPrice: currentPrice.sellingPrice, // The new current price
           });
         }
       }
@@ -418,7 +418,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                         {cartItem.item.storage}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        {formatPrice(cartItem.item.pricePerUnit)} each
+                        {formatPrice(cartItem.item.sellingPrice)} each
                       </span>
                     </div>
                   </div>
@@ -486,7 +486,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                     <div className="text-right min-w-[100px]">
                       <p className="font-semibold text-foreground">
                         {formatPrice(
-                          cartItem.item.pricePerUnit * cartItem.quantity,
+                          cartItem.item.sellingPrice * cartItem.quantity,
                         )}
                       </p>
                     </div>

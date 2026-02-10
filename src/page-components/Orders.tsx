@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Order, OrderStatus } from "@/types/order";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePaginatedQuery } from "@/hooks/use-paginated-query";
+import { useRefresh } from "@/contexts/RefreshContext";
 import { fetchPaginatedOrders, OrdersFilters } from "@/lib/supabase/queries";
 
 const getStatusColor = (status: OrderStatus) => {
@@ -62,6 +63,7 @@ export default function Orders() {
   const [loadingEmails, setLoadingEmails] = useState(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
+  const { refreshKey } = useRefresh();
 
   const serverFilters: OrdersFilters = {
     search: debouncedSearch,
@@ -73,7 +75,7 @@ export default function Orders() {
       return fetchPaginatedOrders(serverFilters, range);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [debouncedSearch, statusFilter]
+    [debouncedSearch, statusFilter],
   );
 
   const {
@@ -88,14 +90,15 @@ export default function Orders() {
     fetchFn,
     dependencies: [debouncedSearch, statusFilter],
     realtimeTable: "orders",
+    refreshKey,
   });
 
   // Create a stable key based on unique user IDs from current page to fetch emails
   const userIdsKey = useMemo(() => {
     const uniqueUserIds = Array.from(
-      new Set(filteredOrders.map((order) => order.userId))
+      new Set(filteredOrders.map((order) => order.userId)),
     ).sort();
-    return uniqueUserIds.join(',');
+    return uniqueUserIds.join(",");
   }, [filteredOrders]);
 
   // Fetch user emails for unique user IDs on the current page
@@ -103,19 +106,19 @@ export default function Orders() {
     const fetchUserEmails = async () => {
       if (!userIdsKey) return;
 
-      const uniqueUserIds = userIdsKey.split(',').filter(Boolean);
+      const uniqueUserIds = userIdsKey.split(",").filter(Boolean);
       const missingUserIds = uniqueUserIds.filter(
-        (userId) => !userEmails[userId]
+        (userId) => !userEmails[userId],
       );
 
       if (missingUserIds.length === 0) return;
 
       setLoadingEmails(true);
       try {
-        const response = await fetch('/api/users/emails', {
-          method: 'POST',
+        const response = await fetch("/api/users/emails", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ userIds: missingUserIds }),
         });
@@ -165,8 +168,7 @@ export default function Orders() {
             <div>
               <h2 className="text-2xl font-semibold text-foreground">Orders</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {totalCount}{" "}
-                {hasActiveFilters ? "filtered" : "total"} orders
+                {totalCount} {hasActiveFilters ? "filtered" : "total"} orders
               </p>
             </div>
           </div>
@@ -267,7 +269,7 @@ export default function Orders() {
                         key={order.id}
                         className={cn(
                           "transition-colors hover:bg-table-hover",
-                          index % 2 === 1 && "bg-table-zebra"
+                          index % 2 === 1 && "bg-table-zebra",
                         )}
                       >
                         <td className="px-6 py-4">
@@ -276,17 +278,23 @@ export default function Orders() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
-                          {userEmails[order.userId] || order.userId.slice(0, 8) + '...'}
+                          {userEmails[order.userId] ||
+                            order.userId.slice(0, 8) + "..."}
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
                           {Array.isArray(order.items) && order.items.length > 0
                             ? Array.from(
-                                new Set(order.items.map((item) => item.item?.brand).filter(Boolean))
+                                new Set(
+                                  order.items
+                                    .map((item) => item.item?.brand)
+                                    .filter(Boolean),
+                                ),
                               ).join(", ")
                             : "N/A"}
                         </td>
                         <td className="px-4 py-4 text-center text-sm text-foreground">
-                          {Array.isArray(order.items) ? order.items.length : 0} item(s)
+                          {Array.isArray(order.items) ? order.items.length : 0}{" "}
+                          item(s)
                         </td>
                         <td className="px-4 py-4 text-right">
                           <span className="font-semibold text-foreground">
@@ -298,7 +306,7 @@ export default function Orders() {
                             variant="outline"
                             className={cn(
                               "text-xs",
-                              getStatusColor(order.status)
+                              getStatusColor(order.status),
                             )}
                           >
                             {getStatusLabel(order.status)}
@@ -308,13 +316,15 @@ export default function Orders() {
                           {formatDateInOntario(order.createdAt)}
                         </td>
                         <td className="px-4 py-4">
-                          {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) ? (
+                          {order.status === "rejected" &&
+                          (order.rejectionReason || order.rejectionComment) ? (
                             <div className="flex items-start gap-2 max-w-xs">
                               <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                               <div className="flex-1 space-y-1">
                                 {order.rejectionReason && (
                                   <p className="text-xs text-foreground">
-                                    <span className="font-medium">Reason:</span> {order.rejectionReason}
+                                    <span className="font-medium">Reason:</span>{" "}
+                                    {order.rejectionReason}
                                   </p>
                                 )}
                                 {order.rejectionComment && (
@@ -325,7 +335,9 @@ export default function Orders() {
                               </div>
                             </div>
                           ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">

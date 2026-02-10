@@ -112,7 +112,7 @@ export const UserOrders = () => {
                       {orderItem.quantity || 0}x {orderItem.item.deviceName || 'Unknown Device'}
                     </span>
                     <span className="text-muted-foreground">
-                      {formatPrice((orderItem.item.pricePerUnit || 0) * (orderItem.quantity || 0))}
+                      {formatPrice((orderItem.item.sellingPrice ?? orderItem.item.pricePerUnit ?? 0) * (orderItem.quantity || 0))}
                     </span>
                   </div>
                 );

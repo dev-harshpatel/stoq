@@ -220,6 +220,9 @@ async function seedInventory() {
       storage: item.storage,
       quantity: item.quantity,
       price_per_unit: item.pricePerUnit,
+      purchase_price: item.purchasePrice ?? null,
+      hst: item.hst ?? null,
+      selling_price: item.sellingPrice,
       last_updated: item.lastUpdated,
       price_change: item.priceChange || null,
     }));
@@ -311,6 +314,7 @@ async function createSampleOrders(userIds: string[]) {
             storage: item1.storage,
             quantity: item1.quantity,
             pricePerUnit: Number(item1.price_per_unit),
+            sellingPrice: Number(item1.selling_price ?? item1.price_per_unit),
             lastUpdated: item1.last_updated,
             priceChange: item1.price_change || undefined,
           },
@@ -325,6 +329,7 @@ async function createSampleOrders(userIds: string[]) {
             storage: item2.storage,
             quantity: item2.quantity,
             pricePerUnit: Number(item2.price_per_unit),
+            sellingPrice: Number(item2.selling_price ?? item2.price_per_unit),
             lastUpdated: item2.last_updated,
             priceChange: item2.price_change || undefined,
           },
@@ -333,7 +338,7 @@ async function createSampleOrders(userIds: string[]) {
       ];
 
       const totalPrice = orderItems.reduce(
-        (sum, oi) => sum + oi.item.pricePerUnit * oi.quantity,
+        (sum, oi) => sum + oi.item.sellingPrice * oi.quantity,
         0
       );
 

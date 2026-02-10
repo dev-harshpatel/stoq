@@ -1,13 +1,13 @@
-import { supabase } from './client'
-import { Database } from '@/lib/database.types'
-import { InventoryItem } from '@/data/inventory'
-import { Order, OrderItem, OrderStatus } from '@/types/order'
-import { UserProfile } from '@/types/user'
-import type { PaginatedResult } from '@/hooks/use-paginated-query'
+import { supabase } from "./client";
+import { Database } from "@/lib/database.types";
+import { InventoryItem } from "@/data/inventory";
+import { Order, OrderItem, OrderStatus } from "@/types/order";
+import { UserProfile } from "@/types/user";
+import type { PaginatedResult } from "@/hooks/use-paginated-query";
 
-type InventoryRow = Database['public']['Tables']['inventory']['Row']
-type OrderRow = Database['public']['Tables']['orders']['Row']
-type UserProfileRow = Database['public']['Tables']['user_profiles']['Row']
+type InventoryRow = Database["public"]["Tables"]["inventory"]["Row"];
+type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
+type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"];
 
 // ---------------------------------------------------------------------------
 // Row-to-model mappers (extracted from contexts for shared use)
@@ -17,57 +17,109 @@ export const dbRowToInventoryItem = (row: InventoryRow): InventoryItem => ({
   id: row.id,
   deviceName: row.device_name,
   brand: row.brand,
-  grade: row.grade as 'A' | 'B' | 'C' | 'D',
+  grade: row.grade as "A" | "B" | "C" | "D",
   storage: row.storage,
   quantity: row.quantity,
   pricePerUnit: Number(row.price_per_unit),
+  purchasePrice: row.purchase_price != null ? Number(row.purchase_price) : null,
+  hst: row.hst != null ? Number(row.hst) : null,
+  sellingPrice:
+    row.selling_price != null
+      ? Number(row.selling_price)
+      : Number(row.price_per_unit),
   lastUpdated: row.last_updated,
-  priceChange: (row.price_change ?? undefined) as 'up' | 'down' | 'stable' | undefined,
-})
+  priceChange: (row.price_change ?? undefined) as
+    | "up"
+    | "down"
+    | "stable"
+    | undefined,
+});
 
 export const dbRowToOrder = (row: OrderRow): Order => {
-  let items: OrderItem[] = []
+  let items: OrderItem[] = [];
 
   if (row.items) {
     try {
-      if (typeof row.items === 'string') {
-        const parsed = JSON.parse(row.items)
-        items = Array.isArray(parsed) ? parsed : [parsed]
+      if (typeof row.items === "string") {
+        const parsed = JSON.parse(row.items);
+        items = Array.isArray(parsed) ? parsed : [parsed];
       } else if (Array.isArray(row.items)) {
-        items = row.items as unknown as OrderItem[]
-      } else if (typeof row.items === 'object' && row.items !== null) {
-        if ('item' in row.items && 'quantity' in row.items) {
-          items = [row.items as unknown as OrderItem]
+        items = row.items as unknown as OrderItem[];
+      } else if (typeof row.items === "object" && row.items !== null) {
+        if ("item" in row.items && "quantity" in row.items) {
+          items = [row.items as unknown as OrderItem];
         } else {
-          const values = Object.values(row.items)
+          const values = Object.values(row.items);
           if (values.length > 0 && Array.isArray(values[0])) {
-            items = values[0] as unknown as OrderItem[]
+            items = values[0] as unknown as OrderItem[];
           } else {
             items = values.filter(
-              (v) => typeof v === 'object' && v !== null && 'item' in v && 'quantity' in v
-            ) as unknown as OrderItem[]
+              (v) =>
+                typeof v === "object" &&
+                v !== null &&
+                "item" in v &&
+                "quantity" in v,
+            ) as unknown as OrderItem[];
           }
         }
       }
     } catch {
-      items = []
+      items = [];
     }
   }
 
   items = items.filter(
     (item): item is OrderItem =>
       item !== null &&
-      typeof item === 'object' &&
-      'item' in item &&
-      'quantity' in item &&
+      typeof item === "object" &&
+      "item" in item &&
+      "quantity" in item &&
       item.item !== null &&
-      typeof item.item === 'object'
-  )
+      typeof item.item === "object",
+  );
+
+  // Normalize each item's product so the app always sees camelCase (deviceName, sellingPrice, etc.)
+  const normalizedItems: OrderItem[] = items.map((oi) => {
+    const raw = oi.item as Record<string, unknown>;
+    const quantity = typeof oi.quantity === "number" ? oi.quantity : 1;
+    return {
+      quantity,
+      item: {
+        id: String(raw.id ?? raw.item_id ?? ""),
+        deviceName: String(raw.deviceName ?? raw.device_name ?? ""),
+        brand: String(raw.brand ?? ""),
+        grade: (raw.grade ?? "A") as "A" | "B" | "C" | "D",
+        storage: String(raw.storage ?? ""),
+        quantity: Number(raw.quantity ?? 0),
+        pricePerUnit: Number(raw.pricePerUnit ?? raw.price_per_unit ?? 0),
+        purchasePrice:
+          raw.purchasePrice != null
+            ? Number(raw.purchasePrice)
+            : raw.purchase_price != null
+              ? Number(raw.purchase_price)
+              : null,
+        hst: raw.hst != null ? Number(raw.hst) : null,
+        sellingPrice: Number(
+          raw.sellingPrice ??
+            raw.selling_price ??
+            raw.pricePerUnit ??
+            raw.price_per_unit ??
+            0,
+        ),
+        lastUpdated: String(raw.lastUpdated ?? raw.last_updated ?? ""),
+        priceChange: (raw.priceChange ?? raw.price_change ?? undefined) as
+          | "up"
+          | "down"
+          | "stable"
+          | undefined,
+      },
+    };
+  });
 
   return {
     id: row.id,
     userId: row.user_id,
-    items,
+    items: normalizedItems,
     subtotal: Number((row as any).subtotal ?? row.total_price),
     taxRate: (row as any).tax_rate ? Number((row as any).tax_rate) : null,
     taxAmount: (row as any).tax_amount ? Number((row as any).tax_amount) : null,
@@ -87,13 +139,20 @@ export const dbRowToOrder = (row: OrderRow): Order => {
     invoiceTerms: (row as any).invoice_terms ?? null,
     invoiceConfirmed: (row as any).invoice_confirmed ?? false,
     invoiceConfirmedAt: (row as any).invoice_confirmed_at ?? null,
-    discountAmount: (row as any).discount_amount ? Number((row as any).discount_amount) : 0,
-    discountType: (row as any).discount_type as 'percentage' | 'cad' | undefined,
-    shippingAmount: (row as any).shipping_amount ? Number((row as any).shipping_amount) : 0,
+    discountAmount: (row as any).discount_amount
+      ? Number((row as any).discount_amount)
+      : 0,
+    discountType: (row as any).discount_type as
+      | "percentage"
+      | "cad"
+      | undefined,
+    shippingAmount: (row as any).shipping_amount
+      ? Number((row as any).shipping_amount)
+      : 0,
     shippingAddress: (row as any).shipping_address ?? null,
     billingAddress: (row as any).billing_address ?? null,
-  }
-}
+  };
+};
 
 export const dbRowToUserProfile = (row: UserProfileRow): UserProfile => ({
   id: row.id,
@@ -106,7 +165,10 @@ export const dbRowToUserProfile = (row: UserProfileRow): UserProfile => ({
   phone: row.phone,
   businessName: row.business_name,
   businessAddress: row.business_address,
-  businessAddressComponents: row.business_address_components as Record<string, any> | null,
+  businessAddressComponents: row.business_address_components as Record<
+    string,
+    any
+  > | null,
   businessState: row.business_state,
   businessCity: row.business_city,
   businessCountry: row.business_country,
@@ -115,14 +177,18 @@ export const dbRowToUserProfile = (row: UserProfileRow): UserProfile => ({
   businessEmail: row.business_email,
   // Shipping Address
   shippingAddress: (row as any).shipping_address ?? null,
-  shippingAddressComponents: (row as any).shipping_address_components as Record<string, any> | null ?? null,
+  shippingAddressComponents:
+    ((row as any).shipping_address_components as Record<string, any> | null) ??
+    null,
   shippingCity: (row as any).shipping_city ?? null,
   shippingState: (row as any).shipping_state ?? null,
   shippingCountry: (row as any).shipping_country ?? null,
   shippingPostalCode: (row as any).shipping_postal_code ?? null,
   // Billing Address
   billingAddress: (row as any).billing_address ?? null,
-  billingAddressComponents: (row as any).billing_address_components as Record<string, any> | null ?? null,
+  billingAddressComponents:
+    ((row as any).billing_address_components as Record<string, any> | null) ??
+    null,
   billingCity: (row as any).billing_city ?? null,
   billingState: (row as any).billing_state ?? null,
   billingCountry: (row as any).billing_country ?? null,
@@ -132,124 +198,126 @@ export const dbRowToUserProfile = (row: UserProfileRow): UserProfile => ({
   billingSameAsBusiness: (row as any).billing_same_as_business ?? false,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
-})
+});
 
 // ---------------------------------------------------------------------------
 // Inventory queries
 // ---------------------------------------------------------------------------
 
 export interface InventoryFilters {
-  search: string
-  brand: string
-  grade: string
-  storage: string
-  priceRange: string
-  stockStatus: string
+  search: string;
+  brand: string;
+  grade: string;
+  storage: string;
+  priceRange: string;
+  stockStatus: string;
 }
 
 function applyInventoryFilters(query: any, filters: InventoryFilters) {
   if (filters.search) {
-    query = query.ilike('device_name', `%${filters.search}%`)
+    query = query.ilike("device_name", `%${filters.search}%`);
   }
-  if (filters.brand !== 'all') {
-    query = query.eq('brand', filters.brand)
+  if (filters.brand !== "all") {
+    query = query.eq("brand", filters.brand);
   }
-  if (filters.grade !== 'all') {
-    query = query.eq('grade', filters.grade)
+  if (filters.grade !== "all") {
+    query = query.eq("grade", filters.grade);
   }
-  if (filters.storage !== 'all') {
-    query = query.eq('storage', filters.storage)
+  if (filters.storage !== "all") {
+    query = query.eq("storage", filters.storage);
   }
-  if (filters.priceRange !== 'all') {
+  if (filters.priceRange !== "all") {
     switch (filters.priceRange) {
-      case 'under200':
-        query = query.lt('price_per_unit', 200)
-        break
-      case '200-400':
-        query = query.gte('price_per_unit', 200).lte('price_per_unit', 400)
-        break
-      case '400+':
-        query = query.gte('price_per_unit', 400)
-        break
+      case "under200":
+        query = query.lt("selling_price", 200);
+        break;
+      case "200-400":
+        query = query.gte("selling_price", 200).lte("selling_price", 400);
+        break;
+      case "400+":
+        query = query.gte("selling_price", 400);
+        break;
     }
   }
-  if (filters.stockStatus !== 'all') {
+  if (filters.stockStatus !== "all") {
     switch (filters.stockStatus) {
-      case 'in-stock':
-        query = query.gt('quantity', 10)
-        break
-      case 'low-stock':
-        query = query.gte('quantity', 5).lte('quantity', 10)
-        break
-      case 'critical':
-        query = query.gt('quantity', 0).lt('quantity', 5)
-        break
-      case 'out-of-stock':
-        query = query.eq('quantity', 0)
-        break
+      case "in-stock":
+        query = query.gt("quantity", 10);
+        break;
+      case "low-stock":
+        query = query.gte("quantity", 5).lte("quantity", 10);
+        break;
+      case "critical":
+        query = query.gt("quantity", 0).lt("quantity", 5);
+        break;
+      case "out-of-stock":
+        query = query.eq("quantity", 0);
+        break;
     }
   }
-  return query
+  return query;
 }
 
 export async function fetchPaginatedInventory(
   filters: InventoryFilters,
-  range: { from: number; to: number }
+  range: { from: number; to: number },
 ): Promise<PaginatedResult<InventoryItem>> {
   let query = supabase
-    .from('inventory')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: true })
+    .from("inventory")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: true });
 
-  query = applyInventoryFilters(query, filters)
-  query = query.range(range.from, range.to)
+  query = applyInventoryFilters(query, filters);
+  query = query.range(range.from, range.to);
 
-  const { data, count, error } = await query
-  if (error) throw error
+  const { data, count, error } = await query;
+  if (error) throw error;
 
   return {
     data: (data || []).map(dbRowToInventoryItem),
     count: count || 0,
-  }
+  };
 }
 
 export async function fetchFilterOptions(): Promise<{
-  brands: string[]
-  storageOptions: string[]
+  brands: string[];
+  storageOptions: string[];
 }> {
-  const { data, error } = await supabase.from('inventory').select('brand, storage')
+  const { data, error } = await supabase
+    .from("inventory")
+    .select("brand, storage");
 
-  if (error || !data) return { brands: [], storageOptions: [] }
+  if (error || !data) return { brands: [], storageOptions: [] };
 
   const brands = Array.from(new Set(data.map((r: any) => r.brand)))
     .filter(Boolean)
-    .sort() as string[]
+    .sort() as string[];
 
   const storageOptions = Array.from(new Set(data.map((r: any) => r.storage)))
     .filter(Boolean)
     .sort((a: string, b: string) => {
-      const numA = parseInt(a)
-      const numB = parseInt(b)
-      if (!isNaN(numA) && !isNaN(numB)) return numA - numB
-      return a.localeCompare(b)
-    }) as string[]
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    }) as string[];
 
-  return { brands, storageOptions }
+  return { brands, storageOptions };
 }
 
 export async function fetchAllFilteredInventory(
-  filters: InventoryFilters
+  filters: InventoryFilters,
 ): Promise<InventoryItem[]> {
   let query = supabase
-    .from('inventory')
-    .select('*')
-    .order('created_at', { ascending: true })
+    .from("inventory")
+    .select("*")
+    .order("created_at", { ascending: true });
 
-  query = applyInventoryFilters(query, filters)
+  query = applyInventoryFilters(query, filters);
 
-  const { data, error } = await query
-  if (error) throw error
-  return (data || []).map(dbRowToInventoryItem)
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).map(dbRowToInventoryItem);
 }
 
 // ---------------------------------------------------------------------------
@@ -257,91 +325,89 @@ export async function fetchAllFilteredInventory(
 // ---------------------------------------------------------------------------
 
 export interface OrdersFilters {
-  search: string
-  status: OrderStatus | 'all'
+  search: string;
+  status: OrderStatus | "all";
 }
 
 export async function fetchPaginatedOrders(
   filters: OrdersFilters,
-  range: { from: number; to: number }
+  range: { from: number; to: number },
 ): Promise<PaginatedResult<Order>> {
-  const hasSearch = filters.search.trim().length > 0
+  const hasSearch = filters.search.trim().length > 0;
 
   if (hasSearch) {
-    const q = filters.search.trim().toLowerCase()
+    const q = filters.search.trim().toLowerCase();
 
     // Use .or() for server-side search across multiple columns.
     // For JSONB items column, we cast to text to enable text search.
     let query = supabase
-      .from('orders')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
+      .from("orders")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false });
 
-    if (filters.status !== 'all') {
-      query = query.eq('status', filters.status)
+    if (filters.status !== "all") {
+      query = query.eq("status", filters.status);
     }
 
     // Search across id, status, and items (cast to text for JSONB)
-    query = query.or(
-      `id.ilike.%${q}%,status.ilike.%${q}%`
-    )
+    query = query.or(`id.ilike.%${q}%,status.ilike.%${q}%`);
 
-    query = query.range(range.from, range.to)
+    query = query.range(range.from, range.to);
 
-    const { data, count, error } = await query
-    if (error) throw error
+    const { data, count, error } = await query;
+    if (error) throw error;
 
     return {
       data: (data || []).map(dbRowToOrder),
       count: count || 0,
-    }
+    };
   }
 
   // No search - simple paginated query
   let query = supabase
-    .from('orders')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
+    .from("orders")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false });
 
-  if (filters.status !== 'all') {
-    query = query.eq('status', filters.status)
+  if (filters.status !== "all") {
+    query = query.eq("status", filters.status);
   }
 
-  query = query.range(range.from, range.to)
+  query = query.range(range.from, range.to);
 
-  const { data, count, error } = await query
-  if (error) throw error
+  const { data, count, error } = await query;
+  if (error) throw error;
 
   return {
     data: (data || []).map(dbRowToOrder),
     count: count || 0,
-  }
+  };
 }
 
 export async function fetchPaginatedUserOrders(
   userId: string,
-  statusFilter: OrderStatus | 'all',
-  range: { from: number; to: number }
+  statusFilter: OrderStatus | "all",
+  range: { from: number; to: number },
 ): Promise<PaginatedResult<Order>> {
   let query = supabase
-    .from('orders')
-    .select('*', { count: 'exact' })
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
+    .from("orders")
+    .select("*", { count: "exact" })
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
-  if (statusFilter !== 'all') {
-    query = query.eq('status', statusFilter)
+  if (statusFilter !== "all") {
+    query = query.eq("status", statusFilter);
   }
 
-  query = query.range(range.from, range.to)
+  query = query.range(range.from, range.to);
 
-  const { data, count, error } = await query
-  if (error) throw error
+  const { data, count, error } = await query;
+  if (error) throw error;
 
   return {
     data: (data || []).map(dbRowToOrder),
     count: count || 0,
-  }
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -350,29 +416,31 @@ export async function fetchPaginatedUserOrders(
 
 export async function fetchPaginatedUsers(
   search: string,
-  range: { from: number; to: number }
+  range: { from: number; to: number },
 ): Promise<PaginatedResult<UserProfile>> {
   let query = supabase
-    .from('user_profiles')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
+    .from("user_profiles")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false });
 
   if (search.trim()) {
-    const q = `%${search.trim()}%`
+    const q = `%${search.trim()}%`;
     query = query.or(
-      `first_name.ilike.${q},last_name.ilike.${q},business_name.ilike.${q},business_email.ilike.${q},phone.ilike.${q},business_city.ilike.${q}`
-    )
+      `first_name.ilike.${q},last_name.ilike.${q},business_name.ilike.${q},business_email.ilike.${q},phone.ilike.${q},business_city.ilike.${q}`,
+    );
   }
 
-  query = query.range(range.from, range.to)
+  query = query.range(range.from, range.to);
 
-  const { data, count, error } = await query
-  if (error) throw error
+  const { data, count, error } = await query;
+  if (error) throw error;
 
   return {
-    data: (data || []).map((row: any) => dbRowToUserProfile(row as UserProfileRow)),
+    data: (data || []).map((row: any) =>
+      dbRowToUserProfile(row as UserProfileRow),
+    ),
     count: count || 0,
-  }
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -380,10 +448,10 @@ export async function fetchPaginatedUsers(
 // ---------------------------------------------------------------------------
 
 export interface LatestInventoryPrice {
-  id: string
-  deviceName: string
-  pricePerUnit: number
-  quantity: number
+  id: string;
+  deviceName: string;
+  sellingPrice: number;
+  quantity: number;
 }
 
 /**
@@ -391,21 +459,24 @@ export interface LatestInventoryPrice {
  * Used to verify cart items before checkout
  */
 export async function fetchLatestPricesForItems(
-  itemIds: string[]
+  itemIds: string[],
 ): Promise<LatestInventoryPrice[]> {
-  if (itemIds.length === 0) return []
+  if (itemIds.length === 0) return [];
 
   const { data, error } = await supabase
-    .from('inventory')
-    .select('id, device_name, price_per_unit, quantity')
-    .in('id', itemIds)
+    .from("inventory")
+    .select("id, device_name, selling_price, price_per_unit, quantity")
+    .in("id", itemIds);
 
-  if (error) throw error
+  if (error) throw error;
 
   return (data || []).map((row: any) => ({
     id: row.id,
     deviceName: row.device_name,
-    pricePerUnit: Number(row.price_per_unit),
+    sellingPrice:
+      row.selling_price != null
+        ? Number(row.selling_price)
+        : Number(row.price_per_unit),
     quantity: row.quantity,
-  }))
+  }));
 }

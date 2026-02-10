@@ -12,7 +12,7 @@ export const exportToExcel = (items: InventoryItem[], filename: string = "invent
       Grade: item.grade,
       Storage: item.storage,
       Quantity: item.quantity,
-      "Price/Unit (CAD)": item.pricePerUnit,
+      "Price (CAD)": item.sellingPrice,
     }));
 
     // Create workbook and worksheet
@@ -66,13 +66,13 @@ export const exportToPDF = (items: InventoryItem[], filename: string = "inventor
       item.grade,
       item.storage,
       item.quantity.toString(),
-      formatPrice(item.pricePerUnit),
+      formatPrice(item.sellingPrice),
       item.lastUpdated,
     ]);
 
     // Add table
     autoTable(doc, {
-      head: [["Device Name", "Brand", "Grade", "Storage", "Qty", "Price/Unit", "Last Updated"]],
+      head: [["Device Name", "Brand", "Grade", "Storage", "Qty", "Price", "Last Updated"]],
       body: tableData,
       startY: 30,
       styles: { fontSize: 8 },

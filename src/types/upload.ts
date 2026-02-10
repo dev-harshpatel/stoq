@@ -17,7 +17,9 @@ export interface ParsedProduct {
   grade: 'A' | 'B' | 'C' | 'D';
   storage: string;
   quantity: number;
-  pricePerUnit: number;
+  purchasePrice: number;
+  sellingPrice: number;
+  hst: number;
   lastUpdated?: string;
   rowNumber?: number; // For error reporting
   errors?: string[]; // Validation errors
