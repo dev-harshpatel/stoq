@@ -151,6 +151,9 @@ export interface Database {
           storage: string;
           quantity: number;
           price_per_unit: number;
+          purchase_price: number | null;
+          hst: number | null;
+          selling_price: number | null;
           last_updated: string;
           price_change: string | null;
           created_at: string;
@@ -164,6 +167,9 @@ export interface Database {
           storage: string;
           quantity?: number;
           price_per_unit: number;
+          purchase_price?: number | null;
+          hst?: number | null;
+          selling_price?: number | null;
           last_updated: string;
           price_change?: string | null;
           created_at?: string;
@@ -177,6 +183,9 @@ export interface Database {
           storage?: string;
           quantity?: number;
           price_per_unit?: number;
+          purchase_price?: number | null;
+          hst?: number | null;
+          selling_price?: number | null;
           last_updated?: string;
           price_change?: string | null;
           created_at?: string;

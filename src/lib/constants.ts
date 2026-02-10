@@ -5,7 +5,7 @@
 
 /**
  * Auto-refresh interval for inventory data (in milliseconds)
- * Default: 2 minutes (120000ms) - 2 minutes
+ * Default: 2 minutes (120000ms) - 2 minute
  * Adjust this value to change how often the inventory auto-refreshes
  */
 export const AUTO_REFRESH_INTERVAL_MS = 120000; // 2 minutes

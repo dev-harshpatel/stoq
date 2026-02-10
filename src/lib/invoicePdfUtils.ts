@@ -179,9 +179,10 @@ export async function generateInvoicePDF(
         if (orderItem?.item) {
           const itemName = `${orderItem.item.deviceName} ${orderItem.item.storage}`;
           const quantity = orderItem.quantity.toString();
-          const rate = formatPrice(orderItem.item.pricePerUnit);
+          const itemPrice = orderItem.item.sellingPrice ?? orderItem.item.pricePerUnit;
+          const rate = formatPrice(itemPrice);
           const amount = formatPrice(
-            orderItem.item.pricePerUnit * orderItem.quantity,
+            itemPrice * orderItem.quantity,
           );
 
           tableData.push([itemName, quantity, rate, amount]);

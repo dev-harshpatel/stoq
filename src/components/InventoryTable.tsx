@@ -1,8 +1,7 @@
 import { InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
-import { StatusBadge } from "./StatusBadge";
-import { GradeBadge } from "./GradeBadge";
-import { PriceChangeIndicator } from "./PriceChangeIndicator";
 import { EmptyState } from "./EmptyState";
+import { GradeBadge } from "./GradeBadge";
+import { StatusBadge } from "./StatusBadge";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,51 +17,57 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
 
   return (
     <>
-      {/* Desktop Table */}
+      {/* Desktop Table - single table so header and body columns stay aligned */}
       <div
         className={cn(
           "hidden md:flex md:flex-col rounded-lg border border-border bg-card h-full overflow-hidden",
           className,
         )}
       >
-        {/* Fixed Header */}
-        <div className="flex-shrink-0 bg-muted border-b border-border">
-          <table className="w-full">
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <table className="w-full border-collapse">
+            <colgroup>
+              <col style={{ width: "22%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "10%" }} />
+            </colgroup>
             <thead>
-              <tr>
-                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4 w-[30%]">
+              <tr className="bg-muted border-b border-border">
+                <th className="sticky top-0 z-10 bg-muted border-b border-border text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
                   Device Name
                 </th>
-                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4 w-[10%]">
+                <th className="sticky top-0 z-10 bg-muted border-b border-border text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                   Grade
                 </th>
-                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4 w-[12%]">
+                <th className="sticky top-0 z-10 bg-muted border-b border-border text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                   Storage
                 </th>
-                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4 w-[10%]">
+                <th className="sticky top-0 z-10 bg-muted border-b border-border text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                   Qty
                 </th>
-                <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4 w-[15%]">
+                <th className="sticky top-0 z-10 bg-muted border-b border-border text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  Purchase Price
+                </th>
+                <th className="sticky top-0 z-10 bg-muted border-b border-border text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  HST %
+                </th>
+                <th className="sticky top-0 z-10 bg-muted border-b border-border text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
                   Price/Unit
                 </th>
-                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4 w-[13%]">
+                <th className="sticky top-0 z-10 bg-muted border-b border-border text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  Selling Price
+                </th>
+                <th className="sticky top-0 z-10 bg-muted border-b border-border text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
                   Status
                 </th>
               </tr>
             </thead>
-          </table>
-        </div>
-        {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto min-h-0">
-          <table className="w-full">
-            <colgroup>
-              <col className="w-[30%]" />
-              <col className="w-[10%]" />
-              <col className="w-[12%]" />
-              <col className="w-[10%]" />
-              <col className="w-[15%]" />
-              <col className="w-[13%]" />
-            </colgroup>
             <tbody className="divide-y divide-border">
               {items.map((item, index) => {
                 const status = getStockStatus(item.quantity);
@@ -78,24 +83,24 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
                       isLowStock && "bg-destructive/[0.02]",
                     )}
                   >
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
+                    <td className="px-6 py-4 text-center align-middle">
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <span className="font-medium text-foreground text-center">
                           {item.deviceName}
                         </span>
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                        <span className="flex items-center justify-center gap-1 text-xs text-muted-foreground mt-1 text-center">
                           <Clock className="h-3 w-3" />
                           Updated {item.lastUpdated}
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-4 py-4 text-center align-middle">
                       <GradeBadge grade={item.grade} />
                     </td>
-                    <td className="px-4 py-4 text-sm text-foreground">
+                    <td className="px-4 py-4 text-center align-middle text-sm text-foreground">
                       {item.storage}
                     </td>
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-4 py-4 text-center align-middle">
                       <span
                         className={cn(
                           "font-semibold",
@@ -107,15 +112,21 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
                         {item.quantity}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="font-medium text-foreground">
-                          {formatPrice(item.pricePerUnit)}
-                        </span>
-                        <PriceChangeIndicator change={item.priceChange} />
-                      </div>
+                    <td className="px-4 py-4 text-center align-middle font-medium text-foreground">
+                      {item.purchasePrice != null
+                        ? formatPrice(item.purchasePrice)
+                        : "—"}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 py-4 text-center align-middle font-medium text-foreground">
+                      {item.hst != null ? `${item.hst}%` : "—"}
+                    </td>
+                    <td className="px-4 py-4 text-center align-middle font-medium text-muted-foreground">
+                      {formatPrice(item.pricePerUnit)}
+                    </td>
+                    <td className="px-4 py-4 text-center align-middle font-medium text-foreground">
+                      {formatPrice(item.sellingPrice)}
+                    </td>
+                    <td className="px-6 py-4 text-center align-middle">
                       <StatusBadge quantity={item.quantity} />
                     </td>
                   </tr>
@@ -153,7 +164,7 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
                 <StatusBadge quantity={item.quantity} />
               </div>
 
-              <div className="grid grid-cols-4 gap-3 text-sm">
+              <div className="grid grid-cols-3 gap-3 text-sm">
                 <div>
                   <span className="text-xs text-muted-foreground block mb-1">
                     Grade
@@ -185,14 +196,37 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground block mb-1">
-                    Price
+                    Purchase Price
                   </span>
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium text-foreground">
-                      ${item.pricePerUnit}
-                    </span>
-                    <PriceChangeIndicator change={item.priceChange} />
-                  </div>
+                  <span className="font-medium text-foreground">
+                    {item.purchasePrice != null
+                      ? `$${item.purchasePrice}`
+                      : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    HST
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {item.hst != null ? `${item.hst}%` : "—"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    Price/Unit
+                  </span>
+                  <span className="font-medium text-muted-foreground">
+                    ${item.pricePerUnit}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    Selling Price
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {formatPrice(item.sellingPrice)}
+                  </span>
                 </div>
               </div>
             </div>

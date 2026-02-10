@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -15,40 +15,44 @@ import {
   LineChart,
   Line,
   Legend,
-} from 'recharts';
-import { useInventory } from '@/contexts/InventoryContext';
-import { useOrders } from '@/contexts/OrdersContext';
-import { getStockStatus, formatPrice } from '@/data/inventory';
-import { Download, Calendar, Filter, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+} from "recharts";
+import { useInventory } from "@/contexts/InventoryContext";
+import { useOrders } from "@/contexts/OrdersContext";
+import { getStockStatus, formatPrice } from "@/data/inventory";
+import { Download, Calendar, Filter, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { format } from 'date-fns';
-import { OrderStatus } from '@/types/order';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { format } from "date-fns";
+import { OrderStatus } from "@/types/order";
+import { cn } from "@/lib/utils";
 
 // Grade colors: A=Green, B=Yellow, C=Blue, D=Red
 const GRADE_COLORS: Record<string, string> = {
-  'Grade A': 'hsl(142, 76%, 36%)', // Green
-  'Grade B': 'hsl(38, 92%, 50%)',  // Yellow
-  'Grade C': 'hsl(217, 91%, 60%)', // Blue
-  'Grade D': 'hsl(0, 72%, 51%)',   // Red
+  "Grade A": "hsl(142, 76%, 36%)", // Green
+  "Grade B": "hsl(38, 92%, 50%)", // Yellow
+  "Grade C": "hsl(217, 91%, 60%)", // Blue
+  "Grade D": "hsl(0, 72%, 51%)", // Red
 };
 
 // Fallback colors for other charts
 const COLORS = [
-  'hsl(142, 76%, 36%)', // Green
-  'hsl(38, 92%, 50%)',  // Yellow
-  'hsl(217, 91%, 60%)', // Blue
-  'hsl(0, 72%, 51%)',   // Red
+  "hsl(142, 76%, 36%)", // Green
+  "hsl(38, 92%, 50%)", // Yellow
+  "hsl(217, 91%, 60%)", // Blue
+  "hsl(0, 72%, 51%)", // Red
 ];
 
 interface ReportFilters {
@@ -56,9 +60,9 @@ interface ReportFilters {
     from: Date | null;
     to: Date | null;
   };
-  orderStatus: OrderStatus | 'all';
-  grade: 'A' | 'B' | 'C' | 'D' | 'all';
-  brand: string | 'all';
+  orderStatus: OrderStatus | "all";
+  grade: "A" | "B" | "C" | "D" | "all";
+  brand: string | "all";
 }
 
 export default function Reports() {
@@ -71,9 +75,9 @@ export default function Reports() {
       from: null,
       to: null,
     },
-    orderStatus: 'all',
-    grade: 'all',
-    brand: 'all',
+    orderStatus: "all",
+    grade: "all",
+    brand: "all",
   });
 
   // Get unique brands from inventory
@@ -90,7 +94,8 @@ export default function Reports() {
     if (filters.dateRange.from || filters.dateRange.to) {
       filtered = filtered.filter((order) => {
         const orderDate = new Date(order.createdAt);
-        if (filters.dateRange.from && orderDate < filters.dateRange.from) return false;
+        if (filters.dateRange.from && orderDate < filters.dateRange.from)
+          return false;
         if (filters.dateRange.to) {
           const toDate = new Date(filters.dateRange.to);
           toDate.setHours(23, 59, 59, 999); // Include entire end date
@@ -101,8 +106,10 @@ export default function Reports() {
     }
 
     // Filter by order status
-    if (filters.orderStatus !== 'all') {
-      filtered = filtered.filter((order) => order.status === filters.orderStatus);
+    if (filters.orderStatus !== "all") {
+      filtered = filtered.filter(
+        (order) => order.status === filters.orderStatus,
+      );
     }
 
     return filtered;
@@ -112,11 +119,11 @@ export default function Reports() {
   const filteredInventory = useMemo(() => {
     let filtered = inventory;
 
-    if (filters.grade !== 'all') {
+    if (filters.grade !== "all") {
       filtered = filtered.filter((item) => item.grade === filters.grade);
     }
 
-    if (filters.brand !== 'all') {
+    if (filters.brand !== "all") {
       filtered = filtered.filter((item) => item.brand === filters.brand);
     }
 
@@ -127,32 +134,44 @@ export default function Reports() {
   const trendData = useMemo(() => {
     if (filteredOrders.length === 0) return [];
 
-    const ordersByPeriod = new Map<string, { units: number; value: number; orders: number }>();
+    const ordersByPeriod = new Map<
+      string,
+      { units: number; value: number; orders: number }
+    >();
 
     filteredOrders.forEach((order) => {
       const orderDate = new Date(order.createdAt);
       let periodKey: string;
 
       // Determine grouping based on date range
-      const daysDiff = filters.dateRange.from && filters.dateRange.to
-        ? Math.ceil((filters.dateRange.to.getTime() - filters.dateRange.from.getTime()) / (1000 * 60 * 60 * 24))
-        : 365; // Default to yearly if no range
+      const daysDiff =
+        filters.dateRange.from && filters.dateRange.to
+          ? Math.ceil(
+              (filters.dateRange.to.getTime() -
+                filters.dateRange.from.getTime()) /
+                (1000 * 60 * 60 * 24),
+            )
+          : 365; // Default to yearly if no range
 
       if (daysDiff <= 7) {
         // Group by day
-        periodKey = format(orderDate, 'MMM dd');
+        periodKey = format(orderDate, "MMM dd");
       } else if (daysDiff <= 90) {
         // Group by week
         const weekStart = new Date(orderDate);
         weekStart.setDate(orderDate.getDate() - orderDate.getDay());
-        periodKey = format(weekStart, 'MMM dd');
+        periodKey = format(weekStart, "MMM dd");
       } else {
         // Group by month
-        periodKey = format(orderDate, 'MMM yyyy');
+        periodKey = format(orderDate, "MMM yyyy");
       }
 
-      const existing = ordersByPeriod.get(periodKey) || { units: 0, value: 0, orders: 0 };
-      
+      const existing = ordersByPeriod.get(periodKey) || {
+        units: 0,
+        value: 0,
+        orders: 0,
+      };
+
       // Calculate units and value from order items
       let orderUnits = 0;
       order.items.forEach((item) => {
@@ -183,27 +202,41 @@ export default function Reports() {
 
   // Stock by Grade (filtered)
   const stockByGrade = useMemo(() => {
-    const gradeA = filteredInventory.filter((i) => i.grade === 'A').reduce((s, i) => s + i.quantity, 0);
-    const gradeB = filteredInventory.filter((i) => i.grade === 'B').reduce((s, i) => s + i.quantity, 0);
-    const gradeC = filteredInventory.filter((i) => i.grade === 'C').reduce((s, i) => s + i.quantity, 0);
-    const gradeD = filteredInventory.filter((i) => i.grade === 'D').reduce((s, i) => s + i.quantity, 0);
+    const gradeA = filteredInventory
+      .filter((i) => i.grade === "A")
+      .reduce((s, i) => s + i.quantity, 0);
+    const gradeB = filteredInventory
+      .filter((i) => i.grade === "B")
+      .reduce((s, i) => s + i.quantity, 0);
+    const gradeC = filteredInventory
+      .filter((i) => i.grade === "C")
+      .reduce((s, i) => s + i.quantity, 0);
+    const gradeD = filteredInventory
+      .filter((i) => i.grade === "D")
+      .reduce((s, i) => s + i.quantity, 0);
     return [
-      { name: 'Grade A', value: gradeA },
-      { name: 'Grade B', value: gradeB },
-      { name: 'Grade C', value: gradeC },
-      { name: 'Grade D', value: gradeD },
+      { name: "Grade A", value: gradeA },
+      { name: "Grade B", value: gradeB },
+      { name: "Grade C", value: gradeC },
+      { name: "Grade D", value: gradeD },
     ].filter((d) => d.value > 0);
   }, [filteredInventory]);
 
   // Stock by Status (filtered)
   const stockByStatus = useMemo(() => {
-    const inStock = filteredInventory.filter((i) => getStockStatus(i.quantity) === 'in-stock').length;
-    const lowStock = filteredInventory.filter((i) => getStockStatus(i.quantity) === 'low-stock').length;
-    const critical = filteredInventory.filter((i) => getStockStatus(i.quantity) === 'critical').length;
+    const inStock = filteredInventory.filter(
+      (i) => getStockStatus(i.quantity) === "in-stock",
+    ).length;
+    const lowStock = filteredInventory.filter(
+      (i) => getStockStatus(i.quantity) === "low-stock",
+    ).length;
+    const critical = filteredInventory.filter(
+      (i) => getStockStatus(i.quantity) === "critical",
+    ).length;
     return [
-      { name: 'In Stock', value: inStock },
-      { name: 'Low Stock', value: lowStock },
-      { name: 'Critical', value: critical },
+      { name: "In Stock", value: inStock },
+      { name: "Low Stock", value: lowStock },
+      { name: "Critical", value: critical },
     ];
   }, [filteredInventory]);
 
@@ -211,8 +244,8 @@ export default function Reports() {
   const valueByDevice = useMemo(() => {
     return filteredInventory
       .map((item) => ({
-        name: item.deviceName.split(' ').slice(0, 2).join(' '),
-        value: item.quantity * item.pricePerUnit,
+        name: item.deviceName.split(" ").slice(0, 2).join(" "),
+        value: item.quantity * item.sellingPrice,
         units: item.quantity,
       }))
       .sort((a, b) => b.value - a.value)
@@ -233,10 +266,10 @@ export default function Reports() {
     });
 
     return [
-      { name: 'Pending', value: statusCounts.pending },
-      { name: 'Approved', value: statusCounts.approved },
-      { name: 'Rejected', value: statusCounts.rejected },
-      { name: 'Completed', value: statusCounts.completed },
+      { name: "Pending", value: statusCounts.pending },
+      { name: "Approved", value: statusCounts.approved },
+      { name: "Rejected", value: statusCounts.rejected },
+      { name: "Completed", value: statusCounts.completed },
     ].filter((d) => d.value > 0);
   }, [filteredOrders]);
 
@@ -254,22 +287,24 @@ export default function Reports() {
     });
 
     return [
-      { name: 'Pending', value: revenue.pending },
-      { name: 'Approved', value: revenue.approved },
-      { name: 'Rejected', value: revenue.rejected },
-      { name: 'Completed', value: revenue.completed },
+      { name: "Pending", value: revenue.pending },
+      { name: "Approved", value: revenue.approved },
+      { name: "Rejected", value: revenue.rejected },
+      { name: "Completed", value: revenue.completed },
     ].filter((d) => d.value > 0);
   }, [filteredOrders]);
 
   // Summary statistics
   const summaryStats = useMemo(() => {
     const totalRevenue = filteredOrders
-      .filter((o) => o.status === 'approved' || o.status === 'completed')
+      .filter((o) => o.status === "approved" || o.status === "completed")
       .reduce((sum, order) => sum + order.totalPrice, 0);
 
     const totalOrders = filteredOrders.length;
     const totalUnits = filteredOrders.reduce((sum, order) => {
-      return sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
+      return (
+        sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0)
+      );
     }, 0);
 
     return {
@@ -279,13 +314,68 @@ export default function Reports() {
     };
   }, [filteredOrders]);
 
+  // Estimated profit: from current inventory (selling - cost) * qty. Unchanged by date range.
+  const estimatedProfitStats = useMemo(() => {
+    let totalProfit = 0;
+    let itemsWithData = 0;
+
+    filteredInventory.forEach((item) => {
+      if (item.purchasePrice != null) {
+        totalProfit += (item.sellingPrice - item.pricePerUnit) * item.quantity;
+        itemsWithData++;
+      }
+    });
+
+    return { totalProfit, itemsWithData };
+  }, [filteredInventory]);
+
+  // Profit from orders in the selected date range (approved/completed only).
+  // Per line: (sellingPrice - pricePerUnit) * quantity.
+  const profitFromOrdersStats = useMemo(() => {
+    const completedOrders = filteredOrders.filter(
+      (o) => o.status === "approved" || o.status === "completed",
+    );
+    let totalProfit = 0;
+    let orderCount = 0;
+
+    completedOrders.forEach((order) => {
+      if (!order.items || !Array.isArray(order.items)) return;
+      orderCount++;
+      order.items.forEach((orderItem) => {
+        const item = orderItem.item;
+        const qty = orderItem.quantity ?? 0;
+        const selling = item?.sellingPrice ?? item?.pricePerUnit ?? 0;
+        const cost = item?.pricePerUnit ?? 0;
+        totalProfit += (selling - cost) * qty;
+      });
+    });
+
+    const hasDateRange =
+      filters.dateRange.from != null && filters.dateRange.to != null;
+    let periodLabel = "Profit";
+    if (hasDateRange) {
+      const daysDiff = Math.ceil(
+        (filters.dateRange.to!.getTime() - filters.dateRange.from!.getTime()) /
+          (1000 * 60 * 60 * 24),
+      );
+      if (daysDiff <= 1) periodLabel = "Profit (Day)";
+      else if (daysDiff <= 7) periodLabel = "Profit (Week)";
+      else if (daysDiff <= 31) periodLabel = "Profit (Month)";
+      else periodLabel = "Profit (Period)";
+    } else {
+      periodLabel = "Profit (All time)";
+    }
+
+    return { totalProfit, orderCount, periodLabel };
+  }, [filteredOrders, filters.dateRange.from, filters.dateRange.to]);
+
   // Reset filters
   const resetFilters = () => {
     setFilters({
       dateRange: { from: null, to: null },
-      orderStatus: 'all',
-      grade: 'all',
-      brand: 'all',
+      orderStatus: "all",
+      grade: "all",
+      brand: "all",
     });
   };
 
@@ -294,9 +384,9 @@ export default function Reports() {
     return (
       filters.dateRange.from !== null ||
       filters.dateRange.to !== null ||
-      filters.orderStatus !== 'all' ||
-      filters.grade !== 'all' ||
-      filters.brand !== 'all'
+      filters.orderStatus !== "all" ||
+      filters.grade !== "all" ||
+      filters.brand !== "all"
     );
   }, [filters]);
 
@@ -322,7 +412,9 @@ export default function Reports() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">Filters:</span>
+              <span className="text-sm font-medium text-foreground">
+                Filters:
+              </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 flex-1">
@@ -333,19 +425,19 @@ export default function Reports() {
                     variant="outline"
                     size="sm"
                     className={cn(
-                      'w-full sm:w-[240px] justify-start text-left font-normal',
-                      !filters.dateRange.from && 'text-muted-foreground'
+                      "w-full sm:w-[240px] justify-start text-left font-normal",
+                      !filters.dateRange.from && "text-muted-foreground",
                     )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
                     {filters.dateRange.from ? (
                       filters.dateRange.to ? (
                         <>
-                          {format(filters.dateRange.from, 'LLL dd, y')} -{' '}
-                          {format(filters.dateRange.to, 'LLL dd, y')}
+                          {format(filters.dateRange.from, "LLL dd, y")} -{" "}
+                          {format(filters.dateRange.to, "LLL dd, y")}
                         </>
                       ) : (
-                        format(filters.dateRange.from, 'LLL dd, y')
+                        format(filters.dateRange.from, "LLL dd, y")
                       )
                     ) : (
                       <span>Pick a date range</span>
@@ -379,7 +471,10 @@ export default function Reports() {
               <Select
                 value={filters.orderStatus}
                 onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, orderStatus: value as OrderStatus | 'all' }))
+                  setFilters((prev) => ({
+                    ...prev,
+                    orderStatus: value as OrderStatus | "all",
+                  }))
                 }
               >
                 <SelectTrigger className="w-full sm:w-[160px]">
@@ -398,7 +493,10 @@ export default function Reports() {
               <Select
                 value={filters.grade}
                 onValueChange={(value) =>
-                  setFilters((prev) => ({ ...prev, grade: value as 'A' | 'B' | 'C' | 'D' | 'all' }))
+                  setFilters((prev) => ({
+                    ...prev,
+                    grade: value as "A" | "B" | "C" | "D" | "all",
+                  }))
                 }
               >
                 <SelectTrigger className="w-full sm:w-[140px]">
@@ -450,28 +548,76 @@ export default function Reports() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="bg-card rounded-lg border border-border shadow-soft p-4">
             <p className="text-sm text-muted-foreground">Total Revenue</p>
             <p className="text-2xl font-bold text-foreground mt-1">
               {formatPrice(summaryStats.totalRevenue)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {filteredOrders.filter((o) => o.status === 'approved' || o.status === 'completed').length} completed orders
+              {
+                filteredOrders.filter(
+                  (o) => o.status === "approved" || o.status === "completed",
+                ).length
+              }{" "}
+              completed orders
+            </p>
+          </div>
+          <div className="bg-card rounded-lg border border-border shadow-soft p-4">
+            <p className="text-sm text-muted-foreground">Estimated Profit</p>
+            <p
+              className={cn(
+                "text-2xl font-bold mt-1",
+                estimatedProfitStats.totalProfit >= 0
+                  ? "text-success"
+                  : "text-destructive",
+              )}
+            >
+              {formatPrice(estimatedProfitStats.totalProfit)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              (Selling - Cost) × Qty · {estimatedProfitStats.itemsWithData}{" "}
+              items
+            </p>
+          </div>
+          <div className="bg-card rounded-lg border border-border shadow-soft p-4">
+            <p className="text-sm text-muted-foreground">
+              {profitFromOrdersStats.periodLabel}
+            </p>
+            <p
+              className={cn(
+                "text-2xl font-bold mt-1",
+                profitFromOrdersStats.totalProfit >= 0
+                  ? "text-success"
+                  : "text-destructive",
+              )}
+            >
+              {formatPrice(profitFromOrdersStats.totalProfit)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              From {profitFromOrdersStats.orderCount} completed orders
+              {filters.dateRange.from && filters.dateRange.to && (
+                <> in selected range</>
+              )}
             </p>
           </div>
           <div className="bg-card rounded-lg border border-border shadow-soft p-4">
             <p className="text-sm text-muted-foreground">Total Orders</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{summaryStats.totalOrders}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">
+              {summaryStats.totalOrders}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
               {summaryStats.totalUnits} total units
             </p>
           </div>
           <div className="bg-card rounded-lg border border-border shadow-soft p-4">
             <p className="text-sm text-muted-foreground">Inventory Items</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{filteredInventory.length}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">
+              {filteredInventory.length}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {filteredInventory.reduce((sum, item) => sum + item.quantity, 0)} total units
+              {filteredInventory.reduce((sum, item) => sum + item.quantity, 0)}{" "}
+              total units
             </p>
           </div>
         </div>
@@ -480,14 +626,27 @@ export default function Reports() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Orders & Revenue Trend */}
           <div className="bg-card rounded-lg border border-border shadow-soft p-6 lg:col-span-2">
-            <h3 className="font-semibold text-foreground mb-4">Orders & Revenue Trend</h3>
+            <h3 className="font-semibold text-foreground mb-4">
+              Orders & Revenue Trend
+            </h3>
             {trendData.length > 0 ? (
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="period" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="hsl(var(--border))"
+                    />
+                    <XAxis
+                      dataKey="period"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                    />
                     <YAxis
                       yAxisId="right"
                       orientation="right"
@@ -497,9 +656,9 @@ export default function Reports() {
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
                       }}
                     />
                     <Legend />
@@ -542,12 +701,17 @@ export default function Reports() {
 
           {/* Value by Device */}
           <div className="bg-card rounded-lg border border-border shadow-soft p-6">
-            <h3 className="font-semibold text-foreground mb-4">Value by Device</h3>
+            <h3 className="font-semibold text-foreground mb-4">
+              Value by Device
+            </h3>
             {valueByDevice.length > 0 ? (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={valueByDevice} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="hsl(var(--border))"
+                    />
                     <XAxis
                       type="number"
                       stroke="hsl(var(--muted-foreground))"
@@ -564,12 +728,16 @@ export default function Reports() {
                     <Tooltip
                       formatter={(value: number) => formatPrice(value)}
                       contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
                       }}
                     />
-                    <Bar dataKey="value" fill="hsl(245, 58%, 60%)" radius={[0, 4, 4, 0]} />
+                    <Bar
+                      dataKey="value"
+                      fill="hsl(245, 58%, 60%)"
+                      radius={[0, 4, 4, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -582,7 +750,9 @@ export default function Reports() {
 
           {/* Units by Grade */}
           <div className="bg-card rounded-lg border border-border shadow-soft p-6">
-            <h3 className="font-semibold text-foreground mb-4">Units by Grade</h3>
+            <h3 className="font-semibold text-foreground mb-4">
+              Units by Grade
+            </h3>
             {stockByGrade.length > 0 ? (
               <div className="h-64 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
@@ -595,18 +765,26 @@ export default function Reports() {
                       outerRadius={90}
                       paddingAngle={2}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      label={({ name, percent }) =>
+                        `${name} (${(percent * 100).toFixed(0)}%)`
+                      }
                       labelLine={false}
                     >
                       {stockByGrade.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={GRADE_COLORS[entry.name] || COLORS[index % COLORS.length]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={
+                            GRADE_COLORS[entry.name] ||
+                            COLORS[index % COLORS.length]
+                          }
+                        />
                       ))}
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
                       }}
                     />
                   </PieChart>
@@ -621,7 +799,9 @@ export default function Reports() {
 
           {/* Order Status Distribution */}
           <div className="bg-card rounded-lg border border-border shadow-soft p-6">
-            <h3 className="font-semibold text-foreground mb-4">Order Status Distribution</h3>
+            <h3 className="font-semibold text-foreground mb-4">
+              Order Status Distribution
+            </h3>
             {orderStatusDistribution.length > 0 ? (
               <div className="h-64 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
@@ -634,18 +814,23 @@ export default function Reports() {
                       outerRadius={90}
                       paddingAngle={2}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      label={({ name, percent }) =>
+                        `${name} (${(percent * 100).toFixed(0)}%)`
+                      }
                       labelLine={false}
                     >
                       {orderStatusDistribution.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
                       ))}
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
                       }}
                     />
                   </PieChart>
@@ -660,13 +845,22 @@ export default function Reports() {
 
           {/* Revenue by Status */}
           <div className="bg-card rounded-lg border border-border shadow-soft p-6">
-            <h3 className="font-semibold text-foreground mb-4">Revenue by Status</h3>
+            <h3 className="font-semibold text-foreground mb-4">
+              Revenue by Status
+            </h3>
             {revenueByStatus.length > 0 ? (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={revenueByStatus}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="hsl(var(--border))"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                    />
                     <YAxis
                       stroke="hsl(var(--muted-foreground))"
                       fontSize={12}
@@ -675,12 +869,16 @@ export default function Reports() {
                     <Tooltip
                       formatter={(value: number) => formatPrice(value)}
                       contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
                       }}
                     />
-                    <Bar dataKey="value" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="value"
+                      fill="hsl(142, 76%, 36%)"
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -693,7 +891,9 @@ export default function Reports() {
 
           {/* Stock Status Distribution */}
           <div className="bg-card rounded-lg border border-border shadow-soft p-6 lg:col-span-2">
-            <h3 className="font-semibold text-foreground mb-4">Stock Status Distribution</h3>
+            <h3 className="font-semibold text-foreground mb-4">
+              Stock Status Distribution
+            </h3>
             <div className="grid grid-cols-3 gap-4">
               {stockByStatus.map((status, idx) => (
                 <div
@@ -701,10 +901,15 @@ export default function Reports() {
                   className="text-center p-4 rounded-lg"
                   style={{ backgroundColor: `${COLORS[idx]}10` }}
                 >
-                  <p className="text-3xl font-bold" style={{ color: COLORS[idx] }}>
+                  <p
+                    className="text-3xl font-bold"
+                    style={{ color: COLORS[idx] }}
+                  >
                     {status.value}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">{status.name}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {status.name}
+                  </p>
                 </div>
               ))}
             </div>

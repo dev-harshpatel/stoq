@@ -1,7 +1,15 @@
-import { Order, OrderStatus } from "@/types/order";
-import { useOrders } from "@/contexts/OrdersContext";
 import { useInventory } from "@/contexts/InventoryContext";
+import { useNavigation } from "@/contexts/NavigationContext";
+import { useOrders } from "@/contexts/OrdersContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { InvoiceConfirmationDialog } from "@/components/InvoiceConfirmationDialog";
+import { OrderRejectionDialog } from "@/components/OrderRejectionDialog";
+import {
+  OutOfStockWarningDialog,
+  InsufficientStockItem,
+} from "@/components/OutOfStockWarningDialog";
 import {
   Dialog,
   DialogContent,
@@ -9,17 +17,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/data/inventory";
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatDateTimeInOntario } from "@/lib/utils";
-import { useState, useEffect } from "react";
-import { Loader2, XCircle, AlertCircle, FileText, Download, CheckCircle2 } from "lucide-react";
-import { OrderRejectionDialog } from "@/components/OrderRejectionDialog";
-import { InvoiceConfirmationDialog } from "@/components/InvoiceConfirmationDialog";
-import { OutOfStockWarningDialog, InsufficientStockItem } from "@/components/OutOfStockWarningDialog";
+import { Order, OrderStatus } from "@/types/order";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  FileText,
+  Loader2,
+  XCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 
 interface OrderDetailsModalProps {
   open: boolean;
@@ -62,6 +73,7 @@ export const OrderDetailsModal = ({
   onOpenChange,
   order,
 }: OrderDetailsModalProps) => {
+  const { startNavigation } = useNavigation();
   const { updateOrderStatus, downloadInvoicePDF, confirmInvoice } = useOrders();
   const { decreaseQuantity, inventory } = useInventory();
   const { isAdmin } = useUserProfile();
@@ -75,17 +87,19 @@ export const OrderDetailsModal = ({
   const [isConfirming, setIsConfirming] = useState(false);
   const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
   const [stockWarningDialogOpen, setStockWarningDialogOpen] = useState(false);
-  const [insufficientStockItems, setInsufficientStockItems] = useState<InsufficientStockItem[]>([]);
+  const [insufficientStockItems, setInsufficientStockItems] = useState<
+    InsufficientStockItem[]
+  >([]);
 
   useEffect(() => {
     const fetchCustomerEmail = async () => {
       if (!order?.userId) return;
 
       try {
-        const response = await fetch('/api/users/emails', {
-          method: 'POST',
+        const response = await fetch("/api/users/emails", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({ userIds: [order.userId] }),
         });
@@ -113,7 +127,9 @@ export const OrderDetailsModal = ({
     for (const orderItem of items) {
       if (!orderItem?.item?.id || !orderItem?.quantity) continue;
 
-      const inventoryItem = inventory.find((inv) => inv.id === orderItem.item.id);
+      const inventoryItem = inventory.find(
+        (inv) => inv.id === orderItem.item.id,
+      );
       const availableQty = inventoryItem?.quantity ?? 0;
 
       if (availableQty < orderItem.quantity) {
@@ -140,7 +156,7 @@ export const OrderDetailsModal = ({
             return decreaseQuantity(orderItem.item.id, orderItem.quantity);
           }
           return Promise.resolve();
-        })
+        }),
       );
 
       // Update order status (await to ensure it completes)
@@ -207,7 +223,7 @@ export const OrderDetailsModal = ({
     setIsRejecting(true);
     try {
       await updateOrderStatus(order.id, "rejected", reason, comment);
-      
+
       toast({
         title: "Order rejected",
         description: `Order #${order.id.slice(-8).toUpperCase()} has been rejected.`,
@@ -228,7 +244,7 @@ export const OrderDetailsModal = ({
   // Only admins can approve or reject orders
   const canApprove = order.status === "pending" && isAdmin;
   const canReject = order.status === "pending" && isAdmin;
-  
+
   // Invoice actions
   const hasInvoice = !!order.invoiceNumber;
   const canDownloadInvoice = hasInvoice && (isAdmin || order.invoiceConfirmed);
@@ -237,7 +253,7 @@ export const OrderDetailsModal = ({
 
   const handleDownloadInvoice = async () => {
     if (!order) return;
-    
+
     setIsDownloading(true);
     try {
       await downloadInvoicePDF(order.id);
@@ -258,13 +274,14 @@ export const OrderDetailsModal = ({
 
   const handleConfirmInvoice = async () => {
     if (!order) return;
-    
+
     setIsConfirming(true);
     try {
       await confirmInvoice(order.id);
       toast({
         title: "Invoice confirmed",
-        description: "Invoice has been confirmed. Customer can now download it.",
+        description:
+          "Invoice has been confirmed. Customer can now download it.",
       });
       setConfirmationDialogOpen(false);
     } catch (error) {
@@ -279,6 +296,11 @@ export const OrderDetailsModal = ({
   };
 
   const handleCreateEditInvoice = () => {
+    if (!order) {
+      return;
+    }
+
+    startNavigation();
     router.push(`/admin/orders/${order.id}/invoice`);
     onOpenChange(false);
   };
@@ -292,13 +314,14 @@ export const OrderDetailsModal = ({
               <DialogTitle>
                 Order #{order.id.slice(-8).toUpperCase()}
               </DialogTitle>
-              <DialogDescription>
-                Order details and summary
-              </DialogDescription>
+              <DialogDescription>Order details and summary</DialogDescription>
             </div>
             <Badge
               variant="outline"
-              className={cn("text-sm flex-shrink-0", getStatusColor(order.status))}
+              className={cn(
+                "text-sm flex-shrink-0",
+                getStatusColor(order.status),
+              )}
             >
               {getStatusLabel(order.status)}
             </Badge>
@@ -313,7 +336,7 @@ export const OrderDetailsModal = ({
               <div>
                 <span className="text-muted-foreground">Customer:</span>
                 <p className="font-medium text-foreground mt-1">
-                  {customerEmail || order.userId.slice(0, 8) + '...'}
+                  {customerEmail || order.userId.slice(0, 8) + "..."}
                 </p>
               </div>
               <div>
@@ -352,14 +375,14 @@ export const OrderDetailsModal = ({
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <h4 className="font-medium text-foreground">
-                            {orderItem.item.deviceName || 'Unknown Device'}
+                            {orderItem.item.deviceName || "Unknown Device"}
                           </h4>
                           <div className="flex items-center gap-2 mt-2">
                             <Badge variant="outline" className="text-xs">
-                              Grade {orderItem.item.grade || 'N/A'}
+                              Grade {orderItem.item.grade || "N/A"}
                             </Badge>
                             <Badge variant="outline" className="text-xs">
-                              {orderItem.item.storage || 'N/A'}
+                              {orderItem.item.storage || "N/A"}
                             </Badge>
                             <span className="text-sm text-muted-foreground">
                               Quantity: {orderItem.quantity || 0}
@@ -368,10 +391,19 @@ export const OrderDetailsModal = ({
                         </div>
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground">
-                            {formatPrice(orderItem.item.pricePerUnit || 0)} each
+                            {formatPrice(
+                              orderItem.item.sellingPrice ??
+                                orderItem.item.pricePerUnit ??
+                                0,
+                            )}{" "}
+                            each
                           </p>
                           <p className="font-semibold text-foreground mt-1">
-                            {formatPrice((orderItem.item.pricePerUnit || 0) * (orderItem.quantity || 0))}
+                            {formatPrice(
+                              (orderItem.item.sellingPrice ??
+                                orderItem.item.pricePerUnit ??
+                                0) * (orderItem.quantity || 0),
+                            )}
                           </p>
                         </div>
                       </div>
@@ -387,28 +419,32 @@ export const OrderDetailsModal = ({
           </div>
 
           {/* Rejection Info */}
-          {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) && (
-            <div className="border-t border-border pt-3">
-              <div className="px-3 py-2 bg-destructive/10 rounded-md border border-destructive/20">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 space-y-1">
-                    <p className="text-xs font-medium text-destructive">Rejected</p>
-                    {order.rejectionReason && (
-                      <p className="text-xs text-muted-foreground">
-                        <span className="font-medium">Reason:</span> {order.rejectionReason}
+          {order.status === "rejected" &&
+            (order.rejectionReason || order.rejectionComment) && (
+              <div className="border-t border-border pt-3">
+                <div className="px-3 py-2 bg-destructive/10 rounded-md border border-destructive/20">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 space-y-1">
+                      <p className="text-xs font-medium text-destructive">
+                        Rejected
                       </p>
-                    )}
-                    {order.rejectionComment && (
-                      <p className="text-xs text-muted-foreground">
-                        {order.rejectionComment}
-                      </p>
-                    )}
+                      {order.rejectionReason && (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium">Reason:</span>{" "}
+                          {order.rejectionReason}
+                        </p>
+                      )}
+                      {order.rejectionComment && (
+                        <p className="text-xs text-muted-foreground">
+                          {order.rejectionComment}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Order Total */}
           <div className="border-t border-border pt-4 space-y-2">
@@ -422,33 +458,45 @@ export const OrderDetailsModal = ({
               </div>
             )}
             {/* Discount (second line) - show only if invoice is confirmed (for users) or always (for admin) */}
-            {order.discountAmount != null && order.discountAmount > 0 && (isAdmin || order.invoiceConfirmed) && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Discount:</span>
-                <span className="font-medium text-success">
-                  -{formatPrice(order.discountAmount)}
-                </span>
-              </div>
-            )}
+            {order.discountAmount != null &&
+              order.discountAmount > 0 &&
+              (isAdmin || order.invoiceConfirmed) && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Discount:</span>
+                  <span className="font-medium text-success">
+                    -{formatPrice(order.discountAmount)}
+                  </span>
+                </div>
+              )}
             {/* Shipping (third line) - show only if invoice is confirmed (for users) or always (for admin) */}
-            {order.shippingAmount != null && order.shippingAmount > 0 && (isAdmin || order.invoiceConfirmed) && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Shipping:</span>
-                <span className="font-medium text-foreground">
-                  {formatPrice(order.shippingAmount)}
-                </span>
-              </div>
-            )}
+            {order.shippingAmount != null &&
+              order.shippingAmount > 0 &&
+              (isAdmin || order.invoiceConfirmed) && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Shipping:</span>
+                  <span className="font-medium text-foreground">
+                    {formatPrice(order.shippingAmount)}
+                  </span>
+                </div>
+              )}
             {/* Result (subtotal - discount + shipping) */}
             {(() => {
-              const discount = (isAdmin || order.invoiceConfirmed) ? (order.discountAmount || 0) : 0;
-              const shipping = (isAdmin || order.invoiceConfirmed) ? (order.shippingAmount || 0) : 0;
+              const discount =
+                isAdmin || order.invoiceConfirmed
+                  ? order.discountAmount || 0
+                  : 0;
+              const shipping =
+                isAdmin || order.invoiceConfirmed
+                  ? order.shippingAmount || 0
+                  : 0;
               const result = (order.subtotal || 0) - discount + shipping;
-              
+
               if (discount > 0 || shipping > 0) {
                 return (
                   <div className="flex items-center justify-between text-sm pt-1">
-                    <span className="text-muted-foreground font-medium">Result:</span>
+                    <span className="text-muted-foreground font-medium">
+                      Result:
+                    </span>
                     <span className="font-semibold text-foreground">
                       {formatPrice(result)}
                     </span>
@@ -470,7 +518,9 @@ export const OrderDetailsModal = ({
             )}
             {/* Total (final amount) */}
             <div className="flex items-center justify-between pt-2 border-t border-border">
-              <span className="text-lg font-semibold text-foreground">Total:</span>
+              <span className="text-lg font-semibold text-foreground">
+                Total:
+              </span>
               <span className="text-2xl font-bold text-primary">
                 {(() => {
                   // For users: show total without discount/shipping until invoice is confirmed
@@ -492,58 +542,61 @@ export const OrderDetailsModal = ({
         {/* Actions */}
         <div className="border-t border-border pt-4 space-y-3">
           {/* Admin Invoice Actions */}
-          {isAdmin && (canCreateEditInvoice || canDownloadInvoice || canConfirmInvoice) && (
-            <div className="flex gap-2 pb-3 border-b border-border">
-              {canCreateEditInvoice && (
-                <Button
-                  variant="outline"
-                  onClick={handleCreateEditInvoice}
-                  disabled={isApproving || isRejecting}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  {hasInvoice ? "Edit Invoice" : "Create Invoice"}
-                </Button>
-              )}
-              {canDownloadInvoice && (
-                <Button
-                  variant="outline"
-                  onClick={handleDownloadInvoice}
-                  disabled={isDownloading || isApproving || isRejecting}
-                >
-                  {isDownloading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Invoice
-                    </>
-                  )}
-                </Button>
-              )}
-              {canConfirmInvoice && (
-                <Button
-                  onClick={() => setConfirmationDialogOpen(true)}
-                  disabled={isConfirming || isApproving || isRejecting}
-                >
-                  {isConfirming ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Confirming...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Confirm Invoice
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-          )}
-          
+          {isAdmin &&
+            (canCreateEditInvoice ||
+              canDownloadInvoice ||
+              canConfirmInvoice) && (
+              <div className="flex gap-2 pb-3 border-b border-border">
+                {canCreateEditInvoice && (
+                  <Button
+                    variant="outline"
+                    onClick={handleCreateEditInvoice}
+                    disabled={isApproving || isRejecting}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    {hasInvoice ? "Edit Invoice" : "Create Invoice"}
+                  </Button>
+                )}
+                {canDownloadInvoice && (
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadInvoice}
+                    disabled={isDownloading || isApproving || isRejecting}
+                  >
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Invoice
+                      </>
+                    )}
+                  </Button>
+                )}
+                {canConfirmInvoice && (
+                  <Button
+                    onClick={() => setConfirmationDialogOpen(true)}
+                    disabled={isConfirming || isApproving || isRejecting}
+                  >
+                    {isConfirming ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Confirming...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Confirm Invoice
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+
           {/* User Download Invoice Button */}
           {!isAdmin && order.status === "approved" && (
             <div className="flex gap-2 pb-3 border-b border-border">
@@ -555,7 +608,8 @@ export const OrderDetailsModal = ({
                   } else {
                     toast({
                       title: "Invoice not available",
-                      description: "Invoice is being prepared. Please check back later.",
+                      description:
+                        "Invoice is being prepared. Please check back later.",
                       variant: "default",
                     });
                   }
@@ -571,7 +625,9 @@ export const OrderDetailsModal = ({
                 ) : (
                   <>
                     <Download className="mr-2 h-4 w-4" />
-                    {order.invoiceConfirmed ? "Download Invoice" : "Invoice Not Ready"}
+                    {order.invoiceConfirmed
+                      ? "Download Invoice"
+                      : "Invoice Not Ready"}
                   </>
                 )}
               </Button>
@@ -580,9 +636,9 @@ export const OrderDetailsModal = ({
 
           {/* Order Actions */}
           <div className="flex justify-end gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)} 
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
               disabled={isApproving || isRejecting}
             >
               Close
@@ -598,14 +654,17 @@ export const OrderDetailsModal = ({
               </Button>
             )}
             {canApprove && (
-              <Button onClick={handleApprove} disabled={isApproving || isRejecting}>
+              <Button
+                onClick={handleApprove}
+                disabled={isApproving || isRejecting}
+              >
                 {isApproving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Approving...
                   </>
                 ) : (
-                  'Approve Order'
+                  "Approve Order"
                 )}
               </Button>
             )}
@@ -638,4 +697,3 @@ export const OrderDetailsModal = ({
     </Dialog>
   );
 };
-

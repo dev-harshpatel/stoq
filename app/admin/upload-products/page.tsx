@@ -184,6 +184,9 @@ export default function UploadProductsPage() {
           storage: mapped.storage,
           quantity: mapped.quantity,
           pricePerUnit: mapped.price_per_unit,
+          purchasePrice: mapped.purchase_price,
+          hst: mapped.hst,
+          sellingPrice: mapped.selling_price,
           lastUpdated: mapped.last_updated,
         };
       });
@@ -333,7 +336,7 @@ export default function UploadProductsPage() {
             <CardTitle>Upload Excel File</CardTitle>
             <CardDescription>
               Upload an Excel file (.xlsx or .xls) with product data. Required columns: Device
-              Name, Brand, Grade, Storage, Quantity, Price Per Unit
+              Name, Brand, Grade, Storage, Quantity, Purchase Price, Selling Price, HST
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -161,7 +161,7 @@ export default function WishlistPage() {
           userProfile.businessState,
           userProfile.businessCity
         );
-        const subtotal = availableItems.reduce((sum, item) => sum + item.item.pricePerUnit * item.quantity, 0);
+        const subtotal = availableItems.reduce((sum, item) => sum + item.item.sellingPrice * item.quantity, 0);
         taxRate = taxInfo.taxRatePercent / 100;
         taxAmount = calculateTax(subtotal, taxInfo.taxRate);
       }
@@ -211,7 +211,7 @@ export default function WishlistPage() {
   });
   const subtotal = availableItems.reduce((sum, item) => {
     const latestItem = inventory.find(inv => inv.id === item.id);
-    return sum + (latestItem?.pricePerUnit || item.pricePerUnit);
+    return sum + (latestItem?.sellingPrice || item.sellingPrice);
   }, 0);
 
   return (
@@ -273,7 +273,7 @@ export default function WishlistPage() {
                   // Get latest inventory data
                   const latestItem = inventory.find(inv => inv.id === item.id);
                   const currentQuantity = latestItem?.quantity ?? item.quantity;
-                  const currentPrice = latestItem?.pricePerUnit ?? item.pricePerUnit;
+                  const currentPrice = latestItem?.sellingPrice ?? item.sellingPrice;
                   const status = getStockStatus(currentQuantity);
                   const isOutOfStock = status === 'out-of-stock';
 

@@ -263,7 +263,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     setCartItems((prev) => {
       const newItems = prev.map((cartItem) =>
         cartItem.item.id === itemId
-          ? { ...cartItem, item: { ...cartItem.item, pricePerUnit: newPrice } }
+          ? { ...cartItem, item: { ...cartItem.item, sellingPrice: newPrice } }
           : cartItem,
       );
       persistCart(newItems);
@@ -287,7 +287,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const getTotalPrice = () => {
     return cartItems.reduce(
       (total, cartItem) =>
-        total + cartItem.item.pricePerUnit * cartItem.quantity,
+        total + cartItem.item.sellingPrice * cartItem.quantity,
       0,
     );
   };
@@ -304,61 +304,63 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     return getSubtotal() + taxAmount;
   };
 
-  // Calculate tax when cart items or user changes
+  // Fetch tax info only when business location changes (avoid extra requests)
   useEffect(() => {
-    const calculateTaxForCart = async () => {
+    const fetchTaxInfo = async () => {
       if (!user?.id || cartItems.length === 0) {
         setTaxRate(0);
         setTaxRatePercent(0);
-        setTaxAmount(0);
+        setTaxType("Tax");
+        return;
+      }
+
+      if (!profile?.businessCountry || !profile.businessState) {
+        setTaxRate(0);
+        setTaxRatePercent(0);
         setTaxType("Tax");
         return;
       }
 
       setIsTaxLoading(true);
       try {
-        if (!profile?.businessCountry || !profile.businessState) {
-          // User hasn't set business location
-          setTaxRate(0);
-          setTaxRatePercent(0);
-          setTaxAmount(0);
-          setTaxType("Tax");
-          return;
-        }
-
-        // Get tax info
         const taxInfo = await getTaxInfo(
           profile.businessCountry,
           profile.businessState,
           profile.businessCity,
         );
 
-        const subtotal = getSubtotal();
-        const calculatedTax = calculateTax(subtotal, taxInfo.taxRate);
-
         setTaxRate(taxInfo.taxRate);
         setTaxRatePercent(taxInfo.taxRatePercent);
-        setTaxAmount(calculatedTax);
         setTaxType(taxInfo.taxType);
-      } catch (error) {
-        // On error, set tax to 0
-        setTaxRate(0);
-        setTaxRatePercent(0);
-        setTaxAmount(0);
-        setTaxType("Tax");
       } finally {
         setIsTaxLoading(false);
       }
     };
 
-    calculateTaxForCart();
+    fetchTaxInfo();
   }, [
-    cartItems,
+    cartItems.length,
     profile?.businessCity,
     profile?.businessCountry,
     profile?.businessState,
     user?.id,
   ]);
+
+  // Recompute tax amount locally when cart changes (no network)
+  useEffect(() => {
+    if (!user?.id || cartItems.length === 0) {
+      setTaxAmount(0);
+      return;
+    }
+
+    if (taxRate <= 0) {
+      setTaxAmount(0);
+      return;
+    }
+
+    setTaxAmount(calculateTax(getSubtotal(), taxRate));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartItems, taxRate, user?.id]);
 
   return (
     <CartContext.Provider

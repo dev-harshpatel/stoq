@@ -117,7 +117,7 @@ export const PurchaseModal = ({
     onOpenChange(false);
   };
 
-  const totalPrice = item.pricePerUnit * quantity;
+  const totalPrice = item.sellingPrice * quantity;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -182,7 +182,7 @@ export const PurchaseModal = ({
           <div className="space-y-2">
             <Label>Price per unit</Label>
             <p className="text-lg font-semibold text-foreground">
-              {formatPrice(item.pricePerUnit)}
+              {formatPrice(item.sellingPrice)}
             </p>
           </div>
           <div className="space-y-2">

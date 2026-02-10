@@ -4,6 +4,17 @@
 
 import { supabase } from './supabase/client';
 
+type TaxInfoResult = { taxRate: number; taxType: string; taxRatePercent: number };
+
+type TaxRateRow = {
+  city: string | null;
+  tax_rate: number | string | null;
+  tax_type: string | null;
+};
+
+const TAX_INFO_CACHE_TTL_MS = 5 * 60 * 1000;
+const taxInfoCache = new Map<string, { value: TaxInfoResult; cachedAtMs: number }>();
+
 /**
  * Get tax rate for a given location
  * @param country - Country name ('Canada' or 'USA')
@@ -21,42 +32,8 @@ export async function getTaxRate(
       return 0;
     }
 
-    // First try to find city-specific rate if city is provided
-    if (city) {
-      const { data: cityRate, error: cityError } = await supabase
-        .from('tax_rates')
-        .select('tax_rate')
-        .eq('country', country)
-        .eq('state_province', state)
-        .eq('city', city)
-        .order('effective_date', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (!cityError && cityRate) {
-        const rate = cityRate as { tax_rate: number };
-        return Number(rate.tax_rate) / 100;
-      }
-    }
-
-    // Fall back to state-level rate
-    const { data: stateRate, error: stateError } = await supabase
-      .from('tax_rates')
-      .select('tax_rate')
-      .eq('country', country)
-      .eq('state_province', state)
-      .is('city', null)
-      .order('effective_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (!stateError && stateRate) {
-      const rate = stateRate as { tax_rate: number };
-      return Number(rate.tax_rate) / 100;
-    }
-
-    // No rate found - return 0
-    return 0;
+    const info = await getTaxInfo(country, state, city);
+    return info.taxRate;
   } catch (error) {
     return 0;
   }
@@ -87,23 +64,8 @@ export async function getTaxType(
       return 'Tax';
     }
 
-    const { data, error } = await supabase
-      .from('tax_rates')
-      .select('tax_type')
-      .eq('country', country)
-      .eq('state_province', state)
-      .is('city', null)
-      .order('effective_date', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (!error && data) {
-      const taxData = data as { tax_type?: string };
-      return taxData.tax_type || 'Tax';
-    }
-
-    // Default based on country
-    return country === 'Canada' ? 'GST/HST' : 'Sales Tax';
+    const info = await getTaxInfo(country, state, null);
+    return info.taxType || (country === 'Canada' ? 'GST/HST' : 'Sales Tax');
   } catch (error) {
     return country === 'Canada' ? 'GST/HST' : 'Sales Tax';
   }
@@ -120,15 +82,64 @@ export async function getTaxInfo(
   country: string,
   state: string,
   city?: string | null
-): Promise<{ taxRate: number; taxType: string; taxRatePercent: number }> {
-  const [taxRate, taxType] = await Promise.all([
-    getTaxRate(country, state, city),
-    getTaxType(country, state),
-  ]);
+): Promise<TaxInfoResult> {
+  if (!country || !state) {
+    return { taxRate: 0, taxRatePercent: 0, taxType: 'Tax' };
+  }
 
-  return {
-    taxRate,
-    taxType,
-    taxRatePercent: taxRate * 100,
-  };
+  const normalizedCity = city?.trim() ? city.trim() : null;
+  const cacheKey = `${country}::${state}::${normalizedCity ?? ''}`;
+  const cached = taxInfoCache.get(cacheKey);
+  const nowMs = Date.now();
+
+  if (cached && nowMs - cached.cachedAtMs < TAX_INFO_CACHE_TTL_MS) {
+    return cached.value;
+  }
+
+  try {
+    const orFilter = normalizedCity
+      ? `city.eq.${normalizedCity},city.is.null`
+      : 'city.is.null';
+
+    const { data, error } = await supabase
+      .from('tax_rates')
+      .select('city,tax_rate,tax_type')
+      .eq('country', country)
+      .eq('state_province', state)
+      .or(orFilter)
+      .order('effective_date', { ascending: false })
+      .limit(10);
+
+    if (error || !data || data.length === 0) {
+      const fallbackTaxType = country === 'Canada' ? 'GST/HST' : 'Sales Tax';
+      return { taxRate: 0, taxRatePercent: 0, taxType: fallbackTaxType };
+    }
+
+    const rows = data as unknown as TaxRateRow[];
+    const bestRow = normalizedCity
+      ? rows.find((r) => r.city === normalizedCity) ?? rows.find((r) => r.city === null) ?? null
+      : rows.find((r) => r.city === null) ?? null;
+
+    if (!bestRow) {
+      const fallbackTaxType = country === 'Canada' ? 'GST/HST' : 'Sales Tax';
+      return { taxRate: 0, taxRatePercent: 0, taxType: fallbackTaxType };
+    }
+
+    const ratePercent = Number(bestRow.tax_rate ?? 0);
+    const taxRate = Number.isFinite(ratePercent) ? ratePercent / 100 : 0;
+    const fallbackTaxType = country === 'Canada' ? 'GST/HST' : 'Sales Tax';
+    const taxType = bestRow.tax_type || fallbackTaxType;
+
+    const value: TaxInfoResult = {
+      taxRate,
+      taxRatePercent: taxRate * 100,
+      taxType,
+    };
+
+    taxInfoCache.set(cacheKey, { value, cachedAtMs: nowMs });
+    return value;
+  } catch {
+    const fallbackTaxType = country === 'Canada' ? 'GST/HST' : 'Sales Tax';
+    return { taxRate: 0, taxRatePercent: 0, taxType: fallbackTaxType };
+  }
 }

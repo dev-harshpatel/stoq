@@ -39,6 +39,15 @@ export const toInventoryUpdate = (updates: Partial<InventoryItem>): InventoryUpd
   if (updates.pricePerUnit !== undefined) {
     updateData.price_per_unit = Number(updates.pricePerUnit);
   }
+  if (updates.purchasePrice !== undefined) {
+    updateData.purchase_price = updates.purchasePrice != null ? Number(updates.purchasePrice) : null;
+  }
+  if (updates.hst !== undefined) {
+    updateData.hst = updates.hst != null ? Number(updates.hst) : null;
+  }
+  if (updates.sellingPrice !== undefined) {
+    updateData.selling_price = Number(updates.sellingPrice);
+  }
   if (updates.quantity !== undefined) updateData.quantity = updates.quantity;
   if (updates.storage !== undefined) updateData.storage = updates.storage;
 
@@ -230,6 +239,9 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
             storage: product.storage,
             quantity: product.quantity,
             price_per_unit: product.pricePerUnit,
+            purchase_price: product.purchasePrice ?? null,
+            hst: product.hst ?? null,
+            selling_price: product.sellingPrice,
             last_updated: product.lastUpdated || 'Just now',
             price_change: product.priceChange ?? null,
             created_at: new Date().toISOString(),
@@ -255,6 +267,9 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
                   storage: product.storage,
                   quantity: product.quantity,
                   price_per_unit: product.pricePerUnit,
+                  purchase_price: product.purchasePrice ?? null,
+                  hst: product.hst ?? null,
+                  selling_price: product.sellingPrice,
                   last_updated: product.lastUpdated || 'Just now',
                   price_change: product.priceChange ?? null,
                   created_at: new Date().toISOString(),
