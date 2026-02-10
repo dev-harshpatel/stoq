@@ -1,13 +1,65 @@
-import { supabase } from "./client";
-import { Database } from "@/lib/database.types";
 import { InventoryItem } from "@/data/inventory";
+import type { PaginatedResult } from "@/hooks/use-paginated-query";
+import { Database } from "@/lib/database.types";
 import { Order, OrderItem, OrderStatus } from "@/types/order";
 import { UserProfile } from "@/types/user";
-import type { PaginatedResult } from "@/hooks/use-paginated-query";
+import { supabase } from "./client";
 
 type InventoryRow = Database["public"]["Tables"]["inventory"]["Row"];
 type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
 type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"];
+
+type StoredInventoryItem = Partial<{
+  brand: string | null;
+  deviceName: string | null;
+  device_name: string | null;
+  grade: string | null;
+  hst: number | string | null;
+  id: string | number | null;
+  item_id: string | number | null;
+  lastUpdated: string | null;
+  last_updated: string | null;
+  priceChange: string | null;
+  pricePerUnit: number | string | null;
+  price_change: string | null;
+  price_per_unit: number | string | null;
+  purchasePrice: number | string | null;
+  purchase_price: number | string | null;
+  quantity: number | string | null;
+  sellingPrice: number | string | null;
+  selling_price: number | string | null;
+  storage: string | null;
+}>;
+
+const coerceFiniteNumber = (value: number | string): number | null => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const readNumber = (value: number | string | null | undefined): number => {
+  if (value == null) return 0;
+  return coerceFiniteNumber(value) ?? 0;
+};
+
+const readNullableNumber = (
+  value: number | string | null | undefined,
+): number | null => {
+  if (value == null) return null;
+  return coerceFiniteNumber(value);
+};
+
+const readString = (value: string | number | null | undefined): string =>
+  value == null ? "" : String(value);
+
+const readGrade = (value: string | null | undefined): "A" | "B" | "C" | "D" =>
+  value === "A" || value === "B" || value === "C" || value === "D"
+    ? value
+    : "A";
+
+const readPriceChange = (
+  value: string | null | undefined,
+): "up" | "down" | "stable" | undefined =>
+  value === "up" || value === "down" || value === "stable" ? value : undefined;
 
 // ---------------------------------------------------------------------------
 // Row-to-model mappers (extracted from contexts for shared use)
@@ -80,38 +132,31 @@ export const dbRowToOrder = (row: OrderRow): Order => {
 
   // Normalize each item's product so the app always sees camelCase (deviceName, sellingPrice, etc.)
   const normalizedItems: OrderItem[] = items.map((oi) => {
-    const raw = oi.item as Record<string, unknown>;
+    const raw: StoredInventoryItem = oi.item;
     const quantity = typeof oi.quantity === "number" ? oi.quantity : 1;
+    const pricePerUnit = readNumber(raw.pricePerUnit ?? raw.price_per_unit);
     return {
       quantity,
       item: {
-        id: String(raw.id ?? raw.item_id ?? ""),
-        deviceName: String(raw.deviceName ?? raw.device_name ?? ""),
-        brand: String(raw.brand ?? ""),
-        grade: (raw.grade ?? "A") as "A" | "B" | "C" | "D",
-        storage: String(raw.storage ?? ""),
-        quantity: Number(raw.quantity ?? 0),
-        pricePerUnit: Number(raw.pricePerUnit ?? raw.price_per_unit ?? 0),
-        purchasePrice:
-          raw.purchasePrice != null
-            ? Number(raw.purchasePrice)
-            : raw.purchase_price != null
-              ? Number(raw.purchase_price)
-              : null,
-        hst: raw.hst != null ? Number(raw.hst) : null,
-        sellingPrice: Number(
+        id: readString(raw.id ?? raw.item_id),
+        deviceName: readString(raw.deviceName ?? raw.device_name),
+        brand: readString(raw.brand),
+        grade: readGrade(raw.grade),
+        storage: readString(raw.storage),
+        quantity: readNumber(raw.quantity),
+        pricePerUnit,
+        purchasePrice: readNullableNumber(
+          raw.purchasePrice ?? raw.purchase_price,
+        ),
+        hst: readNullableNumber(raw.hst),
+        sellingPrice: readNumber(
           raw.sellingPrice ??
             raw.selling_price ??
             raw.pricePerUnit ??
-            raw.price_per_unit ??
-            0,
+            raw.price_per_unit,
         ),
-        lastUpdated: String(raw.lastUpdated ?? raw.last_updated ?? ""),
-        priceChange: (raw.priceChange ?? raw.price_change ?? undefined) as
-          | "up"
-          | "down"
-          | "stable"
-          | undefined,
+        lastUpdated: readString(raw.lastUpdated ?? raw.last_updated),
+        priceChange: readPriceChange(raw.priceChange ?? raw.price_change),
       },
     };
   });
