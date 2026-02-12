@@ -27,14 +27,14 @@ interface OrdersContextType {
     subtotal?: number,
     taxRate?: number,
     taxAmount?: number,
-    addresses?: OrderAddresses,
+    addresses?: OrderAddresses
   ) => Promise<Order>;
   updateOrderStatus: (
     orderId: string,
     status: OrderStatus,
     rejectionReason?: string,
     rejectionComment?: string,
-    discountAmount?: number,
+    discountAmount?: number
   ) => Promise<void>;
   updateInvoice: (
     orderId: string,
@@ -50,7 +50,7 @@ interface OrdersContextType {
       discountAmount?: number;
       discountType?: string;
       shippingAmount?: number;
-    },
+    }
   ) => Promise<void>;
   confirmInvoice: (orderId: string) => Promise<void>;
   downloadInvoicePDF: (orderId: string) => Promise<void>;
@@ -62,7 +62,7 @@ interface OrdersContextType {
 }
 
 export const OrdersContext = createContext<OrdersContextType | undefined>(
-  undefined,
+  undefined
 );
 
 export const useOrders = () => {
@@ -86,7 +86,7 @@ const buildOrderInsert = (
   subtotal?: number,
   taxRate?: number,
   taxAmount?: number,
-  addresses?: OrderAddresses,
+  addresses?: OrderAddresses
 ): OrderInsert => {
   // Calculate subtotal if not provided
   const calculatedSubtotal =
@@ -96,7 +96,7 @@ const buildOrderInsert = (
         total +
         (orderItem.item.sellingPrice ?? orderItem.item.pricePerUnit) *
           orderItem.quantity,
-      0,
+      0
     );
 
   // Calculate tax amount if not provided but tax rate is
@@ -199,7 +199,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         () => {
           // Reload orders when changes occur (don't set loading state for real-time updates)
           loadOrders();
-        },
+        }
       )
       .subscribe();
 
@@ -216,7 +216,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     subtotal?: number,
     taxRate?: number,
     taxAmount?: number,
-    addresses?: OrderAddresses,
+    addresses?: OrderAddresses
   ): Promise<Order> => {
     if (!items || items.length === 0) {
       throw new Error("Order must have at least one item");
@@ -228,7 +228,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       subtotal,
       taxRate,
       taxAmount,
-      addresses,
+      addresses
     );
 
     try {
@@ -255,7 +255,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
             total +
             (orderItem.item.sellingPrice ?? orderItem.item.pricePerUnit) *
               orderItem.quantity,
-          0,
+          0
         );
       const fallbackTaxAmount =
         taxAmount ??
@@ -269,12 +269,12 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         subtotal: Number((newOrder as any).subtotal ?? fallbackSubtotal),
         taxRate: (newOrder as any).tax_rate
           ? Number((newOrder as any).tax_rate)
-          : (taxRate ?? null),
+          : taxRate ?? null,
         taxAmount: (newOrder as any).tax_amount
           ? Number((newOrder as any).tax_amount)
           : fallbackTaxAmount > 0
-            ? fallbackTaxAmount
-            : null,
+          ? fallbackTaxAmount
+          : null,
         totalPrice: Number(newOrder.total_price ?? fallbackTotalPrice),
         status: (newOrder.status ?? "pending") as OrderStatus,
         createdAt: newOrder.created_at ?? new Date().toISOString(),
@@ -290,7 +290,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     status: OrderStatus,
     rejectionReason?: string,
     rejectionComment?: string,
-    discountAmount?: number,
+    discountAmount?: number
   ) => {
     try {
       const updateData: OrderUpdate = {
@@ -348,14 +348,14 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       .filter((order) => order.userId === userId)
       .sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
   };
 
   const getAllOrders = (): Order[] => {
     return [...orders].sort(
       (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   };
 
@@ -377,7 +377,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       discountAmount?: number;
       discountType?: string;
       shippingAmount?: number;
-    },
+    }
   ): Promise<void> => {
     try {
       const order = getOrderById(orderId);
