@@ -2,26 +2,28 @@
  * Supabase utility functions for user profiles and role checking
  */
 
-import { supabase } from './client';
-import { UserProfile, UserRole } from '@/types/user';
-import { Database } from '@/lib/database.types';
-import { dbRowToUserProfile } from '@/lib/supabase/queries';
+import { supabase } from "./client";
+import { UserProfile, UserRole } from "@/types/user";
+import { Database } from "@/lib/database.types";
+import { dbRowToUserProfile } from "@/lib/supabase/queries";
 
-type UserProfileRow = Database['public']['Tables']['user_profiles']['Row'];
+type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"];
 
 /**
  * Get user profile by user ID
  */
-export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+export const getUserProfile = async (
+  userId: string
+): Promise<UserProfile | null> => {
   try {
     const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', userId)
+      .from("user_profiles")
+      .select("*")
+      .eq("user_id", userId)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      if (error.code === "PGRST116") {
         // No rows returned
         return null;
       }
@@ -44,12 +46,32 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
  */
 export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    // Handle refresh token errors gracefully
+    if (
+      error &&
+      (error.message?.includes("refresh_token_not_found") ||
+        error.message?.includes("Invalid Refresh Token"))
+    ) {
+      return null;
+    }
+
     if (!user) {
       return null;
     }
     return getUserProfile(user.id);
-  } catch (error) {
+  } catch (error: any) {
+    // Handle refresh token errors in catch block too
+    if (
+      error?.message?.includes("refresh_token_not_found") ||
+      error?.message?.includes("Invalid Refresh Token")
+    ) {
+      return null;
+    }
     return null;
   }
 };
@@ -59,7 +81,7 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
  */
 export const isAdmin = async (userId: string): Promise<boolean> => {
   const profile = await getUserProfile(userId);
-  return profile?.role === 'admin';
+  return profile?.role === "admin";
 };
 
 /**
@@ -67,12 +89,32 @@ export const isAdmin = async (userId: string): Promise<boolean> => {
  */
 export const isCurrentUserAdmin = async (): Promise<boolean> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    // Handle refresh token errors gracefully
+    if (
+      error &&
+      (error.message?.includes("refresh_token_not_found") ||
+        error.message?.includes("Invalid Refresh Token"))
+    ) {
+      return false;
+    }
+
     if (!user) {
       return false;
     }
     return isAdmin(user.id);
-  } catch (error) {
+  } catch (error: any) {
+    // Handle refresh token errors in catch block too
+    if (
+      error?.message?.includes("refresh_token_not_found") ||
+      error?.message?.includes("Invalid Refresh Token")
+    ) {
+      return false;
+    }
     return false;
   }
 };
@@ -82,18 +124,26 @@ export const isCurrentUserAdmin = async (): Promise<boolean> => {
  */
 export const upsertUserProfile = async (
   userId: string,
-  role: UserRole = 'user'
+  role: UserRole = "user"
 ): Promise<UserProfile | null> => {
   try {
-    type InsertType = Database['public']['Tables']['user_profiles']['Insert'];
-    
+    type InsertType = Database["public"]["Tables"]["user_profiles"]["Insert"];
+
     // Use type assertion to work around @supabase/ssr type limitations
-    const client = supabase.from('user_profiles') as unknown as {
-      upsert: (values: InsertType, options?: { onConflict?: string; ignoreDuplicates?: boolean }) => {
-        select: () => { single: () => Promise<{ data: UserProfileRow | null; error: Error | null }> };
+    const client = supabase.from("user_profiles") as unknown as {
+      upsert: (
+        values: InsertType,
+        options?: { onConflict?: string; ignoreDuplicates?: boolean }
+      ) => {
+        select: () => {
+          single: () => Promise<{
+            data: UserProfileRow | null;
+            error: Error | null;
+          }>;
+        };
       };
     };
-    
+
     const { data, error } = await client
       .upsert(
         {
@@ -101,7 +151,7 @@ export const upsertUserProfile = async (
           role,
         } as InsertType,
         {
-          onConflict: 'user_id',
+          onConflict: "user_id",
           ignoreDuplicates: true,
         }
       )
@@ -131,20 +181,28 @@ export const updateUserRole = async (
   role: UserRole
 ): Promise<UserProfile | null> => {
   try {
-    type UpdateType = Database['public']['Tables']['user_profiles']['Update'];
-    
+    type UpdateType = Database["public"]["Tables"]["user_profiles"]["Update"];
+
     // Use type assertion to work around @supabase/ssr type limitations
-    const client = supabase.from('user_profiles') as unknown as {
+    const client = supabase.from("user_profiles") as unknown as {
       update: (values: UpdateType) => {
-        eq: (column: string, value: string) => {
-          select: () => { single: () => Promise<{ data: UserProfileRow | null; error: Error | null }> };
+        eq: (
+          column: string,
+          value: string
+        ) => {
+          select: () => {
+            single: () => Promise<{
+              data: UserProfileRow | null;
+              error: Error | null;
+            }>;
+          };
         };
       };
     };
-    
+
     const { data, error } = await client
       .update({ role } as UpdateType)
-      .eq('user_id', userId)
+      .eq("user_id", userId)
       .select()
       .single();
 
@@ -187,12 +245,12 @@ export const createUserProfileWithDetails = async (
 ): Promise<UserProfile | null> => {
   try {
     // Try using client first (works if user has session)
-    type InsertType = Database['public']['Tables']['user_profiles']['Insert'];
-    
+    type InsertType = Database["public"]["Tables"]["user_profiles"]["Insert"];
+
     const insertData = {
       user_id: userId,
-      role: details.role || 'user',
-      approval_status: 'pending' as const,
+      role: details.role || "user",
+      approval_status: "pending" as const,
       approval_status_updated_at: null,
       first_name: details.firstName || null,
       last_name: details.lastName || null,
@@ -206,32 +264,39 @@ export const createUserProfileWithDetails = async (
       business_years: details.businessYears || null,
       business_website: details.businessWebsite || null,
       business_email: details.businessEmail || null,
-    } as InsertType
-    
-    const client = supabase.from('user_profiles') as unknown as {
+    } as InsertType;
+
+    const client = supabase.from("user_profiles") as unknown as {
       insert: (values: InsertType) => {
-        select: () => { single: () => Promise<{ data: UserProfileRow | null; error: { code?: string; message?: string; name?: string } | null }> };
+        select: () => {
+          single: () => Promise<{
+            data: UserProfileRow | null;
+            error: { code?: string; message?: string; name?: string } | null;
+          }>;
+        };
       };
     };
-    
-    const { data, error } = await client
-      .insert(insertData)
-      .select()
-      .single();
+
+    const { data, error } = await client.insert(insertData).select().single();
 
     // Type the error properly for Supabase errors
-    const supabaseError = error as { code?: string; message?: string; name?: string } | null;
+    const supabaseError = error as {
+      code?: string;
+      message?: string;
+      name?: string;
+    } | null;
     const errorCode = supabaseError?.code;
-    const errorMessage = supabaseError?.message || '';
-    const isRLSError = errorCode === '42501' || errorMessage.includes('row-level security');
+    const errorMessage = supabaseError?.message || "";
+    const isRLSError =
+      errorCode === "42501" || errorMessage.includes("row-level security");
 
     if (error && isRLSError) {
       // RLS error - try using server API route with admin client
       try {
-        const response = await fetch('/api/user-profile/create', {
-          method: 'POST',
+        const response = await fetch("/api/user-profile/create", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             userId,
@@ -247,31 +312,31 @@ export const createUserProfileWithDetails = async (
             businessYears: details.businessYears,
             businessWebsite: details.businessWebsite,
             businessEmail: details.businessEmail,
-            role: details.role || 'user',
+            role: details.role || "user",
           }),
-        })
+        });
 
         if (!response.ok) {
           // Return RLS error marker so caller can handle it
-          return { __isRLSError: true } as unknown as UserProfile
+          return { __isRLSError: true } as unknown as UserProfile;
         }
 
-        const responseData = await response.json()
-        const { profile: serverProfile } = responseData
+        const responseData = await response.json();
+        const { profile: serverProfile } = responseData;
         if (serverProfile) {
-          const row = serverProfile as UserProfileRow
-          const profile = dbRowToUserProfile(row)
-          return profile
+          const row = serverProfile as UserProfileRow;
+          const profile = dbRowToUserProfile(row);
+          return profile;
         } else {
-          return { __isRLSError: true } as unknown as UserProfile
+          return { __isRLSError: true } as unknown as UserProfile;
         }
       } catch (apiError) {
         // Return RLS error marker so caller can handle it
-        return { __isRLSError: true } as unknown as UserProfile
+        return { __isRLSError: true } as unknown as UserProfile;
       }
-      
+
       // If server API also fails, return RLS error marker
-      return { __isRLSError: true } as unknown as UserProfile
+      return { __isRLSError: true } as unknown as UserProfile;
     }
 
     if (error) {
@@ -332,50 +397,71 @@ export const updateUserProfileDetails = async (
     };
 
     // Personal details
-    if (details.firstName !== undefined) updateData.first_name = details.firstName;
+    if (details.firstName !== undefined)
+      updateData.first_name = details.firstName;
     if (details.lastName !== undefined) updateData.last_name = details.lastName;
     if (details.phone !== undefined) updateData.phone = details.phone;
 
     // Business details
-    if (details.businessName !== undefined) updateData.business_name = details.businessName;
-    if (details.businessAddress !== undefined) updateData.business_address = details.businessAddress;
+    if (details.businessName !== undefined)
+      updateData.business_name = details.businessName;
+    if (details.businessAddress !== undefined)
+      updateData.business_address = details.businessAddress;
     if (details.businessAddressComponents !== undefined) {
-      updateData.business_address_components = details.businessAddressComponents;
+      updateData.business_address_components =
+        details.businessAddressComponents;
     }
-    if (details.businessCity !== undefined) updateData.business_city = details.businessCity;
-    if (details.businessCountry !== undefined) updateData.business_country = details.businessCountry;
-    if (details.businessYears !== undefined) updateData.business_years = details.businessYears;
-    if (details.businessWebsite !== undefined) updateData.business_website = details.businessWebsite;
-    if (details.businessEmail !== undefined) updateData.business_email = details.businessEmail;
+    if (details.businessCity !== undefined)
+      updateData.business_city = details.businessCity;
+    if (details.businessCountry !== undefined)
+      updateData.business_country = details.businessCountry;
+    if (details.businessYears !== undefined)
+      updateData.business_years = details.businessYears;
+    if (details.businessWebsite !== undefined)
+      updateData.business_website = details.businessWebsite;
+    if (details.businessEmail !== undefined)
+      updateData.business_email = details.businessEmail;
 
     // Shipping address
-    if (details.shippingAddress !== undefined) updateData.shipping_address = details.shippingAddress;
+    if (details.shippingAddress !== undefined)
+      updateData.shipping_address = details.shippingAddress;
     if (details.shippingAddressComponents !== undefined) {
-      updateData.shipping_address_components = details.shippingAddressComponents;
+      updateData.shipping_address_components =
+        details.shippingAddressComponents;
     }
-    if (details.shippingCity !== undefined) updateData.shipping_city = details.shippingCity;
-    if (details.shippingState !== undefined) updateData.shipping_state = details.shippingState;
-    if (details.shippingCountry !== undefined) updateData.shipping_country = details.shippingCountry;
-    if (details.shippingPostalCode !== undefined) updateData.shipping_postal_code = details.shippingPostalCode;
+    if (details.shippingCity !== undefined)
+      updateData.shipping_city = details.shippingCity;
+    if (details.shippingState !== undefined)
+      updateData.shipping_state = details.shippingState;
+    if (details.shippingCountry !== undefined)
+      updateData.shipping_country = details.shippingCountry;
+    if (details.shippingPostalCode !== undefined)
+      updateData.shipping_postal_code = details.shippingPostalCode;
 
     // Billing address
-    if (details.billingAddress !== undefined) updateData.billing_address = details.billingAddress;
+    if (details.billingAddress !== undefined)
+      updateData.billing_address = details.billingAddress;
     if (details.billingAddressComponents !== undefined) {
       updateData.billing_address_components = details.billingAddressComponents;
     }
-    if (details.billingCity !== undefined) updateData.billing_city = details.billingCity;
-    if (details.billingState !== undefined) updateData.billing_state = details.billingState;
-    if (details.billingCountry !== undefined) updateData.billing_country = details.billingCountry;
-    if (details.billingPostalCode !== undefined) updateData.billing_postal_code = details.billingPostalCode;
+    if (details.billingCity !== undefined)
+      updateData.billing_city = details.billingCity;
+    if (details.billingState !== undefined)
+      updateData.billing_state = details.billingState;
+    if (details.billingCountry !== undefined)
+      updateData.billing_country = details.billingCountry;
+    if (details.billingPostalCode !== undefined)
+      updateData.billing_postal_code = details.billingPostalCode;
 
     // Flags
-    if (details.shippingSameAsBusiness !== undefined) updateData.shipping_same_as_business = details.shippingSameAsBusiness;
-    if (details.billingSameAsBusiness !== undefined) updateData.billing_same_as_business = details.billingSameAsBusiness;
+    if (details.shippingSameAsBusiness !== undefined)
+      updateData.shipping_same_as_business = details.shippingSameAsBusiness;
+    if (details.billingSameAsBusiness !== undefined)
+      updateData.billing_same_as_business = details.billingSameAsBusiness;
 
-    const { data, error } = await (supabase
-      .from('user_profiles') as any)
+    const { data, error } = await (supabase.from("user_profiles") as any)
       .update(updateData)
-      .eq('user_id', userId)
+      .eq("user_id", userId)
       .select()
       .single();
 
@@ -397,7 +483,9 @@ export const updateUserProfileDetails = async (
 /**
  * Get user profile with all details (alias for getUserProfile, but kept for clarity)
  */
-export const getUserProfileWithDetails = async (userId: string): Promise<UserProfile | null> => {
+export const getUserProfileWithDetails = async (
+  userId: string
+): Promise<UserProfile | null> => {
   return getUserProfile(userId);
 };
 
@@ -407,9 +495,9 @@ export const getUserProfileWithDetails = async (userId: string): Promise<UserPro
 export const getAllUserProfiles = async (): Promise<UserProfile[]> => {
   try {
     const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("user_profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (error) {
       throw error;
@@ -431,24 +519,26 @@ export const getAllUserProfiles = async (): Promise<UserProfile[]> => {
  */
 export const updateUserProfileApprovalStatus = async (
   userId: string,
-  status: 'pending' | 'approved' | 'rejected'
+  status: "pending" | "approved" | "rejected"
 ): Promise<UserProfile | null> => {
   try {
-    const response = await fetch('/api/user-profile/update-approval-status', {
-      method: 'POST',
+    const response = await fetch("/api/user-profile/update-approval-status", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ userId, status }),
-    })
+    });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Failed to update approval status' }))
-      throw new Error(errorData.error || 'Failed to update approval status')
+      const errorData = await response
+        .json()
+        .catch(() => ({ error: "Failed to update approval status" }));
+      throw new Error(errorData.error || "Failed to update approval status");
     }
 
-    const { profile } = await response.json()
-    
+    const { profile } = await response.json();
+
     if (!profile) {
       return null;
     }
