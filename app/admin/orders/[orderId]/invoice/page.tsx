@@ -626,6 +626,7 @@ export default function InvoicePage() {
                             step={form.watch('discountType') === 'percentage' ? '0.01' : '0.01'}
                             max={form.watch('discountType') === 'percentage' ? '100' : undefined}
                             placeholder={form.watch('discountType') === 'percentage' ? '0.00' : '0.00'}
+                            onWheel={(e) => e.currentTarget.blur()}
                             {...field}
                             className="flex-1"
                           />
@@ -649,6 +650,7 @@ export default function InvoicePage() {
                         min="0"
                         step="0.01"
                         placeholder="0.00"
+                        onWheel={(e) => e.currentTarget.blur()}
                         {...field}
                       />
                     </FormControl>

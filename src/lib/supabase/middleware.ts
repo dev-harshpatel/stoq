@@ -59,12 +59,21 @@ export async function updateSession(request: NextRequest) {
 
     // If refresh token is missing or invalid, treat as unauthenticated
     if (error) {
-      // Check if it's a refresh token error (expected when user is logged out)
+      // Check if it's a refresh token error (expected when user has stale cookies)
       if (
         error.message?.includes("refresh_token_not_found") ||
         error.message?.includes("Invalid Refresh Token")
       ) {
-        // User is not authenticated - this is normal, don't log as error
+        // Clear invalid auth cookies to prevent this error on subsequent requests
+        const allCookies = request.cookies.getAll();
+        allCookies.forEach((cookie) => {
+          if (cookie.name.startsWith("sb-") && cookie.name.includes("auth")) {
+            supabaseResponse.cookies.set(cookie.name, "", {
+              path: "/",
+              maxAge: 0,
+            });
+          }
+        });
         user = null;
       } else {
         // Other auth errors - log for debugging but don't crash
@@ -74,17 +83,27 @@ export async function updateSession(request: NextRequest) {
     } else {
       user = fetchedUser;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { message?: string };
     // Catch any unexpected errors during getUser()
     if (
-      error?.message?.includes("refresh_token_not_found") ||
-      error?.message?.includes("Invalid Refresh Token")
+      err?.message?.includes("refresh_token_not_found") ||
+      err?.message?.includes("Invalid Refresh Token")
     ) {
-      // Silently handle missing refresh token - user is not authenticated
+      // Clear invalid auth cookies to prevent this error on subsequent requests
+      const allCookies = request.cookies.getAll();
+      allCookies.forEach((cookie) => {
+        if (cookie.name.startsWith("sb-") && cookie.name.includes("auth")) {
+          supabaseResponse.cookies.set(cookie.name, "", {
+            path: "/",
+            maxAge: 0,
+          });
+        }
+      });
       user = null;
     } else {
       // Log other unexpected errors but don't crash
-      console.error("Unexpected auth error in middleware:", error?.message);
+      console.error("Unexpected auth error in middleware:", err?.message);
       user = null;
     }
   }
