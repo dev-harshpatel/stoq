@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useInventory } from "@/contexts/InventoryContext";
+import { useRealtimeContext } from "@/contexts/RealtimeContext";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePaginatedQuery } from "@/hooks/use-paginated-query";
 import { InventoryItem, calculatePricePerUnit, formatPrice } from "@/data/inventory";
@@ -130,6 +131,7 @@ const ProductsTableSkeleton = ({ rows }: { rows: number }) => {
 
 export default function ProductManagement() {
   const { updateProduct, resetInventory } = useInventory();
+  const { inventoryVersion } = useRealtimeContext();
   const [editedProducts, setEditedProducts] = useState<
     Record<string, Partial<InventoryItem>>
   >({});
@@ -177,7 +179,6 @@ export default function ProductManagement() {
     isLoading,
     isFetching,
     setCurrentPage,
-    refresh,
     rangeText,
   } = usePaginatedQuery<InventoryItem>({
     fetchFn,
@@ -189,7 +190,7 @@ export default function ProductManagement() {
       filters.priceRange,
       filters.stockStatus,
     ],
-    realtimeTable: "inventory",
+    realtimeVersion: inventoryVersion,
   });
 
   const handleFieldChange = (
@@ -209,13 +210,11 @@ export default function ProductManagement() {
   const handleSave = async (id: string) => {
     const updates = editedProducts[id];
     if (updates) {
-      // Get current product + pending edits to recalculate price per unit
       const product = filteredItems.find((p) => p.id === id);
       if (product) {
         const qty = (updates.quantity ?? product.quantity) as number;
         const pp = (updates.purchasePrice ?? product.purchasePrice ?? 0) as number;
         const h = (updates.hst ?? product.hst ?? 0) as number;
-        // Always recalculate price per unit when saving
         updates.pricePerUnit = calculatePricePerUnit(pp, qty, h);
       }
       await updateProduct(id, updates);
@@ -227,7 +226,6 @@ export default function ProductManagement() {
       toast.success("Product updated", {
         description: "Changes have been saved to inventory.",
       });
-      await refresh();
     }
   };
 
@@ -237,7 +235,7 @@ export default function ProductManagement() {
     toast.success("Inventory reset", {
       description: "All products have been reset to original values.",
     });
-    await refresh();
+    // No explicit refresh - Realtime will trigger refetch automatically
   };
 
   const getFieldValue = (

@@ -310,7 +310,8 @@ export async function fetchPaginatedInventory(
   let query = supabase
     .from("inventory")
     .select("*", { count: "exact" })
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true }); // Stable sort - prevents reshuffling when created_at ties
 
   query = applyInventoryFilters(query, filters);
   query = query.range(range.from, range.to);
@@ -356,7 +357,8 @@ export async function fetchAllFilteredInventory(
   let query = supabase
     .from("inventory")
     .select("*")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   query = applyInventoryFilters(query, filters);
 

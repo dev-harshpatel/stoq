@@ -1,6 +1,5 @@
-import { RefreshCw, Menu, User, LogOut, Loader2 } from "lucide-react";
+import { Menu, LogOut, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -20,23 +19,10 @@ import { useState } from "react";
 
 interface NavbarProps {
   onMenuClick: () => void;
-  autoRefresh: boolean;
-  onAutoRefreshChange: (value: boolean) => void;
-  lastRefreshed: string;
-  onRefresh?: () => void;
-  isRefreshing?: boolean;
   className?: string;
 }
 
-export function Navbar({
-  onMenuClick,
-  autoRefresh,
-  onAutoRefreshChange,
-  lastRefreshed,
-  onRefresh,
-  isRefreshing = false,
-  className,
-}: NavbarProps) {
+export function Navbar({ onMenuClick, className }: NavbarProps) {
   const { user, signOut } = useAuth();
   const { profile } = useUserProfile();
   const { startNavigation } = useNavigation();
@@ -104,32 +90,6 @@ export function Navbar({
         </div>
 
         <div className="flex items-center gap-4 lg:gap-6">
-          <div className="hidden md:flex items-center gap-3 text-sm">
-            <span className="text-muted-foreground">Last refreshed:</span>
-            <span className="text-foreground font-medium">{lastRefreshed}</span>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Auto-refresh</span>
-            <Switch
-              checked={autoRefresh}
-              onCheckedChange={onAutoRefreshChange}
-              className="data-[state=checked]:bg-primary"
-            />
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden sm:flex"
-            onClick={onRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw
-              className={cn("h-4 w-4", isRefreshing && "animate-spin")}
-            />
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">

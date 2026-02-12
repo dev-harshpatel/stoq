@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePaginatedQuery } from "@/hooks/use-paginated-query";
-import { useRefresh } from "@/contexts/RefreshContext";
+import { useRealtimeContext } from "@/contexts/RealtimeContext";
 import { fetchPaginatedOrders, OrdersFilters } from "@/lib/supabase/queries";
 
 const getStatusColor = (status: OrderStatus) => {
@@ -63,7 +63,7 @@ export default function Orders() {
   const [loadingEmails, setLoadingEmails] = useState(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
-  const { refreshKey } = useRefresh();
+  const { ordersVersion } = useRealtimeContext();
 
   const serverFilters: OrdersFilters = {
     search: debouncedSearch,
@@ -89,8 +89,7 @@ export default function Orders() {
   } = usePaginatedQuery<Order>({
     fetchFn,
     dependencies: [debouncedSearch, statusFilter],
-    realtimeTable: "orders",
-    refreshKey,
+    realtimeVersion: ordersVersion,
   });
 
   // Create a stable key based on unique user IDs from current page to fetch emails

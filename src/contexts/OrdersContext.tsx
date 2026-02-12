@@ -3,7 +3,7 @@
 import { Database, Json } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/context";
-import { useRefresh } from "@/contexts/RefreshContext";
+import { useRealtimeContext } from "@/contexts/RealtimeContext";
 import { Order, OrderItem, OrderStatus } from "@/types/order";
 import {
   ReactNode,
@@ -142,7 +142,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const { triggerRefresh } = useRefresh();
+  const { ordersVersion } = useRealtimeContext();
 
   // Load orders from Supabase
   const loadOrders = async () => {
@@ -177,38 +177,23 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     const initializeOrders = async () => {
       setIsLoading(true);
       await loadOrders();
-      // Only update loading state if component is still mounted
       if (isMounted) {
         setIsLoading(false);
       }
     };
 
-    // Initialize immediately
     initializeOrders();
-
-    // Set up real-time subscription
-    const channel = supabase
-      .channel("orders-changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-        },
-        () => {
-          // Reload orders when changes occur (don't set loading state for real-time updates)
-          loadOrders();
-        }
-      )
-      .subscribe();
-
     return () => {
       isMounted = false;
-      supabase.removeChannel(channel);
     };
-    // Use user?.id to avoid re-fetching when user object reference changes but ID is the same
   }, [user?.id]);
+
+  // Reload orders when RealtimeProvider signals orders changes
+  useEffect(() => {
+    if (ordersVersion > 0) {
+      loadOrders();
+    }
+  }, [ordersVersion]);
 
   const createOrder = async (
     userId: string,
@@ -336,8 +321,6 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
 
       // Reload orders from database to ensure we have the latest data
       await loadOrders();
-      // Notify paginated lists (e.g. admin Orders page) to refetch so table updates immediately
-      triggerRefresh();
     } catch (error) {
       throw error;
     }

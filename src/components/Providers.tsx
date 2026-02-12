@@ -9,7 +9,7 @@ import { WishlistProvider } from "@/contexts/WishlistContext";
 import { InventoryProvider } from "@/contexts/InventoryContext";
 import { OrdersProvider } from "@/contexts/OrdersContext";
 import { NavigationProvider } from "@/contexts/NavigationContext";
-import { RefreshProvider } from "@/contexts/RefreshContext";
+import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { NavigationIndicator } from "@/components/NavigationIndicator";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -22,9 +22,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <NavigationProvider>
-            <UserProfileProvider>
-              <RefreshProvider>
+          <RealtimeProvider>
+            <NavigationProvider>
+              <UserProfileProvider>
                 <InventoryProvider>
                   <CartProvider>
                     <WishlistProvider>
@@ -37,9 +37,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     </WishlistProvider>
                   </CartProvider>
                 </InventoryProvider>
-              </RefreshProvider>
-            </UserProfileProvider>
-          </NavigationProvider>
+              </UserProfileProvider>
+            </NavigationProvider>
+          </RealtimeProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
