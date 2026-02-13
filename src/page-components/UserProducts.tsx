@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { ShoppingCart, FileText, Heart } from "lucide-react";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { useRefresh } from "@/contexts/RefreshContext";
+import { useRealtimeContext } from "@/contexts/RealtimeContext";
 import { InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
 import { Button } from "@/components/ui/button";
 import { FilterBar, FilterValues } from "@/components/FilterBar";
@@ -37,7 +37,7 @@ const defaultFilters: FilterValues = {
 
 export default function UserProducts() {
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const { refreshKey } = useRefresh();
+  const { inventoryVersion } = useRealtimeContext();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
@@ -95,8 +95,7 @@ export default function UserProducts() {
       filters.priceRange,
       filters.stockStatus,
     ],
-    refreshKey,
-    // Note: realtimeTable removed to prevent double-fetching with RefreshContext
+    realtimeVersion: inventoryVersion,
   });
 
   const handleBuyClick = (item: InventoryItem) => {

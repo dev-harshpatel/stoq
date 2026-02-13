@@ -4,7 +4,7 @@ import { InventoryItem } from '@/data/inventory';
 import { Database } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth/context';
-import { useRefresh } from '@/contexts/RefreshContext';
+import { useRealtimeContext } from '@/contexts/RealtimeContext';
 import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
 import { UploadHistory, BulkInsertResult } from '@/types/upload';
 import { dbRowToInventoryItem } from '@/lib/supabase/queries';
@@ -58,7 +58,7 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
-  const { refreshKey } = useRefresh();
+  const { inventoryVersion } = useRealtimeContext();
 
   // Load inventory from Supabase
   const loadInventory = async () => {
@@ -66,7 +66,8 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
       const { data, error } = await supabase
         .from('inventory')
         .select('*')
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true });
 
       if (error) {
         setInventory([]);
@@ -90,46 +91,23 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
     const initializeInventory = async () => {
       setIsLoading(true);
       await loadInventory();
-      // Only update loading state if component is still mounted
       if (isMounted) {
         setIsLoading(false);
       }
     };
 
-    // Initialize immediately
     initializeInventory();
-
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('inventory-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'inventory',
-        },
-        () => {
-          // Reload inventory when changes occur
-          loadInventory();
-        }
-      )
-      .subscribe();
-
     return () => {
       isMounted = false;
-      supabase.removeChannel(channel);
     };
-    // Use user?.id to avoid re-fetching when user object reference changes but ID is the same
   }, [user?.id]);
 
-  // Refresh inventory when RefreshContext triggers (auto-refresh or manual refresh)
+  // Reload inventory when RealtimeProvider signals inventory changes
   useEffect(() => {
-    // Skip on initial mount (refreshKey starts at 0)
-    if (refreshKey > 0) {
+    if (inventoryVersion > 0) {
       loadInventory();
     }
-  }, [refreshKey]);
+  }, [inventoryVersion]);
 
   const updateProduct = async (id: string, updates: Partial<InventoryItem>) => {
     try {

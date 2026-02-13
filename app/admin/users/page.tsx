@@ -10,6 +10,7 @@ import { Users, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useDebounce } from '@/hooks/use-debounce'
 import { usePaginatedQuery } from '@/hooks/use-paginated-query'
+import { useRealtimeContext } from '@/contexts/RealtimeContext'
 import { fetchPaginatedUsers } from '@/lib/supabase/queries'
 
 export default function UsersPage() {
@@ -18,6 +19,7 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const debouncedSearch = useDebounce(searchQuery, 300)
+  const { userProfilesVersion } = useRealtimeContext()
 
   const fetchFn = useCallback(
     async (range: { from: number; to: number }) => {
@@ -38,7 +40,7 @@ export default function UsersPage() {
   } = usePaginatedQuery<UserProfile>({
     fetchFn,
     dependencies: [debouncedSearch],
-    realtimeTable: 'user_profiles',
+    realtimeVersion: userProfilesVersion,
   })
 
   if (isLoading) {

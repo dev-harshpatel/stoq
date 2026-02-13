@@ -2,7 +2,6 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,8 +29,6 @@ import {
   LogOut,
   Mail,
   Menu,
-  Package,
-  RefreshCw,
   ShoppingCart,
   User,
   UserCircle,
@@ -43,21 +40,9 @@ import { toast } from "sonner";
 
 interface UserNavbarProps {
   className?: string;
-  autoRefresh?: boolean;
-  onAutoRefreshChange?: (value: boolean) => void;
-  lastRefreshed?: string;
-  onRefresh?: () => void;
-  isRefreshing?: boolean;
 }
 
-export const UserNavbar = ({
-  className,
-  autoRefresh = false,
-  onAutoRefreshChange,
-  lastRefreshed,
-  onRefresh,
-  isRefreshing = false,
-}: UserNavbarProps) => {
+export const UserNavbar = ({ className }: UserNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getUniqueItemsCount } = useCart();
   const { getWishlistCount } = useWishlist();
@@ -152,46 +137,6 @@ export const UserNavbar = ({
 
           {/* Desktop Navigation and Actions */}
           <div className="hidden md:flex items-center gap-4">
-            {/* Auto-refresh Controls */}
-            {lastRefreshed && (
-              <div className="hidden md:flex items-center gap-3 text-sm">
-                <span className="text-muted-foreground">Last refreshed:</span>
-                <span className="text-foreground font-medium">
-                  {lastRefreshed}
-                </span>
-              </div>
-            )}
-
-            {onAutoRefreshChange && (
-              <div className="hidden md:flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  Auto-refresh
-                </span>
-                <Switch
-                  checked={autoRefresh}
-                  onCheckedChange={onAutoRefreshChange}
-                  className="data-[state=checked]:bg-primary"
-                />
-              </div>
-            )}
-
-            {onRefresh && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden md:flex"
-                onClick={onRefresh}
-                disabled={isRefreshing}
-              >
-                <RefreshCw
-                  className={cn("h-4 w-4", isRefreshing && "animate-spin")}
-                />
-              </Button>
-            )}
-
-            {/* Vertical Divider */}
-            <div className="hidden md:block h-6 w-px bg-border" />
-
             {/* Grades Guide Link */}
             <Button
               variant="ghost"
@@ -425,54 +370,6 @@ export const UserNavbar = ({
 
           {/* Menu Content */}
           <nav className="flex flex-col p-4 space-y-1 flex-1">
-            {/* Auto-refresh Controls for Mobile */}
-            {(onAutoRefreshChange || onRefresh) && (
-              <>
-                <div className="px-3 py-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase">
-                    Data Refresh
-                  </p>
-                  {lastRefreshed && (
-                    <p className="text-sm text-foreground mt-1">
-                      Last refreshed: {lastRefreshed}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center justify-between px-3 py-2.5">
-                  {onAutoRefreshChange && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-foreground">
-                        Auto-refresh
-                      </span>
-                      <Switch
-                        checked={autoRefresh}
-                        onCheckedChange={onAutoRefreshChange}
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
-                  )}
-                  {onRefresh && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={onRefresh}
-                      disabled={isRefreshing}
-                      className="gap-2"
-                    >
-                      <RefreshCw
-                        className={cn(
-                          "h-4 w-4",
-                          isRefreshing && "animate-spin",
-                        )}
-                      />
-                      Refresh
-                    </Button>
-                  )}
-                </div>
-                <div className="border-t border-border my-2" />
-              </>
-            )}
-
             {/* Navigation Links */}
             <button
               onClick={() => {

@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePaginatedQuery } from "@/hooks/use-paginated-query";
+import { useRealtimeContext } from "@/contexts/RealtimeContext";
 import { fetchPaginatedUserOrders } from "@/lib/supabase/queries";
 
 const getStatusColor = (status: OrderStatus) => {
@@ -57,6 +58,7 @@ const getStatusLabel = (status: OrderStatus) => {
 
 export default function UserOrdersPage() {
   const { user, loading: authLoading } = useAuth();
+  const { ordersVersion } = useRealtimeContext();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
@@ -81,7 +83,7 @@ export default function UserOrdersPage() {
   } = usePaginatedQuery<Order>({
     fetchFn,
     dependencies: [user?.id, statusFilter],
-    realtimeTable: "orders",
+    realtimeVersion: ordersVersion,
   });
 
   const handleViewOrder = (order: Order) => {

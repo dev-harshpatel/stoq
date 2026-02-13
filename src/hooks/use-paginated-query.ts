@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase } from '@/lib/supabase/client'
 
 export const PAGE_SIZE = 10
 
@@ -12,10 +11,9 @@ export interface PaginatedResult<T> {
 
 export interface UsePaginatedQueryOptions<T> {
   fetchFn: (range: { from: number; to: number }) => Promise<PaginatedResult<T>>
-  dependencies?: any[]
-  realtimeTable?: string
+  dependencies?: unknown[]
+  realtimeVersion?: number
   pageSize?: number
-  refreshKey?: number
 }
 
 export interface UsePaginatedQueryReturn<T> {
@@ -34,7 +32,7 @@ export interface UsePaginatedQueryReturn<T> {
 export function usePaginatedQuery<T>(
   options: UsePaginatedQueryOptions<T>
 ): UsePaginatedQueryReturn<T> {
-  const { fetchFn, dependencies = [], realtimeTable, pageSize = PAGE_SIZE, refreshKey = 0 } = options
+  const { fetchFn, dependencies = [], realtimeVersion = 0, pageSize = PAGE_SIZE } = options
 
   const [data, setData] = useState<T[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -49,32 +47,37 @@ export function usePaginatedQuery<T>(
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
-  const fetchData = useCallback(async (page: number) => {
-    const fetchId = ++fetchIdRef.current
-    setIsFetching(true)
+  const fetchData = useCallback(
+    async (page: number, reason?: string) => {
+      const fetchId = ++fetchIdRef.current
+      const isSilentRefetch =
+        reason === 'realtime' || reason === 'tab-visibility'
+      if (!isSilentRefetch) setIsFetching(true)
 
-    const from = (page - 1) * pageSize
-    const to = from + pageSize - 1
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
 
-    try {
-      const result = await fetchFn({ from, to })
-      if (fetchId === fetchIdRef.current) {
-        setData(result.data)
-        setTotalCount(result.count)
-        setHasInitialized(true)
+      try {
+        const result = await fetchFn({ from, to })
+        if (fetchId === fetchIdRef.current) {
+          setData(result.data)
+          setTotalCount(result.count)
+          setHasInitialized(true)
+        }
+      } catch (error) {
+        if (fetchId === fetchIdRef.current) {
+          setData([])
+          setTotalCount(0)
+          setHasInitialized(true)
+        }
+      } finally {
+        if (fetchId === fetchIdRef.current && !isSilentRefetch) {
+          setIsFetching(false)
+        }
       }
-    } catch (error) {
-      if (fetchId === fetchIdRef.current) {
-        setData([])
-        setTotalCount(0)
-        setHasInitialized(true)
-      }
-    } finally {
-      if (fetchId === fetchIdRef.current) {
-        setIsFetching(false)
-      }
-    }
-  }, [fetchFn, pageSize])
+    },
+    [fetchFn, pageSize]
+  )
 
   // Reset to page 1 when dependencies change
   const depsKey = JSON.stringify(dependencies)
@@ -87,31 +90,27 @@ export function usePaginatedQuery<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [depsKey])
 
-  // Fetch data when page changes, fetchFn changes, or refreshKey changes
+  const prevRealtimeVersionRef = useRef(realtimeVersion)
+
+  // Fetch data when page changes, fetchFn changes, or realtimeVersion changes
   useEffect(() => {
-    fetchData(currentPage)
-  }, [currentPage, fetchData, refreshKey])
+    const isRealtimeTrigger = realtimeVersion !== prevRealtimeVersionRef.current
+    const reason =
+      isRealtimeTrigger && realtimeVersion > 0 ? 'realtime' : 'page-or-deps'
+    prevRealtimeVersionRef.current = realtimeVersion
+    fetchData(currentPage, reason)
+  }, [currentPage, fetchData, realtimeVersion])
 
-  // Real-time subscription
+  // Refetch when tab becomes visible (fallback for missed Realtime events, e.g. tab in background)
   useEffect(() => {
-    if (!realtimeTable) return
-
-    const channel = supabase
-      .channel(`${realtimeTable}-paginated-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: realtimeTable },
-        () => {
-          fetchData(currentPage)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && hasInitialized) {
+        fetchData(currentPage, 'tab-visibility')
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realtimeTable, currentPage, fetchData])
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [currentPage, fetchData, hasInitialized])
 
   // Clamp currentPage if it exceeds totalPages after a re-fetch
   useEffect(() => {
@@ -121,7 +120,7 @@ export function usePaginatedQuery<T>(
   }, [currentPage, totalPages, isLoading])
 
   const refresh = useCallback(async () => {
-    await fetchData(currentPage)
+    await fetchData(currentPage, 'manual-refresh')
   }, [fetchData, currentPage])
 
   const from = (currentPage - 1) * pageSize + 1
