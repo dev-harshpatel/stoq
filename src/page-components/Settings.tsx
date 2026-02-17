@@ -15,7 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { TOAST_MESSAGES } from "@/lib/toast-messages";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import {
   Bell,
   Building2,

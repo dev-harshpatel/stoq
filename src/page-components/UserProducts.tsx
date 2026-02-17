@@ -21,7 +21,7 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { TOAST_MESSAGES } from "@/lib/toast-messages";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePaginatedReactQuery } from "@/hooks/use-paginated-react-query";
 import { usePageParam } from "@/hooks/use-page-param";

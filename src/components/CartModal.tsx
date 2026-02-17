@@ -4,7 +4,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/lib/auth/context";
 import { useOrders, OrderAddresses } from "@/contexts/OrdersContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
-import { getAvailableQuantityForUser } from "@/lib/orderUtils";
+import { getAvailableQuantityForUser } from "@/lib/utils/order";
 import {
   Dialog,
   DialogContent,

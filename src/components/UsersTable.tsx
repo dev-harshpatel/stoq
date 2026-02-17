@@ -1,10 +1,10 @@
-import { UserProfile } from '@/types/user';
-import { Badge } from './ui/badge';
-import { EmptyState } from './EmptyState';
-import { Button } from './ui/button';
-import { cn } from '@/lib/utils';
-import { getStatusColor, getStatusLabel } from '@/lib/statusUtils';
-import { User, Mail, Building2, MapPin, Calendar, Eye } from 'lucide-react';
+import { UserProfile } from "@/types/user";
+import { Badge } from "./ui/badge";
+import { EmptyState } from "./EmptyState";
+import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
+import { getStatusColor, getStatusLabel } from "@/lib/utils/status";
+import { User, Mail, Building2, MapPin, Calendar, Eye } from "lucide-react";
 
 interface UsersTableProps {
   users: UserProfile[];
@@ -12,24 +12,33 @@ interface UsersTableProps {
   onReviewUser?: (user: UserProfile) => void;
 }
 
-export function UsersTable({ users, className, onReviewUser }: UsersTableProps) {
+export function UsersTable({
+  users,
+  className,
+  onReviewUser,
+}: UsersTableProps) {
   if (users.length === 0) {
     return <EmptyState />;
   }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   return (
     <>
       {/* Desktop Table */}
-      <div className={cn('hidden md:block overflow-hidden rounded-lg border border-border bg-card', className)}>
+      <div
+        className={cn(
+          "hidden md:block overflow-hidden rounded-lg border border-border bg-card",
+          className
+        )}
+      >
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -62,18 +71,21 @@ export function UsersTable({ users, className, onReviewUser }: UsersTableProps) 
             </thead>
             <tbody className="divide-y divide-border">
               {users.map((user, index) => {
-                const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'N/A';
-                const businessName = user.businessName || 'N/A';
-                const location = [user.businessCity, user.businessState, user.businessCountry]
-                  .filter(Boolean)
-                  .join(', ') || 'N/A';
+                const fullName =
+                  [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+                  "N/A";
+                const businessName = user.businessName || "N/A";
+                const location =
+                  [user.businessCity, user.businessState, user.businessCountry]
+                    .filter(Boolean)
+                    .join(", ") || "N/A";
 
                 return (
                   <tr
                     key={user.id}
                     className={cn(
-                      'transition-colors hover:bg-table-hover',
-                      index % 2 === 1 && 'bg-table-zebra'
+                      "transition-colors hover:bg-table-hover",
+                      index % 2 === 1 && "bg-table-zebra"
                     )}
                   >
                     <td className="px-6 py-4">
@@ -82,15 +94,21 @@ export function UsersTable({ users, className, onReviewUser }: UsersTableProps) 
                           <User className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-medium text-foreground">{fullName}</span>
-                          <span className="text-xs text-muted-foreground">ID: {user.userId.slice(0, 8)}...</span>
+                          <span className="font-medium text-foreground">
+                            {fullName}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ID: {user.userId.slice(0, 8)}...
+                          </span>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <span className="text-sm text-foreground">{businessName}</span>
+                        <span className="text-sm text-foreground">
+                          {businessName}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -98,37 +116,51 @@ export function UsersTable({ users, className, onReviewUser }: UsersTableProps) 
                         {user.businessEmail && (
                           <div className="flex items-center gap-2 text-sm">
                             <Mail className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-foreground">{user.businessEmail}</span>
+                            <span className="text-foreground">
+                              {user.businessEmail}
+                            </span>
                           </div>
                         )}
                         {user.phone && (
-                          <span className="text-xs text-muted-foreground">{user.phone}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {user.phone}
+                          </span>
                         )}
                         {!user.businessEmail && !user.phone && (
-                          <span className="text-xs text-muted-foreground">N/A</span>
+                          <span className="text-xs text-muted-foreground">
+                            N/A
+                          </span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <span className="text-sm text-foreground">{location}</span>
+                        <span className="text-sm text-foreground">
+                          {location}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <Badge
-                        variant={user.role === 'admin' ? 'default' : 'secondary'}
+                        variant={
+                          user.role === "admin" ? "default" : "secondary"
+                        }
                         className={cn(
-                          user.role === 'admin' && 'bg-primary text-primary-foreground'
+                          user.role === "admin" &&
+                            "bg-primary text-primary-foreground"
                         )}
                       >
-                        {user.role === 'admin' ? 'Admin' : 'User'}
+                        {user.role === "admin" ? "Admin" : "User"}
                       </Badge>
                     </td>
                     <td className="px-4 py-4 text-center">
                       <Badge
                         variant="outline"
-                        className={cn('text-xs', getStatusColor(user.approvalStatus))}
+                        className={cn(
+                          "text-xs",
+                          getStatusColor(user.approvalStatus)
+                        )}
                       >
                         {getStatusLabel(user.approvalStatus)}
                       </Badge>
@@ -163,11 +195,13 @@ export function UsersTable({ users, className, onReviewUser }: UsersTableProps) 
       {/* Mobile Cards */}
       <div className="md:hidden space-y-4">
         {users.map((user) => {
-          const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'N/A';
-          const businessName = user.businessName || 'N/A';
-          const location = [user.businessCity, user.businessState, user.businessCountry]
-            .filter(Boolean)
-            .join(', ') || 'N/A';
+          const fullName =
+            [user.firstName, user.lastName].filter(Boolean).join(" ") || "N/A";
+          const businessName = user.businessName || "N/A";
+          const location =
+            [user.businessCity, user.businessState, user.businessCountry]
+              .filter(Boolean)
+              .join(", ") || "N/A";
 
           return (
             <div
@@ -180,22 +214,30 @@ export function UsersTable({ users, className, onReviewUser }: UsersTableProps) 
                     <User className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-medium text-foreground">{fullName}</span>
-                    <span className="text-xs text-muted-foreground">ID: {user.userId.slice(0, 8)}...</span>
+                    <span className="font-medium text-foreground">
+                      {fullName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ID: {user.userId.slice(0, 8)}...
+                    </span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   <Badge
-                    variant={user.role === 'admin' ? 'default' : 'secondary'}
+                    variant={user.role === "admin" ? "default" : "secondary"}
                     className={cn(
-                      user.role === 'admin' && 'bg-primary text-primary-foreground'
+                      user.role === "admin" &&
+                        "bg-primary text-primary-foreground"
                     )}
                   >
-                    {user.role === 'admin' ? 'Admin' : 'User'}
+                    {user.role === "admin" ? "Admin" : "User"}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className={cn('text-xs', getStatusColor(user.approvalStatus))}
+                    className={cn(
+                      "text-xs",
+                      getStatusColor(user.approvalStatus)
+                    )}
                   >
                     {getStatusLabel(user.approvalStatus)}
                   </Badge>
@@ -210,7 +252,9 @@ export function UsersTable({ users, className, onReviewUser }: UsersTableProps) 
                 {user.businessEmail && (
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-foreground">{user.businessEmail}</span>
+                    <span className="text-foreground">
+                      {user.businessEmail}
+                    </span>
                   </div>
                 )}
                 {user.phone && (
