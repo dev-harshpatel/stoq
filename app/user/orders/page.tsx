@@ -4,7 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import { UserLayout } from '@/components/UserLayout'
-import { useState, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth/context";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePaginatedQuery } from "@/hooks/use-paginated-query";
-import { useRealtimeContext } from "@/contexts/RealtimeContext";
+import { usePaginatedReactQuery } from "@/hooks/use-paginated-react-query";
+import { usePageParam } from "@/hooks/use-page-param";
+import { queryKeys } from "@/lib/query-keys";
 import { fetchPaginatedUserOrders } from "@/lib/supabase/queries";
 
 const getStatusColor = (status: OrderStatus) => {
@@ -58,33 +59,47 @@ const getStatusLabel = (status: OrderStatus) => {
 
 export default function UserOrdersPage() {
   const { user, loading: authLoading } = useAuth();
-  const { ordersVersion } = useRealtimeContext();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
 
-  const fetchFn = useCallback(
-    async (range: { from: number; to: number }) => {
-      if (!user) return { data: [], count: 0 };
-      return fetchPaginatedUserOrders(user.id, statusFilter, range);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user?.id, statusFilter]
-  );
+  const [currentPage, setCurrentPage] = usePageParam();
+  const queryKey = user?.id
+    ? queryKeys.userOrdersPage(user.id, currentPage, statusFilter)
+    : ['paginated', 'userOrders', 'disabled'];
 
   const {
     data: filteredOrders,
     totalCount,
-    currentPage,
     totalPages,
     isLoading,
-    setCurrentPage,
     rangeText,
-  } = usePaginatedQuery<Order>({
-    fetchFn,
-    dependencies: [user?.id, statusFilter],
-    realtimeVersion: ordersVersion,
+  } = usePaginatedReactQuery<Order>({
+    queryKey,
+    fetchFn: (range) => {
+      if (!user) return Promise.resolve({ data: [], count: 0 });
+      return fetchPaginatedUserOrders(user.id, statusFilter, range);
+    },
+    currentPage,
+    enabled: !!user,
   });
+
+  // Reset to page 1 when filters change
+  const filtersKey = `${user?.id}-${statusFilter}`;
+  const prevFiltersRef = useRef(filtersKey);
+  useEffect(() => {
+    if (prevFiltersRef.current !== filtersKey) {
+      prevFiltersRef.current = filtersKey;
+      setCurrentPage(1);
+    }
+  }, [filtersKey, setCurrentPage]);
+
+  // Clamp page if it exceeds totalPages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages, isLoading, setCurrentPage]);
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);

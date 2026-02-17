@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebounce } from "@/hooks/use-debounce";
-import { usePaginatedQuery } from "@/hooks/use-paginated-query";
-import { useRealtimeContext } from "@/contexts/RealtimeContext";
+import { usePaginatedReactQuery } from "@/hooks/use-paginated-react-query";
+import { usePageParam } from "@/hooks/use-page-param";
+import { queryKeys } from "@/lib/query-keys";
 import { fetchPaginatedOrders, OrdersFilters } from "@/lib/supabase/queries";
 
 const getStatusColor = (status: OrderStatus) => {
@@ -63,34 +64,43 @@ export default function Orders() {
   const [loadingEmails, setLoadingEmails] = useState(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
-  const { ordersVersion } = useRealtimeContext();
 
   const serverFilters: OrdersFilters = {
     search: debouncedSearch,
     status: statusFilter,
   };
 
-  const fetchFn = useCallback(
-    async (range: { from: number; to: number }) => {
-      return fetchPaginatedOrders(serverFilters, range);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [debouncedSearch, statusFilter],
-  );
+  const [currentPage, setCurrentPage] = usePageParam();
+  const queryKey = queryKeys.ordersPage(currentPage, serverFilters);
 
   const {
     data: filteredOrders,
     totalCount,
-    currentPage,
     totalPages,
     isLoading,
-    setCurrentPage,
     rangeText,
-  } = usePaginatedQuery<Order>({
-    fetchFn,
-    dependencies: [debouncedSearch, statusFilter],
-    realtimeVersion: ordersVersion,
+  } = usePaginatedReactQuery<Order>({
+    queryKey,
+    fetchFn: (range) => fetchPaginatedOrders(serverFilters, range),
+    currentPage,
   });
+
+  // Reset to page 1 when filters change
+  const filtersKey = JSON.stringify(serverFilters);
+  const prevFiltersRef = useRef(filtersKey);
+  useEffect(() => {
+    if (prevFiltersRef.current !== filtersKey) {
+      prevFiltersRef.current = filtersKey;
+      setCurrentPage(1);
+    }
+  }, [filtersKey, setCurrentPage]);
+
+  // Clamp page if it exceeds totalPages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages, isLoading, setCurrentPage]);
 
   // Create a stable key based on unique user IDs from current page to fetch emails
   const userIdsKey = useMemo(() => {

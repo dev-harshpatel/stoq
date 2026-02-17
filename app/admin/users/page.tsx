@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { UsersTable } from '@/components/UsersTable'
 import { UserDetailsModal } from '@/components/UserDetailsModal'
 import { UserProfile } from '@/types/user'
@@ -9,39 +10,53 @@ import { PaginationControls } from '@/components/PaginationControls'
 import { Users, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useDebounce } from '@/hooks/use-debounce'
-import { usePaginatedQuery } from '@/hooks/use-paginated-query'
-import { useRealtimeContext } from '@/contexts/RealtimeContext'
+import { usePaginatedReactQuery } from '@/hooks/use-paginated-react-query'
+import { usePageParam } from '@/hooks/use-page-param'
+import { queryKeys } from '@/lib/query-keys'
 import { fetchPaginatedUsers } from '@/lib/supabase/queries'
 
 export default function UsersPage() {
+  const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   const debouncedSearch = useDebounce(searchQuery, 300)
-  const { userProfilesVersion } = useRealtimeContext()
 
-  const fetchFn = useCallback(
-    async (range: { from: number; to: number }) => {
-      return fetchPaginatedUsers(debouncedSearch, range)
-    },
-    [debouncedSearch]
-  )
+  const [currentPage, setCurrentPage] = usePageParam()
+  const queryKey = queryKeys.usersPage(currentPage, debouncedSearch)
 
   const {
     data: users,
     totalCount,
-    currentPage,
     totalPages,
     isLoading,
-    setCurrentPage,
-    refresh,
     rangeText,
-  } = usePaginatedQuery<UserProfile>({
-    fetchFn,
-    dependencies: [debouncedSearch],
-    realtimeVersion: userProfilesVersion,
+  } = usePaginatedReactQuery<UserProfile>({
+    queryKey,
+    fetchFn: (range) => fetchPaginatedUsers(debouncedSearch, range),
+    currentPage,
   })
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.users })
+  }
+
+  // Reset to page 1 when search changes
+  const prevSearchRef = useRef(debouncedSearch)
+  useEffect(() => {
+    if (prevSearchRef.current !== debouncedSearch) {
+      prevSearchRef.current = debouncedSearch
+      setCurrentPage(1)
+    }
+  }, [debouncedSearch, setCurrentPage])
+
+  // Clamp page if it exceeds totalPages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages, isLoading, setCurrentPage])
 
   if (isLoading) {
     return (

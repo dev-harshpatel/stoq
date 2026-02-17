@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FilterBar, FilterValues } from "@/components/FilterBar";
 import { ExportActions } from "@/components/ExportActions";
 import { InventoryTable } from "@/components/InventoryTable";
@@ -8,8 +8,9 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { Loader } from "@/components/Loader";
 import { InventoryItem } from "@/data/inventory";
 import { useDebounce } from "@/hooks/use-debounce";
-import { usePaginatedQuery } from "@/hooks/use-paginated-query";
-import { useRealtimeContext } from "@/contexts/RealtimeContext";
+import { usePaginatedReactQuery } from "@/hooks/use-paginated-react-query";
+import { usePageParam } from "@/hooks/use-page-param";
+import { queryKeys } from "@/lib/query-keys";
 import {
   fetchPaginatedInventory,
   fetchFilterOptions,
@@ -27,7 +28,6 @@ const defaultFilters: FilterValues = {
 };
 
 export default function Inventory() {
-  const { inventoryVersion } = useRealtimeContext();
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
   const [filterOptions, setFilterOptions] = useState<{
     brands: string[];
@@ -50,27 +50,37 @@ export default function Inventory() {
     stockStatus: filters.stockStatus,
   };
 
-  const fetchFn = useCallback(
-    async (range: { from: number; to: number }) => {
-      return fetchPaginatedInventory(serverFilters, range);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [debouncedSearch, filters.brand, filters.grade, filters.storage, filters.priceRange, filters.stockStatus]
-  );
+  const [currentPage, setCurrentPage] = usePageParam();
+  const queryKey = queryKeys.inventoryPage(currentPage, serverFilters);
 
   const {
     data,
     totalCount,
-    currentPage,
     totalPages,
     isLoading,
-    setCurrentPage,
     rangeText,
-  } = usePaginatedQuery<InventoryItem>({
-    fetchFn,
-    dependencies: [debouncedSearch, filters.brand, filters.grade, filters.storage, filters.priceRange, filters.stockStatus],
-    realtimeVersion: inventoryVersion,
+  } = usePaginatedReactQuery<InventoryItem>({
+    queryKey,
+    fetchFn: (range) => fetchPaginatedInventory(serverFilters, range),
+    currentPage,
   });
+
+  // Reset to page 1 when filters change
+  const filtersKey = JSON.stringify(serverFilters);
+  const prevFiltersRef = useRef(filtersKey);
+  useEffect(() => {
+    if (prevFiltersRef.current !== filtersKey) {
+      prevFiltersRef.current = filtersKey;
+      setCurrentPage(1);
+    }
+  }, [filtersKey, setCurrentPage]);
+
+  // Clamp page if it exceeds totalPages
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages, isLoading, setCurrentPage]);
 
   const handleResetFilters = () => {
     setFilters(defaultFilters);
