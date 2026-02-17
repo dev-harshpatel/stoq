@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 
 interface LoginModalProps {
   open: boolean;
@@ -22,12 +23,15 @@ interface LoginModalProps {
   onSignupClick?: () => void;
 }
 
-export const LoginModal = ({ open, onOpenChange, onSignupClick }: LoginModalProps) => {
+export const LoginModal = ({
+  open,
+  onOpenChange,
+  onSignupClick,
+}: LoginModalProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
-  const { toast } = useToast();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,36 +39,30 @@ export const LoginModal = ({ open, onOpenChange, onSignupClick }: LoginModalProp
     setIsLoading(true);
     try {
       const { user } = await signIn(email, password);
-      
+
       if (user) {
         // Check if user is an admin
         const profile = await getUserProfile(user.id);
-        const isAdmin = profile?.role === 'admin';
-        
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        });
-        
+        const isAdmin = profile?.role === "admin";
+
+        toast.success(TOAST_MESSAGES.LOGIN_SUCCESS);
+
         setEmail("");
         setPassword("");
         onOpenChange(false);
-        
+
         // Redirect based on role
         if (isAdmin) {
-          router.push('/admin/dashboard');
+          router.push("/admin/dashboard");
         } else {
           // Regular users stay on the current page or go to home
           router.refresh(); // Refresh to trigger middleware redirect if needed
         }
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Invalid email or password";
-      toast({
-        title: "Login failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      const errorMessage =
+        error instanceof Error ? error.message : "Invalid email or password";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -116,12 +114,14 @@ export const LoginModal = ({ open, onOpenChange, onSignupClick }: LoginModalProp
               </Button>
             </div>
             <div className="text-center text-sm">
-              <span className="text-muted-foreground">Don't have an account? </span>
+              <span className="text-muted-foreground">
+                Don't have an account?{" "}
+              </span>
               <button
                 type="button"
                 onClick={() => {
-                  onOpenChange(false)
-                  onSignupClick?.()
+                  onOpenChange(false);
+                  onSignupClick?.();
                 }}
                 className="text-primary hover:underline font-medium"
               >
@@ -134,4 +134,3 @@ export const LoginModal = ({ open, onOpenChange, onSignupClick }: LoginModalProp
     </Dialog>
   );
 };
-

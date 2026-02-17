@@ -1,8 +1,9 @@
-import { UserProfile, ApprovalStatus } from '@/types/user';
+import { UserProfile } from '@/types/user';
 import { Badge } from './ui/badge';
 import { EmptyState } from './EmptyState';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
+import { getStatusColor, getStatusLabel } from '@/lib/statusUtils';
 import { User, Mail, Building2, MapPin, Calendar, Eye } from 'lucide-react';
 
 interface UsersTableProps {
@@ -10,32 +11,6 @@ interface UsersTableProps {
   className?: string;
   onReviewUser?: (user: UserProfile) => void;
 }
-
-const getStatusColor = (status: ApprovalStatus) => {
-  switch (status) {
-    case 'pending':
-      return 'bg-warning/10 text-warning border-warning/20';
-    case 'approved':
-      return 'bg-success/10 text-success border-success/20';
-    case 'rejected':
-      return 'bg-destructive/10 text-destructive border-destructive/20';
-    default:
-      return 'bg-muted text-muted-foreground';
-  }
-};
-
-const getStatusLabel = (status: ApprovalStatus) => {
-  switch (status) {
-    case 'pending':
-      return 'Pending';
-    case 'approved':
-      return 'Approved';
-    case 'rejected':
-      return 'Rejected';
-    default:
-      return status;
-  }
-};
 
 export function UsersTable({ users, className, onReviewUser }: UsersTableProps) {
   if (users.length === 0) {

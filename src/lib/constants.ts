@@ -1,4 +1,6 @@
 /**
- * Application constants
- * Centralized configuration values that can be easily adjusted
+ * Backward compatibility export
+ * Re-exports from constants folder
  */
+
+export * from "./constants/index";

@@ -77,49 +77,6 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
 };
 
 /**
- * Check if a user is an admin
- */
-export const isAdmin = async (userId: string): Promise<boolean> => {
-  const profile = await getUserProfile(userId);
-  return profile?.role === "admin";
-};
-
-/**
- * Check if current user is an admin
- */
-export const isCurrentUserAdmin = async (): Promise<boolean> => {
-  try {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    // Handle refresh token errors gracefully
-    if (
-      error &&
-      (error.message?.includes("refresh_token_not_found") ||
-        error.message?.includes("Invalid Refresh Token"))
-    ) {
-      return false;
-    }
-
-    if (!user) {
-      return false;
-    }
-    return isAdmin(user.id);
-  } catch (error: any) {
-    // Handle refresh token errors in catch block too
-    if (
-      error?.message?.includes("refresh_token_not_found") ||
-      error?.message?.includes("Invalid Refresh Token")
-    ) {
-      return false;
-    }
-    return false;
-  }
-};
-
-/**
  * Create or update user profile
  */
 export const upsertUserProfile = async (
@@ -168,54 +125,6 @@ export const upsertUserProfile = async (
     }
 
     return getUserProfile(userId);
-  } catch (error) {
-    return null;
-  }
-};
-
-/**
- * Update user role (admin only operation)
- */
-export const updateUserRole = async (
-  userId: string,
-  role: UserRole
-): Promise<UserProfile | null> => {
-  try {
-    type UpdateType = Database["public"]["Tables"]["user_profiles"]["Update"];
-
-    // Use type assertion to work around @supabase/ssr type limitations
-    const client = supabase.from("user_profiles") as unknown as {
-      update: (values: UpdateType) => {
-        eq: (
-          column: string,
-          value: string
-        ) => {
-          select: () => {
-            single: () => Promise<{
-              data: UserProfileRow | null;
-              error: Error | null;
-            }>;
-          };
-        };
-      };
-    };
-
-    const { data, error } = await client
-      .update({ role } as UpdateType)
-      .eq("user_id", userId)
-      .select()
-      .single();
-
-    if (error) {
-      return null;
-    }
-
-    if (!data) {
-      return null;
-    }
-
-    const row = data as UserProfileRow;
-    return dbRowToUserProfile(row);
   } catch (error) {
     return null;
   }
@@ -487,30 +396,6 @@ export const getUserProfileWithDetails = async (
   userId: string
 ): Promise<UserProfile | null> => {
   return getUserProfile(userId);
-};
-
-/**
- * Get all user profiles (admin only)
- */
-export const getAllUserProfiles = async (): Promise<UserProfile[]> => {
-  try {
-    const { data, error } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    return data.map((row) => dbRowToUserProfile(row as UserProfileRow));
-  } catch (error) {
-    throw error;
-  }
 };
 
 /**

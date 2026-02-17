@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { UsersTable } from '@/components/UsersTable'
 import { UserDetailsModal } from '@/components/UserDetailsModal'
@@ -36,27 +36,13 @@ export default function UsersPage() {
     queryKey,
     fetchFn: (range) => fetchPaginatedUsers(debouncedSearch, range),
     currentPage,
+    setCurrentPage,
+    filtersKey: debouncedSearch,
   })
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.users })
   }
-
-  // Reset to page 1 when search changes
-  const prevSearchRef = useRef(debouncedSearch)
-  useEffect(() => {
-    if (prevSearchRef.current !== debouncedSearch) {
-      prevSearchRef.current = debouncedSearch
-      setCurrentPage(1)
-    }
-  }, [debouncedSearch, setCurrentPage])
-
-  // Clamp page if it exceeds totalPages
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
-      setCurrentPage(totalPages)
-    }
-  }, [currentPage, totalPages, isLoading, setCurrentPage])
 
   if (isLoading) {
     return (

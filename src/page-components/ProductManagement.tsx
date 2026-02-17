@@ -1,7 +1,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { FilterBar, FilterValues } from "@/components/FilterBar";
+import {
+  FilterBar,
+  FilterValues,
+  defaultFilters,
+  buildServerFilters,
+} from "@/components/FilterBar";
 import { Input } from "@/components/ui/input";
 import { PaginationControls } from "@/components/PaginationControls";
 import {
@@ -16,25 +21,19 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { usePaginatedReactQuery } from "@/hooks/use-paginated-react-query";
 import { usePageParam } from "@/hooks/use-page-param";
 import { queryKeys } from "@/lib/query-keys";
-import { InventoryItem, calculatePricePerUnit, formatPrice } from "@/data/inventory";
 import {
-  fetchFilterOptions,
-  fetchPaginatedInventory,
-  InventoryFilters,
-} from "@/lib/supabase/queries";
+  InventoryItem,
+  calculatePricePerUnit,
+  formatPrice,
+} from "@/data/inventory";
+import { fetchPaginatedInventory } from "@/lib/supabase/queries";
+import { useFilterOptions } from "@/hooks/use-filter-options";
 import { cn } from "@/lib/utils";
 import { RotateCcw, Save } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-
-const defaultFilters: FilterValues = {
-  search: "",
-  brand: "all",
-  grade: "all",
-  storage: "all",
-  priceRange: "all",
-  stockStatus: "all",
-};
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
+import { EmptyState } from "@/components/EmptyState";
 
 const TableLoadingOverlay = ({ label }: { label: string }) => {
   return (
@@ -47,117 +46,22 @@ const TableLoadingOverlay = ({ label }: { label: string }) => {
   );
 };
 
-const ProductsTableSkeleton = ({ rows }: { rows: number }) => {
-  return (
-    <div className="rounded-lg border border-border bg-card overflow-x-auto">
-      <table className="w-full">
-        <thead className="sticky top-0 z-10">
-          <tr className="border-b border-border bg-muted">
-            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-              Device Name
-            </th>
-            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-              Brand
-            </th>
-            <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-              Grade
-            </th>
-            <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-              Storage
-            </th>
-            <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-              Quantity
-            </th>
-            <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-              Purchase Price
-            </th>
-            <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-              HST %
-            </th>
-            <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-              Price/Unit
-            </th>
-            <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
-              Selling Price
-            </th>
-            <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {Array.from({ length: rows }).map((_, index) => (
-            <tr
-              // eslint-disable-next-line react/no-array-index-key
-              key={index}
-              className={cn("animate-pulse", index % 2 === 1 && "bg-muted/20")}
-            >
-              <td className="px-6 py-4">
-                <div className="h-9 w-[240px] rounded-md bg-muted" />
-              </td>
-              <td className="px-4 py-4">
-                <div className="h-9 w-[140px] rounded-md bg-muted" />
-              </td>
-              <td className="px-4 py-4">
-                <div className="mx-auto h-9 w-20 rounded-md bg-muted" />
-              </td>
-              <td className="px-4 py-4">
-                <div className="h-9 w-[120px] rounded-md bg-muted" />
-              </td>
-              <td className="px-4 py-4">
-                <div className="mx-auto h-9 w-24 rounded-md bg-muted" />
-              </td>
-              <td className="px-4 py-4">
-                <div className="ml-auto h-9 w-28 rounded-md bg-muted" />
-              </td>
-              <td className="px-4 py-4">
-                <div className="ml-auto h-9 w-20 rounded-md bg-muted" />
-              </td>
-              <td className="px-4 py-4">
-                <div className="ml-auto h-9 w-24 rounded-md bg-muted" />
-              </td>
-              <td className="px-4 py-4">
-                <div className="ml-auto h-9 w-28 rounded-md bg-muted" />
-              </td>
-              <td className="px-6 py-4">
-                <div className="mx-auto h-9 w-24 rounded-md bg-muted" />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
 export default function ProductManagement() {
   const { updateProduct, resetInventory } = useInventory();
   const [editedProducts, setEditedProducts] = useState<
     Record<string, Partial<InventoryItem>>
   >({});
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
-  const [filterOptions, setFilterOptions] = useState<{
-    brands: string[];
-    storageOptions: string[];
-  }>({ brands: [], storageOptions: [] });
+  const filterOptions = useFilterOptions();
 
-  const debouncedSearch = useDebounce(filters.search, 300);
+  const debouncedSearch = useDebounce(filters.search);
 
-  useEffect(() => {
-    fetchFilterOptions().then(setFilterOptions);
-  }, []);
-
-  const serverFilters: InventoryFilters = {
-    search: debouncedSearch,
-    brand: filters.brand,
-    grade: filters.grade,
-    storage: filters.storage,
-    priceRange: filters.priceRange,
-    stockStatus: filters.stockStatus,
-  };
+  const serverFilters = buildServerFilters(debouncedSearch, filters);
 
   const [currentPage, setCurrentPage] = usePageParam();
   const queryKey = queryKeys.inventoryPage(currentPage, serverFilters);
+
+  const filtersKey = JSON.stringify(serverFilters);
 
   const {
     data: filteredItems,
@@ -170,29 +74,14 @@ export default function ProductManagement() {
     queryKey,
     fetchFn: (range) => fetchPaginatedInventory(serverFilters, range),
     currentPage,
+    setCurrentPage,
+    filtersKey,
   });
-
-  // Reset to page 1 when filters change
-  const filtersKey = JSON.stringify(serverFilters);
-  const prevFiltersRef = useRef(filtersKey);
-  useEffect(() => {
-    if (prevFiltersRef.current !== filtersKey) {
-      prevFiltersRef.current = filtersKey;
-      setCurrentPage(1);
-    }
-  }, [filtersKey, setCurrentPage]);
-
-  // Clamp page if it exceeds totalPages
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages, isLoading, setCurrentPage]);
 
   const handleFieldChange = (
     id: string,
     field: keyof InventoryItem,
-    value: string | number,
+    value: string | number
   ) => {
     setEditedProducts((prev) => ({
       ...prev,
@@ -209,7 +98,9 @@ export default function ProductManagement() {
       const product = filteredItems.find((p) => p.id === id);
       if (product) {
         const qty = (updates.quantity ?? product.quantity) as number;
-        const pp = (updates.purchasePrice ?? product.purchasePrice ?? 0) as number;
+        const pp = (updates.purchasePrice ??
+          product.purchasePrice ??
+          0) as number;
         const h = (updates.hst ?? product.hst ?? 0) as number;
         updates.pricePerUnit = calculatePricePerUnit(pp, qty, h);
       }
@@ -219,7 +110,7 @@ export default function ProductManagement() {
         delete newState[id];
         return newState;
       });
-      toast.success("Product updated", {
+      toast.success(TOAST_MESSAGES.PRODUCT_UPDATED, {
         description: "Changes have been saved to inventory.",
       });
     }
@@ -228,7 +119,7 @@ export default function ProductManagement() {
   const handleReset = async () => {
     await resetInventory();
     setEditedProducts({});
-    toast.success("Inventory reset", {
+    toast.success(TOAST_MESSAGES.INVENTORY_RESET, {
       description: "All products have been reset to original values.",
     });
     // No explicit refresh - Realtime will trigger refetch automatically
@@ -236,7 +127,7 @@ export default function ProductManagement() {
 
   const getFieldValue = (
     product: InventoryItem,
-    field: keyof InventoryItem,
+    field: keyof InventoryItem
   ) => {
     if (editedProducts[product.id]?.[field] !== undefined) {
       return editedProducts[product.id][field];
@@ -288,7 +179,88 @@ export default function ProductManagement() {
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
-        {shouldShowSkeleton && <ProductsTableSkeleton rows={10} />}
+        {shouldShowSkeleton && (
+          <div className="rounded-lg border border-border bg-card overflow-x-auto">
+            <table className="w-full">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-border bg-muted">
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                    Device Name
+                  </th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    Brand
+                  </th>
+                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    Grade
+                  </th>
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    Storage
+                  </th>
+                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    Quantity
+                  </th>
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    Purchase Price
+                  </th>
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    HST %
+                  </th>
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    Price/Unit
+                  </th>
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                    Selling Price
+                  </th>
+                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {Array.from({ length: 10 }).map((_, index) => (
+                  <tr
+                    key={index}
+                    className={cn(
+                      "animate-pulse",
+                      index % 2 === 1 && "bg-muted/20"
+                    )}
+                  >
+                    <td className="px-6 py-4">
+                      <div className="h-9 w-[240px] rounded-md bg-muted" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="h-9 w-[140px] rounded-md bg-muted" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="mx-auto h-9 w-20 rounded-md bg-muted" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="h-9 w-[120px] rounded-md bg-muted" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="mx-auto h-9 w-24 rounded-md bg-muted" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="ml-auto h-9 w-28 rounded-md bg-muted" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="ml-auto h-9 w-20 rounded-md bg-muted" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="ml-auto h-9 w-24 rounded-md bg-muted" />
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="ml-auto h-9 w-28 rounded-md bg-muted" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="mx-auto h-9 w-24 rounded-md bg-muted" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Products Table */}
         {!shouldShowSkeleton && filteredItems.length > 0 && (
@@ -336,7 +308,7 @@ export default function ProductManagement() {
                   const hasEdits = !!editedProducts[product.id];
                   const deviceName = getFieldValue(
                     product,
-                    "deviceName",
+                    "deviceName"
                   ) as string;
                   const brand = getFieldValue(product, "brand") as string;
                   const grade = getFieldValue(product, "grade") as
@@ -348,18 +320,19 @@ export default function ProductManagement() {
                   const quantity = getFieldValue(product, "quantity") as number;
                   const purchasePrice = (getFieldValue(
                     product,
-                    "purchasePrice",
+                    "purchasePrice"
                   ) ?? 0) as number;
-                  const hst = (getFieldValue(
-                    product,
-                    "hst",
-                  ) ?? 0) as number;
+                  const hst = (getFieldValue(product, "hst") ?? 0) as number;
                   const sellingPrice = getFieldValue(
                     product,
-                    "sellingPrice",
+                    "sellingPrice"
                   ) as number;
                   // Auto-calculate price per unit from formula
-                  const calculatedPricePerUnit = calculatePricePerUnit(purchasePrice, quantity, hst);
+                  const calculatedPricePerUnit = calculatePricePerUnit(
+                    purchasePrice,
+                    quantity,
+                    hst
+                  );
 
                   return (
                     <tr
@@ -367,7 +340,7 @@ export default function ProductManagement() {
                       className={cn(
                         "transition-colors hover:bg-muted/50",
                         index % 2 === 1 && "bg-muted/20",
-                        hasEdits && "bg-primary/5",
+                        hasEdits && "bg-primary/5"
                       )}
                     >
                       <td className="px-6 py-4">
@@ -377,7 +350,7 @@ export default function ProductManagement() {
                             handleFieldChange(
                               product.id,
                               "deviceName",
-                              e.target.value,
+                              e.target.value
                             )
                           }
                           className="min-w-[200px]"
@@ -390,7 +363,7 @@ export default function ProductManagement() {
                             handleFieldChange(
                               product.id,
                               "brand",
-                              e.target.value,
+                              e.target.value
                             )
                           }
                           className="min-w-[120px]"
@@ -403,7 +376,7 @@ export default function ProductManagement() {
                             handleFieldChange(
                               product.id,
                               "grade",
-                              value as "A" | "B" | "C" | "D",
+                              value as "A" | "B" | "C" | "D"
                             )
                           }
                         >
@@ -425,7 +398,7 @@ export default function ProductManagement() {
                             handleFieldChange(
                               product.id,
                               "storage",
-                              e.target.value,
+                              e.target.value
                             )
                           }
                           className="min-w-[100px]"
@@ -439,7 +412,7 @@ export default function ProductManagement() {
                             handleFieldChange(
                               product.id,
                               "quantity",
-                              parseInt(e.target.value) || 0,
+                              parseInt(e.target.value) || 0
                             )
                           }
                           className="w-24 text-center"
@@ -456,7 +429,7 @@ export default function ProductManagement() {
                               handleFieldChange(
                                 product.id,
                                 "purchasePrice",
-                                parseFloat(e.target.value) || 0,
+                                parseFloat(e.target.value) || 0
                               )
                             }
                             className="w-28 text-right"
@@ -474,7 +447,7 @@ export default function ProductManagement() {
                               handleFieldChange(
                                 product.id,
                                 "hst",
-                                parseFloat(e.target.value) || 0,
+                                parseFloat(e.target.value) || 0
                               )
                             }
                             className="w-20 text-right"
@@ -499,7 +472,7 @@ export default function ProductManagement() {
                               handleFieldChange(
                                 product.id,
                                 "sellingPrice",
-                                parseFloat(e.target.value) || 0,
+                                parseFloat(e.target.value) || 0
                               )
                             }
                             className="w-28 text-right"
@@ -531,9 +504,10 @@ export default function ProductManagement() {
         )}
 
         {!shouldShowSkeleton && !isFetching && filteredItems.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            No products found matching your filters.
-          </div>
+          <EmptyState
+            title="No products found"
+            description="Try adjusting your search or filter criteria to find what you're looking for."
+          />
         )}
       </div>
 

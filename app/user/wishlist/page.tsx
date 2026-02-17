@@ -1,19 +1,26 @@
-'use client'
+"use client";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
-import { UserLayout } from '@/components/UserLayout'
-import { useState } from "react";
+import { UserLayout } from "@/components/UserLayout";
+import { useState, useEffect } from "react";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/lib/auth/context";
 import { useOrders } from "@/contexts/OrdersContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
-import { useInventory } from "@/contexts/InventoryContext";
 import { InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
+import { fetchInventoryByIds } from "@/lib/supabase/queries";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Trash2, ShoppingCart, Package, Loader2, AlertTriangle } from "lucide-react";
+import {
+  Heart,
+  Trash2,
+  ShoppingCart,
+  Package,
+  Loader2,
+  AlertTriangle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/EmptyState";
 import { GradeBadge } from "@/components/GradeBadge";
@@ -24,21 +31,60 @@ import { useToast } from "@/hooks/use-toast";
 import { getUserProfile } from "@/lib/supabase/utils";
 
 export default function WishlistPage() {
-  const { wishlistItems, removeFromWishlist, isLoading: wishlistLoading } = useWishlist();
+  const {
+    wishlistItems,
+    removeFromWishlist,
+    isLoading: wishlistLoading,
+  } = useWishlist();
   const { addToCart, cartItems } = useCart();
   const { user, loading: authLoading } = useAuth();
   const { createOrder, orders } = useOrders();
   const { profile } = useUserProfile();
-  const { inventory } = useInventory();
   const { toast } = useToast();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
+  // Fetch latest inventory data for wishlist items only (optimized)
+  const [latestInventory, setLatestInventory] = useState<
+    Map<string, InventoryItem>
+  >(new Map());
+  const [isLoadingInventory, setIsLoadingInventory] = useState(false);
+
+  useEffect(() => {
+    const loadLatestInventory = async () => {
+      if (wishlistItems.length === 0) {
+        setLatestInventory(new Map());
+        return;
+      }
+
+      setIsLoadingInventory(true);
+      try {
+        const itemIds = wishlistItems.map((item) => item.id);
+        const inventoryItems = await fetchInventoryByIds(itemIds);
+        const inventoryMap = new Map(
+          inventoryItems.map((item) => [item.id, item])
+        );
+        setLatestInventory(inventoryMap);
+      } catch (error) {
+        console.error("Failed to load latest inventory:", error);
+        // Fallback to wishlist items themselves
+        const fallbackMap = new Map(
+          wishlistItems.map((item) => [item.id, item])
+        );
+        setLatestInventory(fallbackMap);
+      } finally {
+        setIsLoadingInventory(false);
+      }
+    };
+
+    loadLatestInventory();
+  }, [wishlistItems]);
+
   const handleBuyClick = (item: InventoryItem) => {
     const status = getStockStatus(item.quantity);
-    if (status === 'out-of-stock') {
+    if (status === "out-of-stock") {
       toast({
         title: "Out of Stock",
         description: `${item.deviceName} is currently out of stock.`,
@@ -56,16 +102,18 @@ export default function WishlistPage() {
       return;
     }
 
-    // Check for out of stock items
-    const outOfStockItems = wishlistItems.filter(item => {
-      const latestItem = inventory.find(inv => inv.id === item.id);
-      return !latestItem || latestItem.quantity === 0;
+    // Check for out of stock items using optimized inventory map
+    const outOfStockItems = wishlistItems.filter((item) => {
+      const latestItem = latestInventory.get(item.id) || item;
+      return latestItem.quantity === 0;
     });
 
     if (outOfStockItems.length > 0) {
       toast({
         title: "Some items are out of stock",
-        description: `${outOfStockItems.map(i => i.deviceName).join(', ')} ${outOfStockItems.length === 1 ? 'is' : 'are'} out of stock and cannot be added.`,
+        description: `${outOfStockItems.map((i) => i.deviceName).join(", ")} ${
+          outOfStockItems.length === 1 ? "is" : "are"
+        } out of stock and cannot be added.`,
         variant: "destructive",
       });
       return;
@@ -74,10 +122,10 @@ export default function WishlistPage() {
     // Add available items to cart (1 each)
     let addedCount = 0;
     for (const item of wishlistItems) {
-      const latestItem = inventory.find(inv => inv.id === item.id);
-      if (latestItem && latestItem.quantity > 0) {
+      const latestItem = latestInventory.get(item.id) || item;
+      if (latestItem.quantity > 0) {
         // Check if already in cart
-        const existingCartItem = cartItems.find(ci => ci.item.id === item.id);
+        const existingCartItem = cartItems.find((ci) => ci.item.id === item.id);
         if (!existingCartItem) {
           addToCart(latestItem, 1);
           addedCount++;
@@ -105,7 +153,7 @@ export default function WishlistPage() {
     }
 
     // Check if profile is approved
-    if (profile && profile.approvalStatus !== 'approved') {
+    if (profile && profile.approvalStatus !== "approved") {
       toast({
         title: "Profile not approved",
         description: "Your profile must be approved before placing orders.",
@@ -119,10 +167,10 @@ export default function WishlistPage() {
     const outOfStockItems: string[] = [];
 
     for (const wishlistItem of wishlistItems) {
-      // Get the latest inventory data
-      const latestItem = inventory.find(inv => inv.id === wishlistItem.id);
+      // Get the latest inventory data from optimized query
+      const latestItem = latestInventory.get(wishlistItem.id) || wishlistItem;
 
-      if (!latestItem || latestItem.quantity === 0) {
+      if (latestItem.quantity === 0) {
         outOfStockItems.push(wishlistItem.deviceName);
       } else {
         availableItems.push({ item: latestItem, quantity: 1 });
@@ -132,7 +180,11 @@ export default function WishlistPage() {
     if (outOfStockItems.length > 0) {
       toast({
         title: "Oops! You missed by a second",
-        description: `${outOfStockItems.join(', ')} ${outOfStockItems.length === 1 ? 'is' : 'are'} now out of stock. Please remove ${outOfStockItems.length === 1 ? 'it' : 'them'} from your wishlist.`,
+        description: `${outOfStockItems.join(", ")} ${
+          outOfStockItems.length === 1 ? "is" : "are"
+        } now out of stock. Please remove ${
+          outOfStockItems.length === 1 ? "it" : "them"
+        } from your wishlist.`,
         variant: "destructive",
       });
       return;
@@ -155,18 +207,24 @@ export default function WishlistPage() {
       let taxAmount = 0;
 
       if (userProfile?.businessCountry && userProfile?.businessState) {
-        const { getTaxInfo, calculateTax } = await import('@/lib/taxUtils');
+        const { getTaxInfo, calculateTax } = await import("@/lib/tax");
         const taxInfo = await getTaxInfo(
           userProfile.businessCountry,
           userProfile.businessState,
           userProfile.businessCity
         );
-        const subtotal = availableItems.reduce((sum, item) => sum + item.item.sellingPrice * item.quantity, 0);
+        const subtotal = availableItems.reduce(
+          (sum, item) => sum + item.item.sellingPrice * item.quantity,
+          0
+        );
         taxRate = taxInfo.taxRatePercent / 100;
         taxAmount = calculateTax(subtotal, taxInfo.taxRate);
       }
 
-      const subtotal = availableItems.reduce((sum, item) => sum + item.item.pricePerUnit * item.quantity, 0);
+      const subtotal = availableItems.reduce(
+        (sum, item) => sum + item.item.pricePerUnit * item.quantity,
+        0
+      );
 
       const order = await createOrder(
         user.id,
@@ -180,11 +238,13 @@ export default function WishlistPage() {
         title: "Order placed successfully",
         description: `Order #${order.id.slice(-8)} has been submitted.`,
       });
-
     } catch (error) {
       toast({
         title: "Error creating order",
-        description: error instanceof Error ? error.message : "Failed to create order. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to create order. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -204,14 +264,14 @@ export default function WishlistPage() {
     );
   }
 
-  // Calculate totals for available items
-  const availableItems = wishlistItems.filter(item => {
-    const latestItem = inventory.find(inv => inv.id === item.id);
-    return latestItem && latestItem.quantity > 0;
+  // Calculate totals for available items using optimized inventory map
+  const availableItems = wishlistItems.filter((item) => {
+    const latestItem = latestInventory.get(item.id) || item;
+    return latestItem.quantity > 0;
   });
   const subtotal = availableItems.reduce((sum, item) => {
-    const latestItem = inventory.find(inv => inv.id === item.id);
-    return sum + (latestItem?.sellingPrice || item.sellingPrice);
+    const latestItem = latestInventory.get(item.id) || item;
+    return sum + latestItem.sellingPrice;
   }, 0);
 
   return (
@@ -270,12 +330,12 @@ export default function WishlistPage() {
               {/* Wishlist Items */}
               <div className="grid gap-4">
                 {wishlistItems.map((item) => {
-                  // Get latest inventory data
-                  const latestItem = inventory.find(inv => inv.id === item.id);
-                  const currentQuantity = latestItem?.quantity ?? item.quantity;
-                  const currentPrice = latestItem?.sellingPrice ?? item.sellingPrice;
+                  // Get latest inventory data from optimized query
+                  const latestItem = latestInventory.get(item.id) || item;
+                  const currentQuantity = latestItem.quantity;
+                  const currentPrice = latestItem.sellingPrice;
                   const status = getStockStatus(currentQuantity);
-                  const isOutOfStock = status === 'out-of-stock';
+                  const isOutOfStock = status === "out-of-stock";
 
                   return (
                     <div
@@ -288,10 +348,14 @@ export default function WishlistPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start gap-3">
                           <div className="flex-1">
-                            <h4 className={cn(
-                              "font-medium",
-                              isOutOfStock ? "text-muted-foreground" : "text-foreground"
-                            )}>
+                            <h4
+                              className={cn(
+                                "font-medium",
+                                isOutOfStock
+                                  ? "text-muted-foreground"
+                                  : "text-foreground"
+                              )}
+                            >
                               {item.deviceName}
                             </h4>
                             <p className="text-sm text-muted-foreground mt-1">
@@ -310,10 +374,14 @@ export default function WishlistPage() {
 
                       <div className="flex items-center gap-4 w-full sm:w-auto">
                         <div className="text-right flex-1 sm:flex-initial">
-                          <p className={cn(
-                            "text-lg font-semibold",
-                            isOutOfStock ? "text-muted-foreground" : "text-foreground"
-                          )}>
+                          <p
+                            className={cn(
+                              "text-lg font-semibold",
+                              isOutOfStock
+                                ? "text-muted-foreground"
+                                : "text-foreground"
+                            )}
+                          >
                             {formatPrice(currentPrice)}
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -325,7 +393,9 @@ export default function WishlistPage() {
                           {isOutOfStock ? (
                             <div className="flex items-center gap-2 text-destructive">
                               <AlertTriangle className="h-4 w-4" />
-                              <span className="text-sm font-medium">Out of Stock</span>
+                              <span className="text-sm font-medium">
+                                Out of Stock
+                              </span>
                             </div>
                           ) : (
                             <Button
@@ -357,7 +427,8 @@ export default function WishlistPage() {
                 <div className="border-t border-border pt-4 mt-4">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">
-                      Subtotal ({availableItems.length} available item{availableItems.length !== 1 ? 's' : ''}):
+                      Subtotal ({availableItems.length} available item
+                      {availableItems.length !== 1 ? "s" : ""}):
                     </span>
                     <span className="text-xl font-bold text-primary">
                       {formatPrice(subtotal)}
@@ -365,7 +436,8 @@ export default function WishlistPage() {
                   </div>
                   {wishlistItems.length !== availableItems.length && (
                     <p className="text-sm text-destructive mt-2">
-                      {wishlistItems.length - availableItems.length} item(s) are out of stock
+                      {wishlistItems.length - availableItems.length} item(s) are
+                      out of stock
                     </p>
                   )}
                 </div>
@@ -381,10 +453,7 @@ export default function WishlistPage() {
         item={selectedItem}
       />
 
-      <LoginModal
-        open={showLoginModal}
-        onOpenChange={setShowLoginModal}
-      />
+      <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
     </UserLayout>
   );
 }

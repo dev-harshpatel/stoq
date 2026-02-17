@@ -13,7 +13,8 @@ import { useAuth } from "@/lib/auth/context";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { useNavigation } from "@/contexts/NavigationContext";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -27,27 +28,19 @@ export function Navbar({ onMenuClick, className }: NavbarProps) {
   const { profile } = useUserProfile();
   const { startNavigation } = useNavigation();
   const router = useRouter();
-  const { toast } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
       await signOut();
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
+      toast.success(TOAST_MESSAGES.LOGOUT_SUCCESS);
       startNavigation();
       router.push("/");
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to logout";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+        error instanceof Error ? error.message : TOAST_MESSAGES.LOGOUT_FAILED;
+      toast.error(errorMessage);
       setIsLoggingOut(false);
     }
   };
@@ -67,7 +60,7 @@ export function Navbar({ onMenuClick, className }: NavbarProps) {
     <header
       className={cn(
         "sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-sm",
-        className,
+        className
       )}
     >
       <div className="flex h-16 items-center justify-between px-4 lg:px-6">

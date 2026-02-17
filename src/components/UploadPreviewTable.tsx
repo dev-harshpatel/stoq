@@ -1,23 +1,26 @@
-'use client'
+"use client";
 
-import { ParsedProduct } from '@/types/upload';
-import { formatPrice } from '@/data/inventory';
-import { GradeBadge } from './GradeBadge';
-import { AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ParsedProduct } from "@/types/upload";
+import { formatPrice } from "@/lib/utils";
+import { GradeBadge } from "./GradeBadge";
+import { AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 
 interface UploadPreviewTableProps {
   products: ParsedProduct[];
   className?: string;
 }
 
-export function UploadPreviewTable({ products, className }: UploadPreviewTableProps) {
+export function UploadPreviewTable({
+  products,
+  className,
+}: UploadPreviewTableProps) {
   if (products.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -26,23 +29,32 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
     );
   }
 
-  const validProducts = products.filter((p) => !p.errors || p.errors.length === 0);
-  const invalidProducts = products.filter((p) => p.errors && p.errors.length > 0);
+  const validProducts = products.filter(
+    (p) => !p.errors || p.errors.length === 0
+  );
+  const invalidProducts = products.filter(
+    (p) => p.errors && p.errors.length > 0
+  );
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn("space-y-4", className)}>
       {/* Summary */}
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-4">
           <span className="text-muted-foreground">
-            Total: <span className="font-medium text-foreground">{products.length}</span> products
+            Total:{" "}
+            <span className="font-medium text-foreground">
+              {products.length}
+            </span>{" "}
+            products
           </span>
           <span className="text-success">
             Valid: <span className="font-medium">{validProducts.length}</span>
           </span>
           {invalidProducts.length > 0 && (
             <span className="text-destructive">
-              Errors: <span className="font-medium">{invalidProducts.length}</span>
+              Errors:{" "}
+              <span className="font-medium">{invalidProducts.length}</span>
             </span>
           )}
         </div>
@@ -94,9 +106,10 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                   <tr
                     key={index}
                     className={cn(
-                      'transition-colors',
-                      index % 2 === 1 && 'bg-table-zebra',
-                      hasErrors && 'bg-destructive/5 border-l-4 border-l-destructive'
+                      "transition-colors",
+                      index % 2 === 1 && "bg-table-zebra",
+                      hasErrors &&
+                        "bg-destructive/5 border-l-4 border-l-destructive"
                     )}
                   >
                     <td className="px-6 py-4 text-sm text-muted-foreground">
@@ -104,7 +117,9 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{product.deviceName}</span>
+                        <span className="font-medium text-foreground">
+                          {product.deviceName}
+                        </span>
                         {hasErrors && (
                           <TooltipProvider>
                             <Tooltip>
@@ -113,7 +128,9 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                               </TooltipTrigger>
                               <TooltipContent className="max-w-xs">
                                 <div className="space-y-1">
-                                  <p className="font-semibold">Validation Errors:</p>
+                                  <p className="font-semibold">
+                                    Validation Errors:
+                                  </p>
                                   <ul className="list-disc list-inside text-xs space-y-0.5">
                                     {product.errors?.map((error, i) => (
                                       <li key={i}>{error}</li>
@@ -126,13 +143,19 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-foreground">{product.brand}</td>
+                    <td className="px-4 py-4 text-sm text-foreground">
+                      {product.brand}
+                    </td>
                     <td className="px-4 py-4 text-center">
                       <GradeBadge grade={product.grade} />
                     </td>
-                    <td className="px-4 py-4 text-sm text-foreground">{product.storage}</td>
+                    <td className="px-4 py-4 text-sm text-foreground">
+                      {product.storage}
+                    </td>
                     <td className="px-4 py-4 text-center">
-                      <span className="font-semibold text-foreground">{product.quantity}</span>
+                      <span className="font-semibold text-foreground">
+                        {product.quantity}
+                      </span>
                     </td>
                     <td className="px-4 py-4 text-right">
                       <span className="font-medium text-foreground">
@@ -151,9 +174,13 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                     </td>
                     <td className="px-6 py-4 text-center">
                       {hasErrors ? (
-                        <span className="text-xs text-destructive font-medium">Error</span>
+                        <span className="text-xs text-destructive font-medium">
+                          Error
+                        </span>
                       ) : (
-                        <span className="text-xs text-success font-medium">Valid</span>
+                        <span className="text-xs text-success font-medium">
+                          Valid
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -173,16 +200,18 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
             <div
               key={index}
               className={cn(
-                'p-4 bg-card rounded-lg border',
+                "p-4 bg-card rounded-lg border",
                 hasErrors
-                  ? 'border-destructive border-l-4 bg-destructive/5'
-                  : 'border-border'
+                  ? "border-destructive border-l-4 bg-destructive/5"
+                  : "border-border"
               )}
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-foreground">{product.deviceName}</h3>
+                    <h3 className="font-medium text-foreground">
+                      {product.deviceName}
+                    </h3>
                     {hasErrors && (
                       <TooltipProvider>
                         <Tooltip>
@@ -191,7 +220,9 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <div className="space-y-1">
-                              <p className="font-semibold">Validation Errors:</p>
+                              <p className="font-semibold">
+                                Validation Errors:
+                              </p>
                               <ul className="list-disc list-inside text-xs space-y-0.5">
                                 {product.errors?.map((error, i) => (
                                   <li key={i}>{error}</li>
@@ -208,9 +239,13 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
                   </span>
                 </div>
                 {hasErrors ? (
-                  <span className="text-xs text-destructive font-medium">Error</span>
+                  <span className="text-xs text-destructive font-medium">
+                    Error
+                  </span>
                 ) : (
-                  <span className="text-xs text-success font-medium">Valid</span>
+                  <span className="text-xs text-success font-medium">
+                    Valid
+                  </span>
                 )}
               </div>
 
@@ -226,35 +261,55 @@ export function UploadPreviewTable({ products, className }: UploadPreviewTablePr
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">Brand</span>
-                  <span className="font-medium text-foreground">{product.brand}</span>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    Brand
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {product.brand}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">Grade</span>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    Grade
+                  </span>
                   <GradeBadge grade={product.grade} />
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">Storage</span>
-                  <span className="font-medium text-foreground">{product.storage}</span>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    Storage
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {product.storage}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">Quantity</span>
-                  <span className="font-semibold text-foreground">{product.quantity}</span>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    Quantity
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {product.quantity}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">Purchase Price</span>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    Purchase Price
+                  </span>
                   <span className="font-medium text-foreground">
                     {formatPrice(product.purchasePrice)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">Selling Price</span>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    Selling Price
+                  </span>
                   <span className="font-medium text-foreground">
                     {formatPrice(product.sellingPrice)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground block mb-1">HST</span>
+                  <span className="text-xs text-muted-foreground block mb-1">
+                    HST
+                  </span>
                   <span className="font-medium text-foreground">
                     {formatPrice(product.hst)}
                   </span>

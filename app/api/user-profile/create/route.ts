@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase/admin'
-import { Database } from '@/lib/database.types'
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase/client/admin";
+import { Database } from "@/lib/database.types";
 
-type UserProfileRow = Database['public']['Tables']['user_profiles']['Row']
-type InsertType = Database['public']['Tables']['user_profiles']['Insert']
+type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"];
+type InsertType = Database["public"]["Tables"]["user_profiles"]["Insert"];
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const body = await request.json();
     const {
       userId,
       firstName,
@@ -22,23 +22,23 @@ export async function POST(request: NextRequest) {
       businessYears,
       businessWebsite,
       businessEmail,
-      role = 'user',
-    } = body
+      role = "user",
+    } = body;
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { error: "User ID is required" },
         { status: 400 }
-      )
+      );
     }
 
     // Use admin client to bypass RLS
     const { data, error } = await supabaseAdmin
-      .from('user_profiles')
+      .from("user_profiles")
       .insert({
         user_id: userId,
         role,
-        approval_status: 'pending',
+        approval_status: "pending",
         approval_status_updated_at: null,
         first_name: firstName || null,
         last_name: lastName || null,
@@ -54,20 +54,17 @@ export async function POST(request: NextRequest) {
         business_email: businessEmail || null,
       } as InsertType)
       .select()
-      .single()
+      .single();
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ profile: data }, { status: 201 })
+    return NextResponse.json({ profile: data }, { status: 201 });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error.message || "Internal server error" },
       { status: 500 }
-    )
+    );
   }
 }

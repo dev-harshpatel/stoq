@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { FilterBar, FilterValues } from "@/components/FilterBar";
+import { useState } from "react";
+import {
+  FilterBar,
+  FilterValues,
+  defaultFilters,
+  buildServerFilters,
+} from "@/components/FilterBar";
 import { ExportActions } from "@/components/ExportActions";
 import { InventoryTable } from "@/components/InventoryTable";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -13,74 +18,31 @@ import { usePageParam } from "@/hooks/use-page-param";
 import { queryKeys } from "@/lib/query-keys";
 import {
   fetchPaginatedInventory,
-  fetchFilterOptions,
   fetchAllFilteredInventory,
-  InventoryFilters,
 } from "@/lib/supabase/queries";
-
-const defaultFilters: FilterValues = {
-  search: "",
-  brand: "all",
-  grade: "all",
-  storage: "all",
-  priceRange: "all",
-  stockStatus: "all",
-};
+import { useFilterOptions } from "@/hooks/use-filter-options";
 
 export default function Inventory() {
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
-  const [filterOptions, setFilterOptions] = useState<{
-    brands: string[];
-    storageOptions: string[];
-  }>({ brands: [], storageOptions: [] });
+  const filterOptions = useFilterOptions();
 
-  const debouncedSearch = useDebounce(filters.search, 300);
+  const debouncedSearch = useDebounce(filters.search);
 
-  // Load filter dropdown options once on mount
-  useEffect(() => {
-    fetchFilterOptions().then(setFilterOptions);
-  }, []);
-
-  const serverFilters: InventoryFilters = {
-    search: debouncedSearch,
-    brand: filters.brand,
-    grade: filters.grade,
-    storage: filters.storage,
-    priceRange: filters.priceRange,
-    stockStatus: filters.stockStatus,
-  };
+  const serverFilters = buildServerFilters(debouncedSearch, filters);
 
   const [currentPage, setCurrentPage] = usePageParam();
   const queryKey = queryKeys.inventoryPage(currentPage, serverFilters);
 
-  const {
-    data,
-    totalCount,
-    totalPages,
-    isLoading,
-    rangeText,
-  } = usePaginatedReactQuery<InventoryItem>({
-    queryKey,
-    fetchFn: (range) => fetchPaginatedInventory(serverFilters, range),
-    currentPage,
-  });
-
-  // Reset to page 1 when filters change
   const filtersKey = JSON.stringify(serverFilters);
-  const prevFiltersRef = useRef(filtersKey);
-  useEffect(() => {
-    if (prevFiltersRef.current !== filtersKey) {
-      prevFiltersRef.current = filtersKey;
-      setCurrentPage(1);
-    }
-  }, [filtersKey, setCurrentPage]);
 
-  // Clamp page if it exceeds totalPages
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages, isLoading, setCurrentPage]);
+  const { data, totalCount, totalPages, isLoading, rangeText } =
+    usePaginatedReactQuery<InventoryItem>({
+      queryKey,
+      fetchFn: (range) => fetchPaginatedInventory(serverFilters, range),
+      currentPage,
+      setCurrentPage,
+      filtersKey,
+    });
 
   const handleResetFilters = () => {
     setFilters(defaultFilters);

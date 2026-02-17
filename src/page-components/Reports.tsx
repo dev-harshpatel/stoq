@@ -18,7 +18,8 @@ import {
 } from "recharts";
 import { useInventory } from "@/contexts/InventoryContext";
 import { useOrders } from "@/contexts/OrdersContext";
-import { getStockStatus, formatPrice } from "@/data/inventory";
+import { getStockStatus } from "@/data/inventory";
+import { formatPrice } from "@/lib/utils";
 import { Download, Calendar, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,7 +109,7 @@ export default function Reports() {
     // Filter by order status
     if (filters.orderStatus !== "all") {
       filtered = filtered.filter(
-        (order) => order.status === filters.orderStatus,
+        (order) => order.status === filters.orderStatus
       );
     }
 
@@ -149,7 +150,7 @@ export default function Reports() {
           ? Math.ceil(
               (filters.dateRange.to.getTime() -
                 filters.dateRange.from.getTime()) /
-                (1000 * 60 * 60 * 24),
+                (1000 * 60 * 60 * 24)
             )
           : 365; // Default to yearly if no range
 
@@ -225,13 +226,13 @@ export default function Reports() {
   // Stock by Status (filtered)
   const stockByStatus = useMemo(() => {
     const inStock = filteredInventory.filter(
-      (i) => getStockStatus(i.quantity) === "in-stock",
+      (i) => getStockStatus(i.quantity) === "in-stock"
     ).length;
     const lowStock = filteredInventory.filter(
-      (i) => getStockStatus(i.quantity) === "low-stock",
+      (i) => getStockStatus(i.quantity) === "low-stock"
     ).length;
     const critical = filteredInventory.filter(
-      (i) => getStockStatus(i.quantity) === "critical",
+      (i) => getStockStatus(i.quantity) === "critical"
     ).length;
     return [
       { name: "In Stock", value: inStock },
@@ -333,7 +334,7 @@ export default function Reports() {
   // Per line: (sellingPrice - pricePerUnit) * quantity.
   const profitFromOrdersStats = useMemo(() => {
     const completedOrders = filteredOrders.filter(
-      (o) => o.status === "approved" || o.status === "completed",
+      (o) => o.status === "approved" || o.status === "completed"
     );
     let totalProfit = 0;
     let orderCount = 0;
@@ -356,7 +357,7 @@ export default function Reports() {
     if (hasDateRange) {
       const daysDiff = Math.ceil(
         (filters.dateRange.to!.getTime() - filters.dateRange.from!.getTime()) /
-          (1000 * 60 * 60 * 24),
+          (1000 * 60 * 60 * 24)
       );
       if (daysDiff <= 1) periodLabel = "Profit (Day)";
       else if (daysDiff <= 7) periodLabel = "Profit (Week)";
@@ -426,7 +427,7 @@ export default function Reports() {
                     size="sm"
                     className={cn(
                       "w-full sm:w-[240px] justify-start text-left font-normal",
-                      !filters.dateRange.from && "text-muted-foreground",
+                      !filters.dateRange.from && "text-muted-foreground"
                     )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
@@ -557,7 +558,7 @@ export default function Reports() {
             <p className="text-xs text-muted-foreground mt-1">
               {
                 filteredOrders.filter(
-                  (o) => o.status === "approved" || o.status === "completed",
+                  (o) => o.status === "approved" || o.status === "completed"
                 ).length
               }{" "}
               completed orders
@@ -570,7 +571,7 @@ export default function Reports() {
                 "text-2xl font-bold mt-1",
                 estimatedProfitStats.totalProfit >= 0
                   ? "text-success"
-                  : "text-destructive",
+                  : "text-destructive"
               )}
             >
               {formatPrice(estimatedProfitStats.totalProfit)}
@@ -589,7 +590,7 @@ export default function Reports() {
                 "text-2xl font-bold mt-1",
                 profitFromOrdersStats.totalProfit >= 0
                   ? "text-success"
-                  : "text-destructive",
+                  : "text-destructive"
               )}
             >
               {formatPrice(profitFromOrdersStats.totalProfit)}

@@ -10,7 +10,7 @@ import {
   initAutocomplete,
   extractAddressComponents,
   type AddressComponents,
-} from '@/lib/googlePlaces'
+} from '@/lib/google/places'
 
 interface GoogleAddressAutocompleteProps {
   value: string

@@ -1,11 +1,17 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ShoppingCart, FileText, Heart } from "lucide-react";
 import { useWishlist } from "@/contexts/WishlistContext";
-import { InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
+import { InventoryItem, getStockStatus } from "@/data/inventory";
+import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { FilterBar, FilterValues } from "@/components/FilterBar";
+import {
+  FilterBar,
+  FilterValues,
+  defaultFilters,
+  buildServerFilters,
+} from "@/components/FilterBar";
 import { PurchaseModal } from "@/components/PurchaseModal";
 import { GradeBadge } from "@/components/GradeBadge";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -15,54 +21,33 @@ import { PaginationControls } from "@/components/PaginationControls";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/toast-messages";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePaginatedReactQuery } from "@/hooks/use-paginated-react-query";
 import { usePageParam } from "@/hooks/use-page-param";
 import { queryKeys } from "@/lib/query-keys";
 import {
   fetchPaginatedInventory,
-  fetchFilterOptions,
   fetchAllFilteredInventory,
-  InventoryFilters,
 } from "@/lib/supabase/queries";
-import { exportToPDF } from "@/lib/exportUtils";
-
-const defaultFilters: FilterValues = {
-  search: "",
-  brand: "all",
-  grade: "all",
-  storage: "all",
-  priceRange: "all",
-  stockStatus: "all",
-};
+import { useFilterOptions } from "@/hooks/use-filter-options";
+import { exportToPDF } from "@/lib/export";
 
 export default function UserProducts() {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
-  const [filterOptions, setFilterOptions] = useState<{
-    brands: string[];
-    storageOptions: string[];
-  }>({ brands: [], storageOptions: [] });
+  const filterOptions = useFilterOptions();
 
-  const debouncedSearch = useDebounce(filters.search, 300);
+  const debouncedSearch = useDebounce(filters.search);
 
-  useEffect(() => {
-    fetchFilterOptions().then(setFilterOptions);
-  }, []);
-
-  const serverFilters: InventoryFilters = {
-    search: debouncedSearch,
-    brand: filters.brand,
-    grade: filters.grade,
-    storage: filters.storage,
-    priceRange: filters.priceRange,
-    stockStatus: filters.stockStatus,
-  };
+  const serverFilters = buildServerFilters(debouncedSearch, filters);
 
   const [currentPage, setCurrentPage] = usePageParam();
   const queryKey = queryKeys.inventoryPage(currentPage, serverFilters);
+
+  const filtersKey = JSON.stringify(serverFilters);
 
   const {
     data: filteredItems,
@@ -75,24 +60,9 @@ export default function UserProducts() {
     queryKey,
     fetchFn: (range) => fetchPaginatedInventory(serverFilters, range),
     currentPage,
+    setCurrentPage,
+    filtersKey,
   });
-
-  // Reset to page 1 when filters change
-  const filtersKey = JSON.stringify(serverFilters);
-  const prevFiltersRef = useRef(filtersKey);
-  useEffect(() => {
-    if (prevFiltersRef.current !== filtersKey) {
-      prevFiltersRef.current = filtersKey;
-      setCurrentPage(1);
-    }
-  }, [filtersKey, setCurrentPage]);
-
-  // Clamp page if it exceeds totalPages
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages, isLoading, setCurrentPage]);
 
   const handleBuyClick = (item: InventoryItem) => {
     setSelectedItem(item);
@@ -121,17 +91,17 @@ export default function UserProducts() {
     try {
       const allItems = await fetchAllFilteredInventory(serverFilters);
       if (allItems.length === 0) {
-        toast.error("No data to export", {
+        toast.error(TOAST_MESSAGES.EXPORT_NO_DATA, {
           description: "Please ensure there are items to export",
         });
         return;
       }
       exportToPDF(allItems, "inventory");
-      toast.success("Export successful", {
+      toast.success(TOAST_MESSAGES.EXPORT_SUCCESS, {
         description: "Your PDF file has been downloaded",
       });
     } catch (error) {
-      toast.error("Export failed", {
+      toast.error(TOAST_MESSAGES.EXPORT_FAILED, {
         description: "There was an error exporting to PDF",
       });
     }
@@ -244,7 +214,7 @@ export default function UserProducts() {
                               "transition-colors hover:bg-table-hover cursor-pointer",
                               index % 2 === 1 && "bg-table-zebra",
                               isLowStock && "bg-destructive/[0.02]",
-                              isOutOfStock && "bg-muted/50",
+                              isOutOfStock && "bg-muted/50"
                             )}
                             onClick={() =>
                               !isOutOfStock && handleBuyClick(item)
@@ -257,7 +227,7 @@ export default function UserProducts() {
                                     "font-medium",
                                     isOutOfStock
                                       ? "text-muted-foreground"
-                                      : "text-foreground",
+                                      : "text-foreground"
                                   )}
                                 >
                                   {item.deviceName}
@@ -273,7 +243,7 @@ export default function UserProducts() {
                                 "px-4 py-4 text-center text-sm",
                                 isOutOfStock
                                   ? "text-muted-foreground"
-                                  : "text-foreground",
+                                  : "text-foreground"
                               )}
                             >
                               {item.brand}
@@ -286,7 +256,7 @@ export default function UserProducts() {
                                 "px-4 py-4 text-center text-sm",
                                 isOutOfStock
                                   ? "text-muted-foreground"
-                                  : "text-foreground",
+                                  : "text-foreground"
                               )}
                             >
                               {item.storage}
@@ -299,7 +269,7 @@ export default function UserProducts() {
                                     "text-destructive",
                                   status === "critical" && "text-destructive",
                                   status === "low-stock" && "text-warning",
-                                  status === "in-stock" && "text-foreground",
+                                  status === "in-stock" && "text-foreground"
                                 )}
                               >
                                 {item.quantity}
@@ -310,7 +280,7 @@ export default function UserProducts() {
                                 "px-4 py-4 text-center font-medium text-sm",
                                 isOutOfStock
                                   ? "text-muted-foreground"
-                                  : "text-foreground",
+                                  : "text-foreground"
                               )}
                             >
                               {formatPrice(item.sellingPrice)}
@@ -327,7 +297,7 @@ export default function UserProducts() {
                                     "h-8 w-8",
                                     isInWishlist(item.id)
                                       ? "text-destructive hover:text-destructive"
-                                      : "text-muted-foreground hover:text-destructive",
+                                      : "text-muted-foreground hover:text-destructive"
                                   )}
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -337,7 +307,7 @@ export default function UserProducts() {
                                   <Heart
                                     className={cn(
                                       "h-4 w-4",
-                                      isInWishlist(item.id) && "fill-current",
+                                      isInWishlist(item.id) && "fill-current"
                                     )}
                                   />
                                 </Button>
@@ -382,7 +352,7 @@ export default function UserProducts() {
                         "p-4 bg-card rounded-lg border border-border",
                         isLowStock &&
                           "border-destructive/20 bg-destructive/[0.02]",
-                        isOutOfStock && "bg-muted/50",
+                        isOutOfStock && "bg-muted/50"
                       )}
                     >
                       <div className="flex items-start justify-between gap-3 mb-3">
@@ -392,7 +362,7 @@ export default function UserProducts() {
                               "font-medium",
                               isOutOfStock
                                 ? "text-muted-foreground"
-                                : "text-foreground",
+                                : "text-foreground"
                             )}
                           >
                             {item.deviceName}
@@ -415,7 +385,7 @@ export default function UserProducts() {
                               "font-medium",
                               isOutOfStock
                                 ? "text-muted-foreground"
-                                : "text-foreground",
+                                : "text-foreground"
                             )}
                           >
                             {item.brand}
@@ -436,7 +406,7 @@ export default function UserProducts() {
                               "font-medium",
                               isOutOfStock
                                 ? "text-muted-foreground"
-                                : "text-foreground",
+                                : "text-foreground"
                             )}
                           >
                             {item.storage}
@@ -452,7 +422,7 @@ export default function UserProducts() {
                               status === "out-of-stock" && "text-destructive",
                               status === "critical" && "text-destructive",
                               status === "low-stock" && "text-warning",
-                              status === "in-stock" && "text-foreground",
+                              status === "in-stock" && "text-foreground"
                             )}
                           >
                             {item.quantity}
@@ -467,7 +437,7 @@ export default function UserProducts() {
                               "font-medium",
                               isOutOfStock
                                 ? "text-muted-foreground"
-                                : "text-foreground",
+                                : "text-foreground"
                             )}
                           >
                             {formatPrice(item.sellingPrice)}
@@ -483,14 +453,14 @@ export default function UserProducts() {
                             "h-10 w-10 flex-shrink-0",
                             isInWishlist(item.id)
                               ? "text-destructive hover:text-destructive border-destructive/20"
-                              : "text-muted-foreground hover:text-destructive",
+                              : "text-muted-foreground hover:text-destructive"
                           )}
                           onClick={() => toggleWishlist(item)}
                         >
                           <Heart
                             className={cn(
                               "h-5 w-5",
-                              isInWishlist(item.id) && "fill-current",
+                              isInWishlist(item.id) && "fill-current"
                             )}
                           />
                         </Button>

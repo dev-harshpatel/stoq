@@ -1,15 +1,15 @@
-import { useState } from 'react';
-import { Search, Filter, X, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState } from "react";
+import { Search, Filter, X, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export interface FilterValues {
   search: string;
@@ -18,6 +18,22 @@ export interface FilterValues {
   storage: string;
   priceRange: string;
   stockStatus: string;
+}
+
+export const defaultFilters: FilterValues = {
+  search: "",
+  brand: "all",
+  grade: "all",
+  storage: "all",
+  priceRange: "all",
+  stockStatus: "all",
+};
+
+export function buildServerFilters(
+  debouncedSearch: string,
+  filters: FilterValues
+): FilterValues {
+  return { ...filters, search: debouncedSearch };
 }
 
 interface FilterBarProps {
@@ -45,18 +61,18 @@ export function FilterBar({
 
   const hasActiveFilters =
     filters.search ||
-    filters.brand !== 'all' ||
-    filters.grade !== 'all' ||
-    filters.storage !== 'all' ||
-    filters.priceRange !== 'all' ||
-    filters.stockStatus !== 'all';
+    filters.brand !== "all" ||
+    filters.grade !== "all" ||
+    filters.storage !== "all" ||
+    filters.priceRange !== "all" ||
+    filters.stockStatus !== "all";
 
   return (
     <>
       {/* Desktop Filter Bar */}
       <div
         className={cn(
-          'hidden md:flex items-center gap-4 p-4 bg-card rounded-lg shadow-soft border border-border',
+          "hidden md:flex items-center gap-4 p-4 bg-card rounded-lg shadow-soft border border-border",
           className
         )}
       >
@@ -65,12 +81,15 @@ export function FilterBar({
           <Input
             placeholder="Search device name..."
             value={filters.search}
-            onChange={(e) => handleChange('search', e.target.value)}
+            onChange={(e) => handleChange("search", e.target.value)}
             className="pl-9 bg-background border-border"
           />
         </div>
 
-        <Select value={filters.brand} onValueChange={(v) => handleChange('brand', v)}>
+        <Select
+          value={filters.brand}
+          onValueChange={(v) => handleChange("brand", v)}
+        >
           <SelectTrigger className="w-36 bg-background border-border">
             <SelectValue placeholder="Brand" />
           </SelectTrigger>
@@ -84,7 +103,10 @@ export function FilterBar({
           </SelectContent>
         </Select>
 
-        <Select value={filters.grade} onValueChange={(v) => handleChange('grade', v)}>
+        <Select
+          value={filters.grade}
+          onValueChange={(v) => handleChange("grade", v)}
+        >
           <SelectTrigger className="w-32 bg-background border-border">
             <SelectValue placeholder="Grade" />
           </SelectTrigger>
@@ -97,7 +119,10 @@ export function FilterBar({
           </SelectContent>
         </Select>
 
-        <Select value={filters.storage} onValueChange={(v) => handleChange('storage', v)}>
+        <Select
+          value={filters.storage}
+          onValueChange={(v) => handleChange("storage", v)}
+        >
           <SelectTrigger className="w-36 bg-background border-border">
             <SelectValue placeholder="Storage" />
           </SelectTrigger>
@@ -111,7 +136,10 @@ export function FilterBar({
           </SelectContent>
         </Select>
 
-        <Select value={filters.priceRange} onValueChange={(v) => handleChange('priceRange', v)}>
+        <Select
+          value={filters.priceRange}
+          onValueChange={(v) => handleChange("priceRange", v)}
+        >
           <SelectTrigger className="w-40 bg-background border-border">
             <SelectValue placeholder="Price Range" />
           </SelectTrigger>
@@ -123,7 +151,10 @@ export function FilterBar({
           </SelectContent>
         </Select>
 
-        <Select value={filters.stockStatus} onValueChange={(v) => handleChange('stockStatus', v)}>
+        <Select
+          value={filters.stockStatus}
+          onValueChange={(v) => handleChange("stockStatus", v)}
+        >
           <SelectTrigger className="w-40 bg-background border-border">
             <SelectValue placeholder="Stock Status" />
           </SelectTrigger>
@@ -147,7 +178,6 @@ export function FilterBar({
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
           </Button>
-          <Button size="sm">Apply Filters</Button>
         </div>
       </div>
 
@@ -159,11 +189,15 @@ export function FilterBar({
             <Input
               placeholder="Search device name..."
               value={filters.search}
-              onChange={(e) => handleChange('search', e.target.value)}
+              onChange={(e) => handleChange("search", e.target.value)}
               className="pl-9 bg-card border-border"
             />
           </div>
-          <Button variant="outline" size="icon" onClick={() => setMobileOpen(true)}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setMobileOpen(true)}
+          >
             <Filter className="h-4 w-4" />
           </Button>
         </div>
@@ -174,15 +208,24 @@ export function FilterBar({
             <div className="fixed inset-x-0 bottom-0 z-50 bg-card border-t border-border rounded-t-xl p-6 animate-fade-in">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold">Filters</h3>
-                <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setMobileOpen(false)}
+                >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Brand</label>
-                  <Select value={filters.brand} onValueChange={(v) => handleChange('brand', v)}>
+                  <label className="text-sm font-medium mb-2 block">
+                    Brand
+                  </label>
+                  <Select
+                    value={filters.brand}
+                    onValueChange={(v) => handleChange("brand", v)}
+                  >
                     <SelectTrigger className="w-full bg-background border-border">
                       <SelectValue placeholder="Brand" />
                     </SelectTrigger>
@@ -198,8 +241,13 @@ export function FilterBar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Grade</label>
-                  <Select value={filters.grade} onValueChange={(v) => handleChange('grade', v)}>
+                  <label className="text-sm font-medium mb-2 block">
+                    Grade
+                  </label>
+                  <Select
+                    value={filters.grade}
+                    onValueChange={(v) => handleChange("grade", v)}
+                  >
                     <SelectTrigger className="w-full bg-background border-border">
                       <SelectValue placeholder="Grade" />
                     </SelectTrigger>
@@ -214,8 +262,13 @@ export function FilterBar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Storage</label>
-                  <Select value={filters.storage} onValueChange={(v) => handleChange('storage', v)}>
+                  <label className="text-sm font-medium mb-2 block">
+                    Storage
+                  </label>
+                  <Select
+                    value={filters.storage}
+                    onValueChange={(v) => handleChange("storage", v)}
+                  >
                     <SelectTrigger className="w-full bg-background border-border">
                       <SelectValue placeholder="Storage" />
                     </SelectTrigger>
@@ -231,8 +284,13 @@ export function FilterBar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Price Range</label>
-                  <Select value={filters.priceRange} onValueChange={(v) => handleChange('priceRange', v)}>
+                  <label className="text-sm font-medium mb-2 block">
+                    Price Range
+                  </label>
+                  <Select
+                    value={filters.priceRange}
+                    onValueChange={(v) => handleChange("priceRange", v)}
+                  >
                     <SelectTrigger className="w-full bg-background border-border">
                       <SelectValue placeholder="Price Range" />
                     </SelectTrigger>
@@ -246,8 +304,13 @@ export function FilterBar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Stock Status</label>
-                  <Select value={filters.stockStatus} onValueChange={(v) => handleChange('stockStatus', v)}>
+                  <label className="text-sm font-medium mb-2 block">
+                    Stock Status
+                  </label>
+                  <Select
+                    value={filters.stockStatus}
+                    onValueChange={(v) => handleChange("stockStatus", v)}
+                  >
                     <SelectTrigger className="w-full bg-background border-border">
                       <SelectValue placeholder="Stock Status" />
                     </SelectTrigger>

@@ -15,6 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/toast-messages";
 import {
   Bell,
   Building2,
@@ -26,7 +27,12 @@ import {
   User,
   X,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client/browser";
+import {
+  ONTARIO_TIMEZONE,
+  DEFAULT_COMPANY_NAME,
+  DEFAULT_COMPANY_ADDRESS,
+} from "@/lib/constants";
 
 interface CompanySettings {
   id: string;
@@ -42,7 +48,7 @@ export default function Settings() {
   const [settings, setSettings] = useState({
     email: "admin@stoq.com",
     currency: "CAD",
-    timezone: "America/Toronto",
+    timezone: ONTARIO_TIMEZONE,
     lowStockThreshold: 5,
     criticalStockThreshold: 2,
     emailAlerts: true,
@@ -54,8 +60,8 @@ export default function Settings() {
 
   const [companySettings, setCompanySettings] = useState<CompanySettings>({
     id: "",
-    companyName: "HARI OM TRADERS LTD.",
-    companyAddress: "48 Pickard Lane, Brampton, ON, L6Y 2M5",
+    companyName: DEFAULT_COMPANY_NAME,
+    companyAddress: DEFAULT_COMPANY_ADDRESS,
     hstNumber: "",
     logoUrl: null,
   });
@@ -105,13 +111,13 @@ export default function Settings() {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
+      toast.error(TOAST_MESSAGES.SETTINGS_IMAGE_REQUIRED);
       return;
     }
 
     // Validate file size (max 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image size should be less than 2MB");
+      toast.error(TOAST_MESSAGES.SETTINGS_IMAGE_SIZE);
       return;
     }
 
@@ -160,7 +166,7 @@ export default function Settings() {
         logoUrl: urlData.publicUrl,
       });
 
-      toast.success("Logo uploaded successfully");
+      toast.success(TOAST_MESSAGES.SETTINGS_LOGO_UPLOADED);
     } catch (error) {
       console.error("Error uploading logo:", error);
       toast.error("Failed to upload logo");
@@ -200,10 +206,10 @@ export default function Settings() {
         logoUrl: null,
       });
 
-      toast.success("Logo removed successfully");
+      toast.success(TOAST_MESSAGES.SETTINGS_LOGO_REMOVED);
     } catch (error) {
       console.error("Error removing logo:", error);
-      toast.error("Failed to remove logo");
+      toast.error(TOAST_MESSAGES.SETTINGS_LOGO_REMOVE_FAILED);
     } finally {
       setIsUploadingLogo(false);
     }
@@ -230,14 +236,14 @@ export default function Settings() {
       toast.success("Company settings saved successfully");
     } catch (error) {
       console.error("Error saving company settings:", error);
-      toast.error("Failed to save company settings");
+      toast.error(TOAST_MESSAGES.SETTINGS_COMPANY_SAVE_FAILED);
     } finally {
       setIsSavingCompany(false);
     }
   };
 
   const handleSave = () => {
-    toast.success("Settings saved successfully");
+    toast.success(TOAST_MESSAGES.SETTINGS_SAVED);
   };
 
   return (
@@ -462,7 +468,7 @@ export default function Settings() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-card">
-                    <SelectItem value="America/Toronto">
+                    <SelectItem value={ONTARIO_TIMEZONE}>
                       Eastern (Toronto)
                     </SelectItem>
                     <SelectItem value="America/Vancouver">

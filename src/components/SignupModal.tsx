@@ -33,6 +33,7 @@ import { PersonalDetailsStep } from "@/components/PersonalDetailsStep";
 import { BusinessDetailsStep } from "@/components/BusinessDetailsStep";
 import { EmailConfirmationModal } from "@/components/EmailConfirmationModal";
 import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import { CheckCircle2, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
 
 interface SignupModalProps {
@@ -84,7 +85,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
       gsap.fromTo(
         stepRef.current,
         { opacity: 0, x: 50 },
-        { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" },
+        { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }
       );
     }
   }, [currentStep, open]);
@@ -183,7 +184,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
           .map((field) => fieldLabels[field]);
 
         if (errorFields.length > 0) {
-          toast.error("Please fix the following fields", {
+          toast.error(TOAST_MESSAGES.SIGNUP_FIX_FIELDS, {
             description: errorFields.join(", "),
             duration: 4000,
           });
@@ -322,7 +323,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
           }
 
           throw new Error(
-            "Failed to create user profile. Please contact support.",
+            "Failed to create user profile. Please contact support."
           );
         }
 
@@ -469,7 +470,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
           }
         }
 
-        toast.error("Signup failed", {
+        toast.error(TOAST_MESSAGES.SIGNUP_FAILED, {
           description: errorMessage,
           duration: attemptCount >= 3 ? 8000 : 5000,
         });
@@ -480,7 +481,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
           error?.message?.toLowerCase().includes("security purposes")
         ) {
           setTimeout(() => {
-            toast.info("Rate limit active", {
+            toast.info(TOAST_MESSAGES.SIGNUP_RATE_LIMIT, {
               description:
                 "For security, please wait 15-30 minutes before trying again. This limit resets automatically.",
               duration: 8000,
@@ -500,7 +501,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
       setUserEmail,
       setShowEmailConfirmation,
       form,
-    ],
+    ]
   );
 
   const handleClose = () => {
@@ -769,12 +770,16 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
                               }
 
                               toast.error("Please fix errors in Step 1", {
-                                description: `The following fields need attention: ${step1Errors.join(", ")}`,
+                                description: `The following fields need attention: ${step1Errors.join(
+                                  ", "
+                                )}`,
                                 duration: 5000,
                               });
                             } else if (step2Errors.length > 0) {
-                              toast.error("Please fix errors in this step", {
-                                description: `The following fields need attention: ${step2Errors.join(", ")}`,
+                              toast.error(TOAST_MESSAGES.SIGNUP_FIX_STEP, {
+                                description: `The following fields need attention: ${step2Errors.join(
+                                  ", "
+                                )}`,
                                 duration: 5000,
                               });
                             }

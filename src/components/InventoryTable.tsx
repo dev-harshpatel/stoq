@@ -1,4 +1,5 @@
-import { InventoryItem, formatPrice, getStockStatus } from "@/data/inventory";
+import { InventoryItem, getStockStatus } from "@/data/inventory";
+import { formatPrice } from "@/lib/utils";
 import { EmptyState } from "./EmptyState";
 import { GradeBadge } from "./GradeBadge";
 import { StatusBadge } from "./StatusBadge";
@@ -21,7 +22,7 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
       <div
         className={cn(
           "hidden md:flex md:flex-col rounded-lg border border-border bg-card h-full overflow-hidden",
-          className,
+          className
         )}
       >
         <div className="flex-1 overflow-y-auto min-h-0">
@@ -80,7 +81,7 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
                     className={cn(
                       "transition-colors hover:bg-table-hover",
                       index % 2 === 1 && "bg-table-zebra",
-                      isLowStock && "bg-destructive/[0.02]",
+                      isLowStock && "bg-destructive/[0.02]"
                     )}
                   >
                     <td className="px-6 py-4 text-center align-middle">
@@ -106,7 +107,7 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
                           "font-semibold",
                           status === "critical" && "text-destructive",
                           status === "low-stock" && "text-warning",
-                          status === "in-stock" && "text-foreground",
+                          status === "in-stock" && "text-foreground"
                         )}
                       >
                         {item.quantity}
@@ -148,7 +149,7 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
               key={item.id}
               className={cn(
                 "p-4 bg-card rounded-lg border border-border",
-                isLowStock && "border-destructive/20 bg-destructive/[0.02]",
+                isLowStock && "border-destructive/20 bg-destructive/[0.02]"
               )}
             >
               <div className="flex items-start justify-between gap-3 mb-3">
@@ -183,16 +184,7 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
                   <span className="text-xs text-muted-foreground block mb-1">
                     Qty
                   </span>
-                  <span
-                    className={cn(
-                      "font-semibold",
-                      status === "critical" && "text-destructive",
-                      status === "low-stock" && "text-warning",
-                      status === "in-stock" && "text-foreground",
-                    )}
-                  >
-                    {item.quantity}
-                  </span>
+                  <StatusBadge quantity={item.quantity} />
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground block mb-1">
@@ -200,7 +192,7 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
                   </span>
                   <span className="font-medium text-foreground">
                     {item.purchasePrice != null
-                      ? `$${item.purchasePrice}`
+                      ? formatPrice(item.purchasePrice)
                       : "—"}
                   </span>
                 </div>
@@ -217,7 +209,7 @@ export function InventoryTable({ items, className }: InventoryTableProps) {
                     Price/Unit
                   </span>
                   <span className="font-medium text-muted-foreground">
-                    ${item.pricePerUnit}
+                    {formatPrice(item.pricePerUnit)}
                   </span>
                 </div>
                 <div>

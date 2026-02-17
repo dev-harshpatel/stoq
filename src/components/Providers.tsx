@@ -11,7 +11,6 @@ import { OrdersProvider } from "@/contexts/OrdersContext";
 import { NavigationProvider } from "@/contexts/NavigationContext";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { NavigationIndicator } from "@/components/NavigationIndicator";
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { useRealtimeInvalidation } from "@/hooks/use-realtime-invalidation";
 import { useState } from "react";
@@ -53,7 +52,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
                       <OrdersProvider>
                         {children}
                         <NavigationIndicator />
-                        <Toaster />
                         <Sonner />
                       </OrdersProvider>
                     </WishlistProvider>

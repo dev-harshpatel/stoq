@@ -22,9 +22,9 @@ import {
   storedToCartItems,
   mergeCarts,
   StoredCartItem,
-} from "@/lib/cartPersistence";
-import { getAvailableQuantityForUser } from "@/lib/orderUtils";
-import { getTaxInfo, calculateTax } from "@/lib/taxUtils";
+} from "@/lib/persistence/cart";
+import { getAvailableQuantityForUser } from "@/lib/utils/order";
+import { getTaxInfo, calculateTax } from "@/lib/tax";
 
 export interface CartItem {
   item: InventoryItem;

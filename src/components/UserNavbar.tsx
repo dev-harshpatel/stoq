@@ -37,6 +37,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 
 interface UserNavbarProps {
   className?: string;
@@ -84,7 +85,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
 
     return cn(
       "cursor-pointer",
-      isActive && "bg-primary/10 text-primary font-medium pointer-events-none",
+      isActive && "bg-primary/10 text-primary font-medium pointer-events-none"
     );
   };
 
@@ -92,7 +93,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
     setIsLoggingOut(true);
     try {
       await signOut();
-      toast.success("Logged out", {
+      toast.success(TOAST_MESSAGES.LOGOUT_SUCCESS, {
         description: "You have been successfully logged out.",
       });
       // Reset state before redirect to prevent stuck loader
@@ -103,7 +104,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to logout";
-      toast.error("Logout failed", {
+      toast.error(TOAST_MESSAGES.LOGOUT_FAILED, {
         description: errorMessage,
       });
       setIsLoggingOut(false);
@@ -119,7 +120,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
       <header
         className={cn(
           "sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-sm",
-          className,
+          className
         )}
       >
         <div className="flex h-16 items-center justify-between px-4 lg:px-6">
@@ -350,7 +351,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
       <div
         className={cn(
           "md:hidden fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-card border-r border-border shadow-lg overflow-y-auto z-[9999] transition-transform duration-300 ease-out",
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex flex-col h-full">
@@ -386,7 +387,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                 isPathActive("/user/grades")
                   ? "text-primary bg-primary/10"
                   : "text-foreground hover:bg-muted",
-                isPathActive("/user/grades") && "pointer-events-none",
+                isPathActive("/user/grades") && "pointer-events-none"
               )}
             >
               <BookOpen className="h-4 w-4" />
@@ -442,7 +443,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                     "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
                     isPathActive("/user/profile")
                       ? "text-primary bg-primary/10 pointer-events-none"
-                      : "text-foreground hover:bg-muted",
+                      : "text-foreground hover:bg-muted"
                   )}
                 >
                   <UserCircle className="h-4 w-4" />
@@ -462,7 +463,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                     "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
                     isPathActive("/user/wishlist")
                       ? "text-primary bg-primary/10 pointer-events-none"
-                      : "text-foreground hover:bg-muted",
+                      : "text-foreground hover:bg-muted"
                   )}
                 >
                   <Heart className="h-4 w-4" />
@@ -490,7 +491,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                     "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
                     isPathActive("/user/stats")
                       ? "text-primary bg-primary/10 pointer-events-none"
-                      : "text-foreground hover:bg-muted",
+                      : "text-foreground hover:bg-muted"
                   )}
                 >
                   <BarChart3 className="h-4 w-4" />
@@ -510,7 +511,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                     "text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2.5 rounded-lg text-left",
                     isPathActive("/user/orders")
                       ? "text-primary bg-primary/10 pointer-events-none"
-                      : "text-foreground hover:bg-muted",
+                      : "text-foreground hover:bg-muted"
                   )}
                 >
                   <FileText className="h-4 w-4" />
@@ -531,7 +532,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                     isPathActive("/contact")
                       ? "text-primary bg-primary/10"
                       : "text-foreground hover:bg-muted",
-                    isPathActive("/contact") && "pointer-events-none",
+                    isPathActive("/contact") && "pointer-events-none"
                   )}
                 >
                   <Mail className="h-4 w-4" />

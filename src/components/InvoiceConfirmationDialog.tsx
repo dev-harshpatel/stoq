@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   AlertDialog,
@@ -11,7 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Order } from "@/types/order";
-import { formatPrice } from "@/data/inventory";
+import { formatPrice } from "@/lib/utils";
 
 interface InvoiceConfirmationDialogProps {
   open: boolean;
@@ -34,23 +34,32 @@ export function InvoiceConfirmationDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Confirm Invoice</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to confirm this invoice? Once confirmed, the customer will be able to download it.
+            Are you sure you want to confirm this invoice? Once confirmed, the
+            customer will be able to download it.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        
+
         {order.invoiceNumber && (
           <div className="py-4 space-y-2">
             <div className="text-sm">
-              <span className="font-medium text-foreground">Invoice Number:</span>
-              <span className="ml-2 text-muted-foreground">{order.invoiceNumber}</span>
+              <span className="font-medium text-foreground">
+                Invoice Number:
+              </span>
+              <span className="ml-2 text-muted-foreground">
+                {order.invoiceNumber}
+              </span>
             </div>
             <div className="text-sm">
               <span className="font-medium text-foreground">Total Amount:</span>
-              <span className="ml-2 text-muted-foreground">{formatPrice(order.totalPrice)}</span>
+              <span className="ml-2 text-muted-foreground">
+                {formatPrice(order.totalPrice)}
+              </span>
             </div>
             {order.invoiceDate && (
               <div className="text-sm">
-                <span className="font-medium text-foreground">Invoice Date:</span>
+                <span className="font-medium text-foreground">
+                  Invoice Date:
+                </span>
                 <span className="ml-2 text-muted-foreground">
                   {new Date(order.invoiceDate).toLocaleDateString()}
                 </span>

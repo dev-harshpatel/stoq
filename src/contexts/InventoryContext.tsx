@@ -1,13 +1,21 @@
-'use client'
+"use client";
 
-import { InventoryItem } from '@/data/inventory';
-import { Database } from '@/lib/database.types';
-import { supabase } from '@/lib/supabase/client';
-import { useAuth } from '@/lib/auth/context';
-import { useRealtimeContext } from '@/contexts/RealtimeContext';
-import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
-import { UploadHistory, BulkInsertResult } from '@/types/upload';
-import { dbRowToInventoryItem } from '@/lib/supabase/queries';
+import { InventoryItem } from "@/data/inventory";
+import { Database } from "@/lib/database.types";
+import { supabase } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/context";
+import { useRealtimeContext } from "@/contexts/RealtimeContext";
+import {
+  ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import { UploadHistory, BulkInsertResult } from "@/types/upload";
+import { dbRowToInventoryItem } from "@/lib/supabase/queries";
+import { BULK_INSERT_BATCH_SIZE, INVENTORY_SORT_ORDER } from "@/lib/constants";
 
 interface InventoryContextType {
   inventory: InventoryItem[];
@@ -20,27 +28,35 @@ interface InventoryContextType {
   isLoading: boolean;
 }
 
-const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
+const InventoryContext = createContext<InventoryContextType | undefined>(
+  undefined
+);
 
 interface InventoryProviderProps {
   children: ReactNode;
 }
 
-type InventoryUpdate = Database['public']['Tables']['inventory']['Update'];
+type InventoryUpdate = Database["public"]["Tables"]["inventory"]["Update"];
 
-export const toInventoryUpdate = (updates: Partial<InventoryItem>): InventoryUpdate => {
+const toInventoryUpdate = (
+  updates: Partial<InventoryItem>
+): InventoryUpdate => {
   const updateData: InventoryUpdate = {};
 
   if (updates.brand !== undefined) updateData.brand = updates.brand;
-  if (updates.deviceName !== undefined) updateData.device_name = updates.deviceName;
+  if (updates.deviceName !== undefined)
+    updateData.device_name = updates.deviceName;
   if (updates.grade !== undefined) updateData.grade = updates.grade;
-  if (updates.lastUpdated !== undefined) updateData.last_updated = updates.lastUpdated;
-  if (updates.priceChange !== undefined) updateData.price_change = updates.priceChange ?? null;
+  if (updates.lastUpdated !== undefined)
+    updateData.last_updated = updates.lastUpdated;
+  if (updates.priceChange !== undefined)
+    updateData.price_change = updates.priceChange ?? null;
   if (updates.pricePerUnit !== undefined) {
     updateData.price_per_unit = Number(updates.pricePerUnit);
   }
   if (updates.purchasePrice !== undefined) {
-    updateData.purchase_price = updates.purchasePrice != null ? Number(updates.purchasePrice) : null;
+    updateData.purchase_price =
+      updates.purchasePrice != null ? Number(updates.purchasePrice) : null;
   }
   if (updates.hst !== undefined) {
     updateData.hst = updates.hst != null ? Number(updates.hst) : null;
@@ -54,6 +70,24 @@ export const toInventoryUpdate = (updates: Partial<InventoryItem>): InventoryUpd
   return updateData;
 };
 
+function productToInsertRow(product: InventoryItem) {
+  return {
+    device_name: product.deviceName,
+    brand: product.brand,
+    grade: product.grade,
+    storage: product.storage,
+    quantity: product.quantity,
+    price_per_unit: product.pricePerUnit,
+    purchase_price: product.purchasePrice ?? null,
+    hst: product.hst ?? null,
+    selling_price: product.sellingPrice,
+    last_updated: product.lastUpdated || "Just now",
+    price_change: product.priceChange ?? null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
 export const InventoryProvider = ({ children }: InventoryProviderProps) => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,13 +95,13 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
   const { inventoryVersion } = useRealtimeContext();
 
   // Load inventory from Supabase
-  const loadInventory = async () => {
+  const loadInventory = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('inventory')
-        .select('*')
-        .order('created_at', { ascending: true })
-        .order('id', { ascending: true });
+        .from("inventory")
+        .select("*")
+        .order("created_at", INVENTORY_SORT_ORDER.created_at)
+        .order("id", INVENTORY_SORT_ORDER.id);
 
       if (error) {
         setInventory([]);
@@ -83,7 +117,7 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
     } catch (error) {
       setInventory([]);
     }
-  };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -107,191 +141,170 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
     if (inventoryVersion > 0) {
       loadInventory();
     }
-  }, [inventoryVersion]);
+  }, [inventoryVersion, loadInventory]);
 
-  const updateProduct = async (id: string, updates: Partial<InventoryItem>) => {
-    try {
-      const updateData: InventoryUpdate = toInventoryUpdate({
-        ...updates,
-        lastUpdated: 'Just now',
-      });
-      updateData.updated_at = new Date().toISOString();
+  const updateProduct = useCallback(
+    async (id: string, updates: Partial<InventoryItem>) => {
+      try {
+        const updateData: InventoryUpdate = toInventoryUpdate({
+          ...updates,
+          lastUpdated: "Just now",
+        });
+        updateData.updated_at = new Date().toISOString();
 
-      const { error } = await (supabase
-        .from('inventory') as any)
-        .update(updateData)
-        .eq('id', id);
+        const { error } = await (supabase.from("inventory") as any)
+          .update(updateData)
+          .eq("id", id);
 
-      if (error) {
+        if (error) {
+          throw error;
+        }
+
+        // Update local state
+        setInventory((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? { ...item, ...updates, lastUpdated: "Just now" }
+              : item
+          )
+        );
+      } catch (error) {
         throw error;
       }
+    },
+    []
+  );
 
-      // Update local state
-      setInventory((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? { ...item, ...updates, lastUpdated: 'Just now' }
-            : item
-        )
-      );
-    } catch (error) {
-      throw error;
-    }
-  };
+  const decreaseQuantity = useCallback(
+    async (id: string, amount: number) => {
+      try {
+        const item = inventory.find((i) => i.id === id);
+        if (!item) {
+          throw new Error("Product not found");
+        }
 
-  const decreaseQuantity = async (id: string, amount: number) => {
-    try {
-      const item = inventory.find((i) => i.id === id);
-      if (!item) {
-        throw new Error('Product not found');
-      }
+        const newQuantity = Math.max(0, item.quantity - amount);
 
-      const newQuantity = Math.max(0, item.quantity - amount);
+        const updateData: InventoryUpdate = {
+          quantity: newQuantity,
+          last_updated: "Just now",
+          updated_at: new Date().toISOString(),
+        };
 
-      const updateData: InventoryUpdate = {
-        quantity: newQuantity,
-        last_updated: 'Just now',
-        updated_at: new Date().toISOString(),
-      };
+        const { error } = await (supabase.from("inventory") as any)
+          .update(updateData)
+          .eq("id", id);
 
-      const { error } = await (supabase
-        .from('inventory') as any)
-        .update(updateData)
-        .eq('id', id);
+        if (error) {
+          throw error;
+        }
 
-      if (error) {
+        // Update local state
+        setInventory((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  quantity: newQuantity,
+                  lastUpdated: "Just now",
+                }
+              : item
+          )
+        );
+      } catch (error) {
         throw error;
       }
+    },
+    [inventory]
+  );
 
-      // Update local state
-      setInventory((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantity: newQuantity,
-                lastUpdated: 'Just now',
-              }
-            : item
-        )
-      );
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const resetInventory = async () => {
+  const resetInventory = useCallback(async () => {
     setIsLoading(true);
     await loadInventory();
     setIsLoading(false);
-  };
+  }, [loadInventory]);
 
   // Silent refresh - doesn't show loading state (for auto-refresh)
-  const refreshInventory = async () => {
+  const refreshInventory = useCallback(async () => {
     await loadInventory();
-  };
+  }, [loadInventory]);
 
-  const bulkInsertProducts = async (products: InventoryItem[]): Promise<BulkInsertResult> => {
-    if (!user?.id) {
-      throw new Error('User must be authenticated to upload products');
-    }
+  const bulkInsertProducts = useCallback(
+    async (products: InventoryItem[]): Promise<BulkInsertResult> => {
+      if (!user?.id) {
+        throw new Error("User must be authenticated to upload products");
+      }
 
-    const result: BulkInsertResult = {
-      success: 0,
-      failed: 0,
-      errors: [],
-    };
+      const result: BulkInsertResult = {
+        success: 0,
+        failed: 0,
+        errors: [],
+      };
 
-    // Insert products in batches of 50 to avoid timeouts
-    const batchSize = 50;
-    for (let i = 0; i < products.length; i += batchSize) {
-      const batch = products.slice(i, i + batchSize);
-      
-      try {
-        // Map to database format
-        const insertData = batch.map((product) => {
-          return {
-            device_name: product.deviceName,
-            brand: product.brand,
-            grade: product.grade,
-            storage: product.storage,
-            quantity: product.quantity,
-            price_per_unit: product.pricePerUnit,
-            purchase_price: product.purchasePrice ?? null,
-            hst: product.hst ?? null,
-            selling_price: product.sellingPrice,
-            last_updated: product.lastUpdated || 'Just now',
-            price_change: product.priceChange ?? null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-        });
+      // Insert products in batches to avoid timeouts
+      const batchSize = BULK_INSERT_BATCH_SIZE;
+      for (let i = 0; i < products.length; i += batchSize) {
+        const batch = products.slice(i, i + batchSize);
 
-        const { data, error } = await (supabase
-          .from('inventory') as any)
-          .insert(insertData)
-          .select();
+        try {
+          // Map to database format
+          const insertData = batch.map(productToInsertRow);
 
-        if (error) {
-          // If batch fails, try inserting individually
-          for (const product of batch) {
-            try {
-              const { error: individualError } = await (supabase
-                .from('inventory') as any)
-                .insert({
-                  device_name: product.deviceName,
-                  brand: product.brand,
-                  grade: product.grade,
-                  storage: product.storage,
-                  quantity: product.quantity,
-                  price_per_unit: product.pricePerUnit,
-                  purchase_price: product.purchasePrice ?? null,
-                  hst: product.hst ?? null,
-                  selling_price: product.sellingPrice,
-                  last_updated: product.lastUpdated || 'Just now',
-                  price_change: product.priceChange ?? null,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                });
+          const { data, error } = await (supabase.from("inventory") as any)
+            .insert(insertData)
+            .select();
 
-              if (individualError) {
+          if (error) {
+            // If batch fails, try inserting individually
+            for (const product of batch) {
+              try {
+                const { error: individualError } = await (
+                  supabase.from("inventory") as any
+                ).insert(productToInsertRow(product));
+
+                if (individualError) {
+                  result.failed++;
+                  result.errors.push(
+                    `${product.deviceName} ${product.storage}: ${individualError.message}`
+                  );
+                } else {
+                  result.success++;
+                }
+              } catch (err) {
                 result.failed++;
                 result.errors.push(
-                  `${product.deviceName} ${product.storage}: ${individualError.message}`
+                  `${product.deviceName} ${product.storage}: ${
+                    err instanceof Error ? err.message : "Unknown error"
+                  }`
                 );
-              } else {
-                result.success++;
               }
-            } catch (err) {
-              result.failed++;
-              result.errors.push(
-                `${product.deviceName} ${product.storage}: ${err instanceof Error ? err.message : 'Unknown error'}`
-              );
             }
+          } else {
+            result.success += batch.length;
           }
-        } else {
-          result.success += batch.length;
+        } catch (error) {
+          result.failed += batch.length;
+          result.errors.push(
+            `Batch ${Math.floor(i / batchSize) + 1}: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`
+          );
         }
-      } catch (error) {
-        result.failed += batch.length;
-        result.errors.push(
-          `Batch ${Math.floor(i / batchSize) + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
       }
-    }
 
-    // Refresh inventory after bulk insert
-    await loadInventory();
+      // Refresh inventory after bulk insert
+      await loadInventory();
 
-    return result;
-  };
+      return result;
+    },
+    [user?.id, loadInventory]
+  );
 
-  const getUploadHistory = async (): Promise<UploadHistory[]> => {
+  const getUploadHistory = useCallback(async (): Promise<UploadHistory[]> => {
     try {
-      const { data, error } = await (supabase
-        .from('product_uploads') as any)
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await (supabase.from("product_uploads") as any)
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) {
         throw error;
@@ -308,7 +321,7 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
         totalProducts: row.total_products,
         successfulInserts: row.successful_inserts,
         failedInserts: row.failed_inserts,
-        uploadStatus: row.upload_status as 'pending' | 'completed' | 'failed',
+        uploadStatus: row.upload_status as "pending" | "completed" | "failed",
         errorMessage: row.error_message ?? undefined,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -316,7 +329,7 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
     } catch (error) {
       throw error;
     }
-  };
+  }, []);
 
   return (
     <InventoryContext.Provider
@@ -339,8 +352,7 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
 export const useInventory = () => {
   const context = useContext(InventoryContext);
   if (context === undefined) {
-    throw new Error('useInventory must be used within an InventoryProvider');
+    throw new Error("useInventory must be used within an InventoryProvider");
   }
   return context;
 };
-

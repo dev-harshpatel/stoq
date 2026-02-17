@@ -219,7 +219,7 @@ It imports `useInventory()` for stock checks. The modal is always mounted in the
 
 ## 6. Hardcoded Values That Should Be Constants
 
-| Value | Occurrences | Should Be |
+| Value | Occurrences | Should Be |  
 |-------|-------------|-----------|
 | `"America/Toronto"` | 6 places across 4 files | `ONTARIO_TIMEZONE` constant |
 | `"HARI OM TRADERS LTD."` + address | Duplicated in `invoicePdfUtils.tsx` + `Settings.tsx` | Company config constant |

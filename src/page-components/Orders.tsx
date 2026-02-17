@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, RotateCcw, Package, AlertCircle, Search } from "lucide-react";
+import { Eye, RotateCcw, Search } from "lucide-react";
+import { RejectionNote } from "@/components/RejectionNote";
 import { Input } from "@/components/ui/input";
-import { formatPrice } from "@/data/inventory";
-import { cn, formatDateInOntario } from "@/lib/utils";
+import { formatPrice, formatDateInOntario } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { OrderDetailsModal } from "@/components/OrderDetailsModal";
 import { EmptyState } from "@/components/EmptyState";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -24,36 +25,7 @@ import { usePaginatedReactQuery } from "@/hooks/use-paginated-react-query";
 import { usePageParam } from "@/hooks/use-page-param";
 import { queryKeys } from "@/lib/query-keys";
 import { fetchPaginatedOrders, OrdersFilters } from "@/lib/supabase/queries";
-
-const getStatusColor = (status: OrderStatus) => {
-  switch (status) {
-    case "pending":
-      return "bg-warning/10 text-warning border-warning/20";
-    case "approved":
-      return "bg-success/10 text-success border-success/20";
-    case "rejected":
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    case "completed":
-      return "bg-primary/10 text-primary border-primary/20";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-};
-
-const getStatusLabel = (status: OrderStatus) => {
-  switch (status) {
-    case "pending":
-      return "Pending";
-    case "approved":
-      return "Approved";
-    case "rejected":
-      return "Rejected";
-    case "completed":
-      return "Completed";
-    default:
-      return status;
-  }
-};
+import { getStatusColor, getStatusLabel } from "@/lib/utils/status";
 
 export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -63,7 +35,7 @@ export default function Orders() {
   const [userEmails, setUserEmails] = useState<Record<string, string>>({});
   const [loadingEmails, setLoadingEmails] = useState(false);
 
-  const debouncedSearch = useDebounce(searchQuery, 300);
+  const debouncedSearch = useDebounce(searchQuery);
 
   const serverFilters: OrdersFilters = {
     search: debouncedSearch,
@@ -72,6 +44,8 @@ export default function Orders() {
 
   const [currentPage, setCurrentPage] = usePageParam();
   const queryKey = queryKeys.ordersPage(currentPage, serverFilters);
+
+  const filtersKey = JSON.stringify(serverFilters);
 
   const {
     data: filteredOrders,
@@ -83,29 +57,14 @@ export default function Orders() {
     queryKey,
     fetchFn: (range) => fetchPaginatedOrders(serverFilters, range),
     currentPage,
+    setCurrentPage,
+    filtersKey,
   });
-
-  // Reset to page 1 when filters change
-  const filtersKey = JSON.stringify(serverFilters);
-  const prevFiltersRef = useRef(filtersKey);
-  useEffect(() => {
-    if (prevFiltersRef.current !== filtersKey) {
-      prevFiltersRef.current = filtersKey;
-      setCurrentPage(1);
-    }
-  }, [filtersKey, setCurrentPage]);
-
-  // Clamp page if it exceeds totalPages
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages, isLoading, setCurrentPage]);
 
   // Create a stable key based on unique user IDs from current page to fetch emails
   const userIdsKey = useMemo(() => {
     const uniqueUserIds = Array.from(
-      new Set(filteredOrders.map((order) => order.userId)),
+      new Set(filteredOrders.map((order) => order.userId))
     ).sort();
     return uniqueUserIds.join(",");
   }, [filteredOrders]);
@@ -117,7 +76,7 @@ export default function Orders() {
 
       const uniqueUserIds = userIdsKey.split(",").filter(Boolean);
       const missingUserIds = uniqueUserIds.filter(
-        (userId) => !userEmails[userId],
+        (userId) => !userEmails[userId]
       );
 
       if (missingUserIds.length === 0) return;
@@ -159,12 +118,7 @@ export default function Orders() {
   const hasActiveFilters = statusFilter !== "all" || searchQuery.trim() !== "";
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center">
-        <Package className="h-12 w-12 text-muted-foreground mb-4 animate-pulse" />
-        <p className="text-muted-foreground">Loading orders...</p>
-      </div>
-    );
+    return <Loader text="Loading orders..." />;
   }
 
   return (
@@ -278,7 +232,7 @@ export default function Orders() {
                         key={order.id}
                         className={cn(
                           "transition-colors hover:bg-table-hover",
-                          index % 2 === 1 && "bg-table-zebra",
+                          index % 2 === 1 && "bg-table-zebra"
                         )}
                       >
                         <td className="px-6 py-4">
@@ -296,8 +250,8 @@ export default function Orders() {
                                 new Set(
                                   order.items
                                     .map((item) => item.item?.brand)
-                                    .filter(Boolean),
-                                ),
+                                    .filter(Boolean)
+                                )
                               ).join(", ")
                             : "N/A"}
                         </td>
@@ -315,7 +269,7 @@ export default function Orders() {
                             variant="outline"
                             className={cn(
                               "text-xs",
-                              getStatusColor(order.status),
+                              getStatusColor(order.status)
                             )}
                           >
                             {getStatusLabel(order.status)}
@@ -325,24 +279,11 @@ export default function Orders() {
                           {formatDateInOntario(order.createdAt)}
                         </td>
                         <td className="px-4 py-4">
-                          {order.status === "rejected" &&
-                          (order.rejectionReason || order.rejectionComment) ? (
-                            <div className="flex items-start gap-2 max-w-xs">
-                              <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                              <div className="flex-1 space-y-1">
-                                {order.rejectionReason && (
-                                  <p className="text-xs text-foreground">
-                                    <span className="font-medium">Reason:</span>{" "}
-                                    {order.rejectionReason}
-                                  </p>
-                                )}
-                                {order.rejectionComment && (
-                                  <p className="text-xs text-muted-foreground line-clamp-2">
-                                    {order.rejectionComment}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
+                          {order.status === "rejected" ? (
+                            <RejectionNote
+                              rejectionReason={order.rejectionReason}
+                              rejectionComment={order.rejectionComment}
+                            />
                           ) : (
                             <span className="text-xs text-muted-foreground">
                               —

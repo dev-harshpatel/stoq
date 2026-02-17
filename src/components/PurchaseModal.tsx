@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { useState } from "react";
 import { InventoryItem } from "@/data/inventory";
@@ -12,11 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/lib/auth/context";
-import { getAvailableQuantityForUser } from "@/lib/orderUtils";
-import { formatPrice } from "@/data/inventory";
+import { getAvailableQuantityForUser } from "@/lib/utils/order";
+import { formatPrice } from "@/lib/utils";
 import { useContext } from "react";
 import { OrdersContext } from "@/contexts/OrdersContext";
 
@@ -34,10 +35,9 @@ export const PurchaseModal = ({
   onConfirm,
 }: PurchaseModalProps) => {
   const [quantity, setQuantity] = useState(1);
-  const { toast } = useToast();
   const { addToCart, cartItems } = useCart();
   const { user } = useAuth();
-  
+
   // Safely get orders - may not be available in all contexts
   // Use useContext directly to avoid throwing error if not available
   const ordersContext = useContext(OrdersContext);
@@ -56,13 +56,17 @@ export const PurchaseModal = ({
   );
 
   // Get current quantity of this item in cart
-  const existingCartItem = cartItems.find((cartItem) => cartItem.item.id === item.id);
+  const existingCartItem = cartItems.find(
+    (cartItem) => cartItem.item.id === item.id
+  );
   const existingCartQuantity = existingCartItem?.quantity || 0;
 
   // Get quantity in pending orders (for display)
   const pendingOrdersQuantity = user?.id
     ? orders
-        .filter((order) => order.userId === user.id && order.status === 'pending')
+        .filter(
+          (order) => order.userId === user.id && order.status === "pending"
+        )
         .reduce((total, order) => {
           if (!Array.isArray(order.items)) return total;
           const orderItem = order.items.find((oi) => oi.item?.id === item.id);
@@ -75,44 +79,36 @@ export const PurchaseModal = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (quantity <= 0) {
-      toast({
-        title: "Invalid quantity",
-        description: "Please enter a valid quantity",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.PURCHASE_INVALID_QUANTITY);
       return;
     }
-    
+
     // Check if adding this quantity would exceed available stock
     // availableQuantity already accounts for items in cart and pending orders
     // So we just need to check if quantity exceeds availableQuantity
     if (quantity > availableQuantity) {
-      const reason = pendingOrdersQuantity > 0
-        ? `You have ${pendingOrdersQuantity} unit(s) in pending orders and ${existingCartQuantity} in your cart.`
-        : existingCartQuantity > 0
-        ? `You already have ${existingCartQuantity} in your cart.`
-        : '';
-      
-      toast({
-        title: "Insufficient stock",
-        description: `Only ${availableQuantity} more unit(s) available. ${reason}`,
-        variant: "destructive",
-      });
+      const reason =
+        pendingOrdersQuantity > 0
+          ? `You have ${pendingOrdersQuantity} unit(s) in pending orders and ${existingCartQuantity} in your cart.`
+          : existingCartQuantity > 0
+          ? `You already have ${existingCartQuantity} in your cart.`
+          : "";
+
+      toast.error(
+        TOAST_MESSAGES.PURCHASE_INSUFFICIENT_STOCK(availableQuantity, reason)
+      );
       return;
     }
-    
+
     // Add to cart
     addToCart(item, quantity);
-    toast({
-      title: "Added to cart",
-      description: `${quantity} unit(s) of ${item.deviceName} added to cart`,
-    });
-    
+    toast.success(TOAST_MESSAGES.CART_ADDED(quantity, item.deviceName));
+
     // Call onConfirm if provided (for backward compatibility)
     if (onConfirm) {
       onConfirm(item, quantity);
     }
-    
+
     setQuantity(1);
     onOpenChange(false);
   };
@@ -141,7 +137,9 @@ export const PurchaseModal = ({
                 {(existingCartQuantity > 0 || pendingOrdersQuantity > 0) && (
                   <span className="ml-2 text-primary">
                     ({existingCartQuantity} in cart
-                    {pendingOrdersQuantity > 0 && `, ${pendingOrdersQuantity} in pending orders`})
+                    {pendingOrdersQuantity > 0 &&
+                      `, ${pendingOrdersQuantity} in pending orders`}
+                    )
                   </span>
                 )}
               </p>
@@ -166,12 +164,15 @@ export const PurchaseModal = ({
               {maxQuantity === 0 ? (
                 <span className="text-destructive">
                   No more units available
-                  {pendingOrdersQuantity > 0 && ' (you have pending orders for this item)'}
+                  {pendingOrdersQuantity > 0 &&
+                    " (you have pending orders for this item)"}
                 </span>
               ) : existingCartQuantity > 0 || pendingOrdersQuantity > 0 ? (
                 <>
-                  {existingCartQuantity > 0 && `You have ${existingCartQuantity} in cart. `}
-                  {pendingOrdersQuantity > 0 && `You have ${pendingOrdersQuantity} in pending orders. `}
+                  {existingCartQuantity > 0 &&
+                    `You have ${existingCartQuantity} in cart. `}
+                  {pendingOrdersQuantity > 0 &&
+                    `You have ${pendingOrdersQuantity} in pending orders. `}
                   Maximum: {maxQuantity} more unit(s) available.
                 </>
               ) : (
@@ -211,4 +212,3 @@ export const PurchaseModal = ({
     </Dialog>
   );
 };
-

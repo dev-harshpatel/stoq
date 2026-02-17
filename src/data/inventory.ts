@@ -17,12 +17,13 @@ export interface InventoryItem {
 export function calculatePricePerUnit(
   purchasePrice: number,
   quantity: number,
-  hst: number,
+  hst: number
 ): number {
   if (quantity === 0) return 0;
   return Math.round((purchasePrice / quantity) * (1 + hst / 100) * 100) / 100;
 }
 
+// Sample inventory data used by seed/reset scripts
 export const inventoryData: InventoryItem[] = [
   {
     id: "1",
@@ -473,6 +474,6 @@ export function getStockStatus(quantity: number): StockStatus {
   return "critical";
 }
 
-export function formatPrice(price: number): string {
-  return `$${price.toLocaleString()} CAD`;
-}
+// formatPrice has been moved to src/lib/utils.ts
+// Re-export for backward compatibility during migration
+export { formatPrice } from "@/lib/utils";

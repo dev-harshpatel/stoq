@@ -1,20 +1,22 @@
-'use client'
+"use client";
 
 // Force dynamic rendering to prevent static generation issues
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
-import { UserLayout } from '@/components/UserLayout'
-import { useState, useEffect, useRef } from "react";
+import { UserLayout } from "@/components/UserLayout";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth/context";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, RotateCcw, Package, AlertCircle } from "lucide-react";
+import { Eye, RotateCcw } from "lucide-react";
+import { RejectionNote } from "@/components/RejectionNote";
 import { formatPrice } from "@/data/inventory";
 import { cn, formatDateInOntario } from "@/lib/utils";
 import { OrderDetailsModal } from "@/components/OrderDetailsModal";
 import { EmptyState } from "@/components/EmptyState";
 import { PaginationControls } from "@/components/PaginationControls";
+import { Loader } from "@/components/Loader";
 import {
   Select,
   SelectContent,
@@ -26,36 +28,7 @@ import { usePaginatedReactQuery } from "@/hooks/use-paginated-react-query";
 import { usePageParam } from "@/hooks/use-page-param";
 import { queryKeys } from "@/lib/query-keys";
 import { fetchPaginatedUserOrders } from "@/lib/supabase/queries";
-
-const getStatusColor = (status: OrderStatus) => {
-  switch (status) {
-    case "pending":
-      return "bg-warning/10 text-warning border-warning/20";
-    case "approved":
-      return "bg-success/10 text-success border-success/20";
-    case "rejected":
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    case "completed":
-      return "bg-primary/10 text-primary border-primary/20";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-};
-
-const getStatusLabel = (status: OrderStatus) => {
-  switch (status) {
-    case "pending":
-      return "Pending";
-    case "approved":
-      return "Approved";
-    case "rejected":
-      return "Rejected";
-    case "completed":
-      return "Completed";
-    default:
-      return status;
-  }
-};
+import { getStatusColor, getStatusLabel } from "@/lib/utils/status";
 
 export default function UserOrdersPage() {
   const { user, loading: authLoading } = useAuth();
@@ -66,7 +39,9 @@ export default function UserOrdersPage() {
   const [currentPage, setCurrentPage] = usePageParam();
   const queryKey = user?.id
     ? queryKeys.userOrdersPage(user.id, currentPage, statusFilter)
-    : ['paginated', 'userOrders', 'disabled'];
+    : ["paginated", "userOrders", "disabled"];
+
+  const filtersKey = `${user?.id}-${statusFilter}`;
 
   const {
     data: filteredOrders,
@@ -81,25 +56,10 @@ export default function UserOrdersPage() {
       return fetchPaginatedUserOrders(user.id, statusFilter, range);
     },
     currentPage,
+    setCurrentPage,
+    filtersKey,
     enabled: !!user,
   });
-
-  // Reset to page 1 when filters change
-  const filtersKey = `${user?.id}-${statusFilter}`;
-  const prevFiltersRef = useRef(filtersKey);
-  useEffect(() => {
-    if (prevFiltersRef.current !== filtersKey) {
-      prevFiltersRef.current = filtersKey;
-      setCurrentPage(1);
-    }
-  }, [filtersKey, setCurrentPage]);
-
-  // Clamp page if it exceeds totalPages
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0 && !isLoading) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages, isLoading, setCurrentPage]);
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -114,10 +74,7 @@ export default function UserOrdersPage() {
   if (authLoading || isLoading) {
     return (
       <UserLayout>
-        <div className="flex flex-col items-center justify-center h-full text-center">
-          <Package className="h-12 w-12 text-muted-foreground mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Loading orders...</p>
-        </div>
+        <Loader text="Loading orders..." />
       </UserLayout>
     );
   }
@@ -125,10 +82,10 @@ export default function UserOrdersPage() {
   if (!user) {
     return (
       <UserLayout>
-        <div className="flex flex-col items-center justify-center h-full text-center">
-          <Package className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Please login to view your orders</p>
-        </div>
+        <EmptyState
+          title="Please login"
+          description="Please login to view your orders"
+        />
       </UserLayout>
     );
   }
@@ -141,10 +98,12 @@ export default function UserOrdersPage() {
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold text-foreground">My Orders</h2>
+              <h2 className="text-2xl font-semibold text-foreground">
+                My Orders
+              </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {totalCount}{" "}
-                {statusFilter !== "all" ? "filtered" : "total"} orders
+                {totalCount} {statusFilter !== "all" ? "filtered" : "total"}{" "}
+                orders
               </p>
             </div>
           </div>
@@ -242,20 +201,27 @@ export default function UserOrdersPage() {
                         <td className="px-4 py-4 text-sm text-foreground">
                           {Array.isArray(order.items) && order.items.length > 0
                             ? Array.from(
-                                new Set(order.items.map((item) => item.item?.brand).filter(Boolean))
+                                new Set(
+                                  order.items
+                                    .map((item) => item.item?.brand)
+                                    .filter(Boolean)
+                                )
                               ).join(", ")
                             : "N/A"}
                         </td>
                         <td className="px-4 py-4 text-center text-sm text-foreground">
-                          {Array.isArray(order.items) ? order.items.length : 0} item(s)
+                          {Array.isArray(order.items) ? order.items.length : 0}{" "}
+                          item(s)
                         </td>
                         <td className="px-4 py-4 text-right">
                           <div className="flex flex-col items-end">
-                            {order.discountAmount != null && order.discountAmount > 0 && order.invoiceConfirmed && (
-                              <span className="text-xs text-success mb-1">
-                                Discount: -{formatPrice(order.discountAmount)}
-                              </span>
-                            )}
+                            {order.discountAmount != null &&
+                              order.discountAmount > 0 &&
+                              order.invoiceConfirmed && (
+                                <span className="text-xs text-success mb-1">
+                                  Discount: -{formatPrice(order.discountAmount)}
+                                </span>
+                              )}
                             <span className="font-semibold text-foreground">
                               {(() => {
                                 // For users: show total without discount until invoice is confirmed
@@ -285,24 +251,15 @@ export default function UserOrdersPage() {
                           {formatDateInOntario(order.createdAt)}
                         </td>
                         <td className="px-4 py-4">
-                          {order.status === "rejected" && (order.rejectionReason || order.rejectionComment) ? (
-                            <div className="flex items-start gap-2 max-w-xs">
-                              <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                              <div className="flex-1 space-y-1">
-                                {order.rejectionReason && (
-                                  <p className="text-xs text-foreground">
-                                    <span className="font-medium">Reason:</span> {order.rejectionReason}
-                                  </p>
-                                )}
-                                {order.rejectionComment && (
-                                  <p className="text-xs text-muted-foreground line-clamp-2">
-                                    {order.rejectionComment}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
+                          {order.status === "rejected" ? (
+                            <RejectionNote
+                              rejectionReason={order.rejectionReason}
+                              rejectionComment={order.rejectionComment}
+                            />
                           ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">

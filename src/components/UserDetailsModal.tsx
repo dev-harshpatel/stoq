@@ -1,55 +1,80 @@
-import { UserProfile, ApprovalStatus } from '@/types/user'
-import { updateUserProfileApprovalStatus, updateUserProfileDetails } from '@/lib/supabase/utils'
+import { UserProfile, ApprovalStatus } from "@/types/user";
+import {
+  updateUserProfileApprovalStatus,
+  updateUserProfileDetails,
+} from "@/lib/supabase/utils";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useToast } from '@/hooks/use-toast'
-import { cn, formatDateTimeInOntario } from '@/lib/utils'
-import { useState } from 'react'
-import { Loader2, CheckCircle2, XCircle, User, Building2, Mail, Phone, MapPin, Globe, Calendar, Edit2, Save, X } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
+import { cn } from "@/lib/utils";
+import { formatDateTimeInOntario } from "@/lib/utils/formatters";
+import { useState } from "react";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  User,
+  Building2,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  Calendar,
+  Edit2,
+  Save,
+  X,
+} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface UserDetailsModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  user: UserProfile | null
-  onStatusUpdate?: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: UserProfile | null;
+  onStatusUpdate?: () => void;
 }
 
 const getStatusColor = (status: ApprovalStatus) => {
   switch (status) {
-    case 'pending':
-      return 'bg-warning/10 text-warning border-warning/20'
-    case 'approved':
-      return 'bg-success/10 text-success border-success/20'
-    case 'rejected':
-      return 'bg-destructive/10 text-destructive border-destructive/20'
+    case "pending":
+      return "bg-warning/10 text-warning border-warning/20";
+    case "approved":
+      return "bg-success/10 text-success border-success/20";
+    case "rejected":
+      return "bg-destructive/10 text-destructive border-destructive/20";
     default:
-      return 'bg-muted text-muted-foreground'
+      return "bg-muted text-muted-foreground";
   }
-}
+};
 
 const getStatusLabel = (status: ApprovalStatus) => {
   switch (status) {
-    case 'pending':
-      return 'Pending'
-    case 'approved':
-      return 'Approved'
-    case 'rejected':
-      return 'Rejected'
+    case "pending":
+      return "Pending";
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
     default:
-      return status
+      return status;
   }
-}
+};
 
 export const UserDetailsModal = ({
   open,
@@ -57,139 +82,123 @@ export const UserDetailsModal = ({
   user,
   onStatusUpdate,
 }: UserDetailsModalProps) => {
-  const { toast } = useToast()
-  const [isApproving, setIsApproving] = useState(false)
-  const [isRejecting, setIsRejecting] = useState(false)
-  const [showConfirmApprove, setShowConfirmApprove] = useState(false)
-  const [showConfirmReject, setShowConfirmReject] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [showConfirmApprove, setShowConfirmApprove] = useState(false);
+  const [showConfirmReject, setShowConfirmReject] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState({
-    businessName: '',
-    businessAddress: '',
-    businessCity: '',
-    businessState: '',
-    businessCountry: '' as 'Canada' | 'USA' | '',
-  })
+    businessName: "",
+    businessAddress: "",
+    businessCity: "",
+    businessState: "",
+    businessCountry: "" as "Canada" | "USA" | "",
+  });
 
   // Reset edit form when user changes or modal opens
   const resetEditForm = () => {
     if (user) {
       setEditForm({
-        businessName: user.businessName || '',
-        businessAddress: user.businessAddress || '',
-        businessCity: user.businessCity || '',
-        businessState: user.businessState || '',
-        businessCountry: (user.businessCountry as 'Canada' | 'USA') || '',
-      })
+        businessName: user.businessName || "",
+        businessAddress: user.businessAddress || "",
+        businessCity: user.businessCity || "",
+        businessState: user.businessState || "",
+        businessCountry: (user.businessCountry as "Canada" | "USA") || "",
+      });
     }
-    setIsEditing(false)
-  }
+    setIsEditing(false);
+  };
 
   const handleStartEdit = () => {
     if (user) {
       setEditForm({
-        businessName: user.businessName || '',
-        businessAddress: user.businessAddress || '',
-        businessCity: user.businessCity || '',
-        businessState: user.businessState || '',
-        businessCountry: (user.businessCountry as 'Canada' | 'USA') || '',
-      })
+        businessName: user.businessName || "",
+        businessAddress: user.businessAddress || "",
+        businessCity: user.businessCity || "",
+        businessState: user.businessState || "",
+        businessCountry: (user.businessCountry as "Canada" | "USA") || "",
+      });
     }
-    setIsEditing(true)
-  }
+    setIsEditing(true);
+  };
 
   const handleCancelEdit = () => {
-    resetEditForm()
-  }
+    resetEditForm();
+  };
 
   const handleSaveEdit = async () => {
-    if (!user) return
+    if (!user) return;
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       await updateUserProfileDetails(user.userId, {
         businessName: editForm.businessName || null,
         businessAddress: editForm.businessAddress || null,
         businessCity: editForm.businessCity || null,
         businessCountry: editForm.businessCountry || null,
-      })
+      });
 
-      toast({
-        title: 'Profile updated',
-        description: 'User business details have been updated successfully.',
-      })
+      toast.success(TOAST_MESSAGES.PROFILE_UPDATED);
 
-      setIsEditing(false)
-      onStatusUpdate?.()
+      setIsEditing(false);
+      onStatusUpdate?.();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update profile. Please try again.',
-        variant: 'destructive',
-      })
+      toast.error(TOAST_MESSAGES.PROFILE_UPDATE_FAILED);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
-  if (!user) return null
+  if (!user) return null;
 
   const handleApprove = async () => {
-    setIsApproving(true)
+    setIsApproving(true);
     try {
-      await updateUserProfileApprovalStatus(user.userId, 'approved')
-      
-      toast({
-        title: 'Profile approved',
-        description: `User profile has been approved. They can now place orders.`,
-      })
-      
-      setShowConfirmApprove(false)
-      onStatusUpdate?.()
-      onOpenChange(false)
+      await updateUserProfileApprovalStatus(user.userId, "approved");
+
+      toast.success(
+        "User profile has been approved. They can now place orders."
+      );
+
+      setShowConfirmApprove(false);
+      onStatusUpdate?.();
+      onOpenChange(false);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to approve profile. Please try again.',
-        variant: 'destructive',
-      })
+      toast.error(TOAST_MESSAGES.PROFILE_APPROVE_FAILED);
     } finally {
-      setIsApproving(false)
+      setIsApproving(false);
     }
-  }
+  };
 
   const handleReject = async () => {
-    setIsRejecting(true)
+    setIsRejecting(true);
     try {
-      await updateUserProfileApprovalStatus(user.userId, 'rejected')
-      
-      toast({
-        title: 'Profile rejected',
-        description: `User profile has been rejected.`,
-      })
-      
-      setShowConfirmReject(false)
-      onStatusUpdate?.()
-      onOpenChange(false)
+      await updateUserProfileApprovalStatus(user.userId, "rejected");
+
+      toast.success(TOAST_MESSAGES.PROFILE_REJECTED);
+
+      setShowConfirmReject(false);
+      onStatusUpdate?.();
+      onOpenChange(false);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to reject profile. Please try again.',
-        variant: 'destructive',
-      })
+      toast.error(TOAST_MESSAGES.PROFILE_REJECT_FAILED);
     } finally {
-      setIsRejecting(false)
+      setIsRejecting(false);
     }
-  }
+  };
 
-  const canApprove = user.approvalStatus === 'pending' || user.approvalStatus === 'rejected'
-  const canReject = user.approvalStatus === 'pending' || user.approvalStatus === 'approved'
+  const canApprove =
+    user.approvalStatus === "pending" || user.approvalStatus === "rejected";
+  const canReject =
+    user.approvalStatus === "pending" || user.approvalStatus === "approved";
 
-  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || 'N/A'
-  const location = [user.businessCity, user.businessState, user.businessCountry]
-    .filter(Boolean)
-    .join(', ') || 'N/A'
+  const fullName =
+    [user.firstName, user.lastName].filter(Boolean).join(" ") || "N/A";
+  const location =
+    [user.businessCity, user.businessState, user.businessCountry]
+      .filter(Boolean)
+      .join(", ") || "N/A";
 
   return (
     <>
@@ -205,7 +214,10 @@ export const UserDetailsModal = ({
               </div>
               <Badge
                 variant="outline"
-                className={cn('text-sm flex-shrink-0', getStatusColor(user.approvalStatus))}
+                className={cn(
+                  "text-sm flex-shrink-0",
+                  getStatusColor(user.approvalStatus)
+                )}
               >
                 {getStatusLabel(user.approvalStatus)}
               </Badge>
@@ -235,7 +247,9 @@ export const UserDetailsModal = ({
                         <Phone className="h-4 w-4" />
                         <span>Phone</span>
                       </div>
-                      <p className="font-medium text-foreground">{user.phone || 'N/A'}</p>
+                      <p className="font-medium text-foreground">
+                        {user.phone || "N/A"}
+                      </p>
                     </div>
 
                     <div className="space-y-1 md:col-span-2">
@@ -264,7 +278,9 @@ export const UserDetailsModal = ({
                           <span>Status Updated</span>
                         </div>
                         <p className="font-medium text-foreground">
-                          {formatDateTimeInOntario(user.approvalStatusUpdatedAt)}
+                          {formatDateTimeInOntario(
+                            user.approvalStatusUpdatedAt
+                          )}
                         </p>
                       </div>
                     )}
@@ -294,52 +310,84 @@ export const UserDetailsModal = ({
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="businessName" className="flex items-center gap-2 text-sm">
+                          <Label
+                            htmlFor="businessName"
+                            className="flex items-center gap-2 text-sm"
+                          >
                             <Building2 className="h-4 w-4" />
                             Business Name
                           </Label>
                           <Input
                             id="businessName"
                             value={editForm.businessName}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, businessName: e.target.value }))}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                businessName: e.target.value,
+                              }))
+                            }
                             placeholder="Enter business name"
                           />
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="businessAddress" className="flex items-center gap-2 text-sm">
+                          <Label
+                            htmlFor="businessAddress"
+                            className="flex items-center gap-2 text-sm"
+                          >
                             <MapPin className="h-4 w-4" />
                             Business Address
                           </Label>
                           <Input
                             id="businessAddress"
                             value={editForm.businessAddress}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, businessAddress: e.target.value }))}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                businessAddress: e.target.value,
+                              }))
+                            }
                             placeholder="Enter business address"
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="businessCity" className="flex items-center gap-2 text-sm">
+                          <Label
+                            htmlFor="businessCity"
+                            className="flex items-center gap-2 text-sm"
+                          >
                             <MapPin className="h-4 w-4" />
                             City
                           </Label>
                           <Input
                             id="businessCity"
                             value={editForm.businessCity}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, businessCity: e.target.value }))}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                businessCity: e.target.value,
+                              }))
+                            }
                             placeholder="Enter city"
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="businessCountry" className="flex items-center gap-2 text-sm">
+                          <Label
+                            htmlFor="businessCountry"
+                            className="flex items-center gap-2 text-sm"
+                          >
                             <MapPin className="h-4 w-4" />
                             Country
                           </Label>
                           <Select
                             value={editForm.businessCountry}
-                            onValueChange={(value) => setEditForm(prev => ({ ...prev, businessCountry: value as 'Canada' | 'USA' }))}
+                            onValueChange={(value) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                businessCountry: value as "Canada" | "USA",
+                              }))
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select country" />
@@ -392,7 +440,9 @@ export const UserDetailsModal = ({
                           <Building2 className="h-4 w-4" />
                           <span>Business Name</span>
                         </div>
-                        <p className="font-medium text-foreground">{user.businessName || 'N/A'}</p>
+                        <p className="font-medium text-foreground">
+                          {user.businessName || "N/A"}
+                        </p>
                       </div>
 
                       <div className="space-y-1 md:col-span-2">
@@ -400,7 +450,9 @@ export const UserDetailsModal = ({
                           <MapPin className="h-4 w-4" />
                           <span>Business Address</span>
                         </div>
-                        <p className="font-medium text-foreground">{user.businessAddress || 'N/A'}</p>
+                        <p className="font-medium text-foreground">
+                          {user.businessAddress || "N/A"}
+                        </p>
                       </div>
 
                       <div className="space-y-1">
@@ -408,7 +460,9 @@ export const UserDetailsModal = ({
                           <MapPin className="h-4 w-4" />
                           <span>City</span>
                         </div>
-                        <p className="font-medium text-foreground">{user.businessCity || 'N/A'}</p>
+                        <p className="font-medium text-foreground">
+                          {user.businessCity || "N/A"}
+                        </p>
                       </div>
 
                       <div className="space-y-1">
@@ -416,7 +470,9 @@ export const UserDetailsModal = ({
                           <MapPin className="h-4 w-4" />
                           <span>State/Province</span>
                         </div>
-                        <p className="font-medium text-foreground">{user.businessState || 'N/A'}</p>
+                        <p className="font-medium text-foreground">
+                          {user.businessState || "N/A"}
+                        </p>
                       </div>
 
                       <div className="space-y-1">
@@ -424,7 +480,9 @@ export const UserDetailsModal = ({
                           <MapPin className="h-4 w-4" />
                           <span>Country</span>
                         </div>
-                        <p className="font-medium text-foreground">{user.businessCountry || 'N/A'}</p>
+                        <p className="font-medium text-foreground">
+                          {user.businessCountry || "N/A"}
+                        </p>
                       </div>
 
                       <div className="space-y-1">
@@ -432,9 +490,10 @@ export const UserDetailsModal = ({
                           <span>Years in Business</span>
                         </div>
                         <p className="font-medium text-foreground">
-                          {user.businessYears !== null && user.businessYears !== undefined
+                          {user.businessYears !== null &&
+                          user.businessYears !== undefined
                             ? `${user.businessYears} years`
-                            : 'N/A'}
+                            : "N/A"}
                         </p>
                       </div>
 
@@ -443,7 +502,9 @@ export const UserDetailsModal = ({
                           <Mail className="h-4 w-4" />
                           <span>Business Email</span>
                         </div>
-                        <p className="font-medium text-foreground">{user.businessEmail || 'N/A'}</p>
+                        <p className="font-medium text-foreground">
+                          {user.businessEmail || "N/A"}
+                        </p>
                       </div>
 
                       <div className="space-y-1">
@@ -462,7 +523,7 @@ export const UserDetailsModal = ({
                               {user.businessWebsite}
                             </a>
                           ) : (
-                            'N/A'
+                            "N/A"
                           )}
                         </p>
                       </div>
@@ -530,7 +591,8 @@ export const UserDetailsModal = ({
             <DialogHeader>
               <DialogTitle>Approve Profile</DialogTitle>
               <DialogDescription>
-                Are you sure you want to approve this user profile? They will be able to place orders once approved.
+                Are you sure you want to approve this user profile? They will be
+                able to place orders once approved.
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-end gap-3">
@@ -548,7 +610,7 @@ export const UserDetailsModal = ({
                     Approving...
                   </>
                 ) : (
-                  'Approve'
+                  "Approve"
                 )}
               </Button>
             </div>
@@ -562,7 +624,8 @@ export const UserDetailsModal = ({
             <DialogHeader>
               <DialogTitle>Reject Profile</DialogTitle>
               <DialogDescription>
-                Are you sure you want to reject this user profile? They will not be able to place orders.
+                Are you sure you want to reject this user profile? They will not
+                be able to place orders.
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-end gap-3">
@@ -573,14 +636,18 @@ export const UserDetailsModal = ({
               >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleReject} disabled={isRejecting}>
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={isRejecting}
+              >
                 {isRejecting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Rejecting...
                   </>
                 ) : (
-                  'Reject'
+                  "Reject"
                 )}
               </Button>
             </div>
@@ -588,5 +655,5 @@ export const UserDetailsModal = ({
         </Dialog>
       )}
     </>
-  )
-}
+  );
+};

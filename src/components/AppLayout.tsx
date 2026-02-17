@@ -1,9 +1,8 @@
-'use client'
+"use client";
 
 import { ReactNode, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { AppSidebar } from "@/components/AppSidebar";
-// import { Footer } from '@/components/Footer';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -28,8 +27,6 @@ export function AppLayout({ children }: AppLayoutProps) {
         <main className="flex-1 p-4 lg:p-6 overflow-hidden">
           <div className="max-w-7xl mx-auto h-full">{children}</div>
         </main>
-
-        {/* <Footer /> */}
       </div>
     </div>
   );

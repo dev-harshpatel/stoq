@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   AlertDialog,
@@ -9,29 +9,29 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
-import { formatPrice } from "@/data/inventory"
-import { ArrowUp, ArrowDown, AlertTriangle, Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { formatPrice } from "@/lib/utils";
+import { ArrowUp, ArrowDown, AlertTriangle, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface PriceChange {
-  itemId: string
-  deviceName: string
-  storage: string
-  grade: string
-  oldPrice: number
-  newPrice: number
-  quantity: number
+  itemId: string;
+  deviceName: string;
+  storage: string;
+  grade: string;
+  oldPrice: number;
+  newPrice: number;
+  quantity: number;
 }
 
 interface PriceChangeWarningDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  priceChanges: PriceChange[]
-  onConfirm: () => void
-  onCancel: () => void
-  isLoading?: boolean
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  priceChanges: PriceChange[];
+  onConfirm: () => void;
+  onCancel: () => void;
+  isLoading?: boolean;
 }
 
 export function PriceChangeWarningDialog({
@@ -45,13 +45,13 @@ export function PriceChangeWarningDialog({
   const totalOldPrice = priceChanges.reduce(
     (sum, item) => sum + item.oldPrice * item.quantity,
     0
-  )
+  );
   const totalNewPrice = priceChanges.reduce(
     (sum, item) => sum + item.newPrice * item.quantity,
     0
-  )
-  const priceDifference = totalNewPrice - totalOldPrice
-  const isPriceIncrease = priceDifference > 0
+  );
+  const priceDifference = totalNewPrice - totalOldPrice;
+  const isPriceIncrease = priceDifference > 0;
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -62,15 +62,18 @@ export function PriceChangeWarningDialog({
             Prices Updated
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Some prices have changed since you added items to your cart. Please review the updates below.
+            Some prices have changed since you added items to your cart. Please
+            review the updates below.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="max-h-[300px] overflow-y-auto space-y-3 my-4">
           {priceChanges.map((item) => {
-            const isIncrease = item.newPrice > item.oldPrice
-            const difference = item.newPrice - item.oldPrice
-            const percentChange = ((difference / item.oldPrice) * 100).toFixed(1)
+            const isIncrease = item.newPrice > item.oldPrice;
+            const difference = item.newPrice - item.oldPrice;
+            const percentChange = ((difference / item.oldPrice) * 100).toFixed(
+              1
+            );
 
             return (
               <div
@@ -127,7 +130,7 @@ export function PriceChangeWarningDialog({
                   </div>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
 
@@ -147,7 +150,9 @@ export function PriceChangeWarningDialog({
             </span>
           </div>
           <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-medium text-foreground">New Total:</span>
+            <span className="text-sm font-medium text-foreground">
+              New Total:
+            </span>
             <span className="text-lg font-bold text-primary">
               {formatPrice(totalNewPrice)}
             </span>
@@ -171,5 +176,5 @@ export function PriceChangeWarningDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }

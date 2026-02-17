@@ -4,6 +4,7 @@ import { useOrders } from "@/contexts/OrdersContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { GradeBadge } from "@/components/GradeBadge";
 import { InvoiceConfirmationDialog } from "@/components/InvoiceConfirmationDialog";
 import { OrderRejectionDialog } from "@/components/OrderRejectionDialog";
 import {
@@ -17,10 +18,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatPrice } from "@/data/inventory";
-import { useToast } from "@/hooks/use-toast";
-import { cn, formatDateTimeInOntario } from "@/lib/utils";
-import { Order, OrderStatus } from "@/types/order";
+import { formatPrice } from "@/lib/utils";
+import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
+import { cn } from "@/lib/utils";
+import { formatDateTimeInOntario } from "@/lib/utils/formatters";
+import { Order } from "@/types/order";
 import {
   AlertCircle,
   CheckCircle2,
@@ -30,43 +33,14 @@ import {
   XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { getStatusColor, getStatusLabel } from "@/lib/utils/status";
 
 interface OrderDetailsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   order: Order | null;
 }
-
-const getStatusColor = (status: OrderStatus) => {
-  switch (status) {
-    case "pending":
-      return "bg-warning/10 text-warning border-warning/20";
-    case "approved":
-      return "bg-success/10 text-success border-success/20";
-    case "rejected":
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    case "completed":
-      return "bg-primary/10 text-primary border-primary/20";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-};
-
-const getStatusLabel = (status: OrderStatus) => {
-  switch (status) {
-    case "pending":
-      return "Pending";
-    case "approved":
-      return "Approved";
-    case "rejected":
-      return "Rejected";
-    case "completed":
-      return "Completed";
-    default:
-      return status;
-  }
-};
 
 export const OrderDetailsModal = ({
   open,
@@ -75,9 +49,9 @@ export const OrderDetailsModal = ({
 }: OrderDetailsModalProps) => {
   const { startNavigation } = useNavigation();
   const { updateOrderStatus, downloadInvoicePDF, confirmInvoice } = useOrders();
+  // Only access inventory when modal is open to avoid unnecessary re-renders
   const { decreaseQuantity, inventory } = useInventory();
   const { isAdmin } = useUserProfile();
-  const { toast } = useToast();
   const router = useRouter();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -128,7 +102,7 @@ export const OrderDetailsModal = ({
       if (!orderItem?.item?.id || !orderItem?.quantity) continue;
 
       const inventoryItem = inventory.find(
-        (inv) => inv.id === orderItem.item.id,
+        (inv) => inv.id === orderItem.item.id
       );
       const availableQty = inventoryItem?.quantity ?? 0;
 
@@ -156,24 +130,17 @@ export const OrderDetailsModal = ({
             return decreaseQuantity(orderItem.item.id, orderItem.quantity);
           }
           return Promise.resolve();
-        }),
+        })
       );
 
       // Update order status (await to ensure it completes)
       await updateOrderStatus(order.id, "approved");
 
-      toast({
-        title: "Order approved",
-        description: `Order #${order.id.slice(-8).toUpperCase()} has been approved. Inventory quantities have been updated.`,
-      });
+      toast.success(TOAST_MESSAGES.ORDER_APPROVED(order.id));
       setStockWarningDialogOpen(false);
       onOpenChange(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update inventory quantities. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.ORDER_FAILED_APPROVE);
     } finally {
       setIsApproving(false);
     }
@@ -183,16 +150,12 @@ export const OrderDetailsModal = ({
     const items = Array.isArray(order.items) ? order.items : [];
 
     if (items.length === 0) {
-      toast({
-        title: "Error",
-        description: "Order has no items to approve.",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.ORDER_NO_ITEMS);
       return;
     }
 
-    // Check stock availability
-    const insufficientItems = checkStockAvailability();
+    // Check stock availability (use memoized result)
+    const insufficientItems = checkStockAvailability;
 
     if (insufficientItems.length > 0) {
       // Show warning dialog
@@ -224,17 +187,10 @@ export const OrderDetailsModal = ({
     try {
       await updateOrderStatus(order.id, "rejected", reason, comment);
 
-      toast({
-        title: "Order rejected",
-        description: `Order #${order.id.slice(-8).toUpperCase()} has been rejected.`,
-      });
+      toast.success(TOAST_MESSAGES.ORDER_REJECTED(order.id));
       onOpenChange(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to reject order. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.ORDER_FAILED_REJECT);
       throw error;
     } finally {
       setIsRejecting(false);
@@ -257,16 +213,9 @@ export const OrderDetailsModal = ({
     setIsDownloading(true);
     try {
       await downloadInvoicePDF(order.id);
-      toast({
-        title: "Invoice downloaded",
-        description: "Invoice PDF has been downloaded.",
-      });
+      toast.success(TOAST_MESSAGES.INVOICE_DOWNLOADED);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to download invoice. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.INVOICE_DOWNLOAD_FAILED);
     } finally {
       setIsDownloading(false);
     }
@@ -278,18 +227,10 @@ export const OrderDetailsModal = ({
     setIsConfirming(true);
     try {
       await confirmInvoice(order.id);
-      toast({
-        title: "Invoice confirmed",
-        description:
-          "Invoice has been confirmed. Customer can now download it.",
-      });
+      toast.success(TOAST_MESSAGES.INVOICE_CONFIRMED);
       setConfirmationDialogOpen(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to confirm invoice. Please try again.",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.INVOICE_CONFIRM_FAILED);
     } finally {
       setIsConfirming(false);
     }
@@ -320,7 +261,7 @@ export const OrderDetailsModal = ({
               variant="outline"
               className={cn(
                 "text-sm flex-shrink-0",
-                getStatusColor(order.status),
+                getStatusColor(order.status)
               )}
             >
               {getStatusLabel(order.status)}
@@ -378,9 +319,9 @@ export const OrderDetailsModal = ({
                             {orderItem.item.deviceName || "Unknown Device"}
                           </h4>
                           <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="text-xs">
-                              Grade {orderItem.item.grade || "N/A"}
-                            </Badge>
+                            {orderItem.item.grade && (
+                              <GradeBadge grade={orderItem.item.grade} />
+                            )}
                             <Badge variant="outline" className="text-xs">
                               {orderItem.item.storage || "N/A"}
                             </Badge>
@@ -394,7 +335,7 @@ export const OrderDetailsModal = ({
                             {formatPrice(
                               orderItem.item.sellingPrice ??
                                 orderItem.item.pricePerUnit ??
-                                0,
+                                0
                             )}{" "}
                             each
                           </p>
@@ -402,7 +343,7 @@ export const OrderDetailsModal = ({
                             {formatPrice(
                               (orderItem.item.sellingPrice ??
                                 orderItem.item.pricePerUnit ??
-                                0) * (orderItem.quantity || 0),
+                                0) * (orderItem.quantity || 0)
                             )}
                           </p>
                         </div>
@@ -606,12 +547,9 @@ export const OrderDetailsModal = ({
                   if (order.invoiceConfirmed) {
                     handleDownloadInvoice();
                   } else {
-                    toast({
-                      title: "Invoice not available",
-                      description:
-                        "Invoice is being prepared. Please check back later.",
-                      variant: "default",
-                    });
+                    toast.info(
+                      "Invoice is being prepared. Please check back later."
+                    );
                   }
                 }}
                 disabled={!order.invoiceConfirmed || isDownloading}

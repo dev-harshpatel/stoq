@@ -14,7 +14,7 @@ import { UserProfile } from "@/types/user";
 import {
   getFieldsBySection,
   type ProfileFieldConfig,
-} from "@/lib/profileFields";
+} from "@/lib/types/profile";
 import {
   personalDetailsSchema,
   businessDetailsSchema,

@@ -24,8 +24,9 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { formatPrice } from "@/data/inventory";
-import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/utils";
+import { toast } from "sonner";
+import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import { cn } from "@/lib/utils";
 import { LoginModal } from "@/components/LoginModal";
 import { fetchLatestPricesForItems } from "@/lib/supabase/queries";
@@ -33,7 +34,7 @@ import {
   PriceChangeWarningDialog,
   PriceChange,
 } from "@/components/PriceChangeWarningDialog";
-import { calculateTax } from "@/lib/taxUtils";
+import { calculateTax } from "@/lib/tax";
 import {
   CheckoutAddressSection,
   SelectedAddresses,
@@ -62,7 +63,6 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
   } = useCart();
   const { user } = useAuth();
   const { createOrder, orders } = useOrders();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPriceWarning, setShowPriceWarning] = useState(false);
@@ -96,31 +96,18 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
     }
 
     if (cartItems.length === 0) {
-      toast({
-        title: "Cart is empty",
-        description: "Add items to cart before checkout",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.CART_EMPTY);
       return;
     }
 
     if (!user) {
-      toast({
-        title: "Error",
-        description: "User information not found",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.CART_USER_NOT_FOUND);
       return;
     }
 
     // Check if user profile is approved
     if (profile && profile.approvalStatus !== "approved") {
-      toast({
-        title: "Profile not approved",
-        description:
-          "Your profile must be approved before placing orders. Please wait for admin approval.",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.CART_PROFILE_NOT_APPROVED);
       return;
     }
 
@@ -131,12 +118,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       selectedAddresses.billing.selection === "none"
     ) {
       setShowAddressErrors(true);
-      toast({
-        title: "Addresses required",
-        description:
-          "Please select shipping and billing addresses before checkout.",
-        variant: "destructive",
-      });
+      toast.error(TOAST_MESSAGES.CART_ADDRESSES_REQUIRED);
       return;
     }
 
@@ -185,11 +167,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       }
 
       if (outOfStockItems.length > 0) {
-        toast({
-          title: "Oops! You missed by a second",
-          description: `${outOfStockItems.join(", ")} ${outOfStockItems.length === 1 ? "is" : "are"} now out of stock. Please remove ${outOfStockItems.length === 1 ? "it" : "them"} from your cart.`,
-          variant: "destructive",
-        });
+        toast.error(TOAST_MESSAGES.CART_OUT_OF_STOCK(outOfStockItems));
         setIsLoading(false);
         return;
       }
@@ -198,14 +176,10 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
         const itemDetails = insufficientStockItems
           .map(
             (item) =>
-              `${item.name} (requested: ${item.requested}, available: ${item.available})`,
+              `${item.name} (requested: ${item.requested}, available: ${item.available})`
           )
           .join(", ");
-        toast({
-          title: "Oops! Stock changed",
-          description: `Some items have less stock than requested: ${itemDetails}. Please adjust quantities.`,
-          variant: "destructive",
-        });
+        toast.error(TOAST_MESSAGES.CART_INSUFFICIENT_STOCK(itemDetails));
         setIsLoading(false);
         return;
       }
@@ -224,12 +198,8 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to verify prices. Please try again.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+          : TOAST_MESSAGES.CART_VERIFY_PRICES_FAILED;
+      toast.error(errorMessage);
       setIsLoading(false);
     }
   };
@@ -257,7 +227,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       const orderSubtotal = orderItems.reduce(
         (total, orderItem) =>
           total + orderItem.item.sellingPrice * orderItem.quantity,
-        0,
+        0
       );
 
       // Recalculate tax based on new subtotal if prices were overridden
@@ -282,13 +252,10 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
         orderSubtotal,
         taxRateDecimal > 0 ? taxRateDecimal : undefined,
         recalculatedTaxAmount > 0 ? recalculatedTaxAmount : undefined,
-        orderAddresses,
+        orderAddresses
       );
 
-      toast({
-        title: "Order placed successfully",
-        description: `Order #${order.id.slice(-8)} has been submitted. Admin will contact you soon.`,
-      });
+      toast.success(TOAST_MESSAGES.ORDER_PLACED(order.id));
 
       clearCart();
       onOpenChange(false);
@@ -296,12 +263,8 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to create order. Please try again.";
-      toast({
-        title: "Error creating order",
-        description: errorMessage,
-        variant: "destructive",
-      });
+          : TOAST_MESSAGES.ORDER_FAILED_CREATE;
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -335,11 +298,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       if (pricesChangedAgain.length > 0) {
         setPriceChanges(pricesChangedAgain);
         setIsLoading(false);
-        toast({
-          title: "Prices changed again",
-          description: "Please review the updated prices before continuing.",
-          variant: "destructive",
-        });
+        toast.error(TOAST_MESSAGES.CART_PRICE_CHANGED);
         return;
       }
 
@@ -360,12 +319,8 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to verify prices. Please try again.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+          : TOAST_MESSAGES.CART_VERIFY_PRICES_FAILED;
+      toast.error(errorMessage);
       setIsLoading(false);
     }
   };
@@ -432,7 +387,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                         onClick={() =>
                           updateQuantity(
                             cartItem.item.id,
-                            cartItem.quantity - 1,
+                            cartItem.quantity - 1
                           )
                         }
                         disabled={cartItem.quantity <= 1}
@@ -459,7 +414,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                         onClick={() =>
                           updateQuantity(
                             cartItem.item.id,
-                            cartItem.quantity + 1,
+                            cartItem.quantity + 1
                           )
                         }
                         disabled={(() => {
@@ -471,7 +426,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                             cartItem.item,
                             user?.id || null,
                             orders || [],
-                            cartItems,
+                            cartItems
                           );
                           // Disable if we can't add one more (current quantity + 1 would exceed available)
                           // availableQuantity already accounts for current cart quantity
@@ -486,7 +441,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                     <div className="text-right min-w-[100px]">
                       <p className="font-semibold text-foreground">
                         {formatPrice(
-                          cartItem.item.sellingPrice * cartItem.quantity,
+                          cartItem.item.sellingPrice * cartItem.quantity
                         )}
                       </p>
                     </div>

@@ -1,6 +1,13 @@
-'use client'
+"use client";
 
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+} from "react";
 import { InventoryItem } from "@/data/inventory";
 import { useAuth } from "@/lib/auth/context";
 import { useInventory } from "@/contexts/InventoryContext";
@@ -13,7 +20,7 @@ import {
   storedToWishlistItems,
   mergeWishlists,
   StoredWishlistItem,
-} from "@/lib/wishlistPersistence";
+} from "@/lib/persistence/wishlist";
 
 interface WishlistContextType {
   wishlistItems: InventoryItem[];
@@ -26,7 +33,9 @@ interface WishlistContextType {
   isLoading: boolean;
 }
 
-const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
+const WishlistContext = createContext<WishlistContextType | undefined>(
+  undefined
+);
 
 export const useWishlist = () => {
   const context = useContext(WishlistContext);
@@ -68,13 +77,9 @@ export const WishlistProvider = ({ children }: WishlistProviderProps) => {
 
   /**
    * Load wishlist from localStorage or database
+   * Optimized: No longer requires full inventory to be loaded
    */
   const loadWishlist = useCallback(async () => {
-    if (inventory.length === 0) {
-      // Wait for inventory to load
-      return;
-    }
-
     setIsLoading(true);
 
     try {
@@ -97,52 +102,41 @@ export const WishlistProvider = ({ children }: WishlistProviderProps) => {
       }
 
       // Convert stored items to full wishlist items (with inventory data)
-      const fullWishlistItems = await storedToWishlistItems(storedItems, inventory);
+      // Now uses targeted query instead of requiring full inventory
+      const fullWishlistItems = await storedToWishlistItems(storedItems);
 
       setWishlistItems(fullWishlistItems);
     } catch (error) {
       // On error, try to load from localStorage as fallback
       const localItems = loadWishlistFromLocalStorage();
-      const fullWishlistItems = await storedToWishlistItems(localItems, inventory);
+      const fullWishlistItems = await storedToWishlistItems(localItems);
       setWishlistItems(fullWishlistItems);
     } finally {
       setIsLoading(false);
       setIsInitialized(true);
     }
-  }, [user?.id, inventory]);
+  }, [user?.id]);
 
-  // Load wishlist on mount when inventory is ready
+  // Load wishlist on mount (no longer depends on inventory)
   useEffect(() => {
-    if (!isInitialized && inventory.length > 0) {
+    if (!isInitialized) {
       loadWishlist();
     }
-  }, [inventory.length, isInitialized, loadWishlist]);
+  }, [isInitialized, loadWishlist]);
 
   // Handle user login/logout - reload wishlist when user changes
   useEffect(() => {
     const currentUserId = user?.id || null;
 
     // Only reload if user actually changed (login or logout)
-    if (isInitialized && inventory.length > 0 && currentUserId !== lastUserId) {
+    if (isInitialized && currentUserId !== lastUserId) {
       setLastUserId(currentUserId);
       loadWishlist();
-    } else if (!isInitialized && inventory.length > 0) {
+    } else if (!isInitialized) {
       // Set initial user ID
       setLastUserId(currentUserId);
     }
-  }, [user?.id, isInitialized, inventory.length, lastUserId, loadWishlist]);
-
-  // Update wishlist items when inventory changes (to get latest quantities/prices)
-  useEffect(() => {
-    if (isInitialized && inventory.length > 0) {
-      setWishlistItems((prev) => {
-        return prev.map((wishlistItem) => {
-          const updatedItem = inventory.find((inv) => inv.id === wishlistItem.id);
-          return updatedItem || wishlistItem;
-        }).filter((item) => inventory.some((inv) => inv.id === item.id));
-      });
-    }
-  }, [inventory, isInitialized]);
+  }, [user?.id, isInitialized, lastUserId, loadWishlist]);
 
   const addToWishlist = (item: InventoryItem) => {
     setWishlistItems((prev) => {
