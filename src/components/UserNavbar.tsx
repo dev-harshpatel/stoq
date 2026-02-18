@@ -130,7 +130,9 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             className="flex flex-col hover:opacity-80 transition-opacity cursor-pointer text-left"
             aria-label="Go to home page"
           >
-            <h1 className="text-lg font-semibold text-foreground">Stoq</h1>
+            <h1 className="text-lg font-semibold text-foreground">
+              b2bMobiles
+            </h1>
             <p className="text-xs text-muted-foreground hidden sm:block">
               Wholesale Stock Marketplace
             </p>

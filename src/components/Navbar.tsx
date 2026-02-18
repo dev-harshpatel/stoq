@@ -56,11 +56,6 @@ export function Navbar({ onMenuClick, className }: NavbarProps) {
     return user?.email || "Admin";
   };
 
-  const isProduction =
-    typeof process.env.NEXT_PUBLIC_SITE_URL === "string" &&
-    process.env.NEXT_PUBLIC_SITE_URL.includes("b2bmobiles.ca");
-  const appName = isProduction ? "Stoq" : "b2bmobiles";
-
   return (
     <header
       className={cn(
@@ -80,7 +75,9 @@ export function Navbar({ onMenuClick, className }: NavbarProps) {
           </Button>
 
           <div className="flex flex-col">
-            <h1 className="text-lg font-semibold text-foreground">{appName}</h1>
+            <h1 className="text-lg font-semibold text-foreground">
+              b2bMobiles
+            </h1>
             <p className="text-xs text-muted-foreground hidden sm:block">
               Wholesale Stock Dashboard
             </p>
