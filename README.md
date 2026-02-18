@@ -157,6 +157,15 @@ This repo includes a `vercel.json` with:
 
 Deploy on Vercel (or similar) and configure the same environment variables in your hosting provider.
 
+### Production standards (b2bmobiles.ca)
+
+For a safe, repeatable workflow now that the app is live:
+
+- **[Production standards](./docs/PRODUCTION_STANDARDS.md)** — Overview, pre-deploy checklist, and what to do if something goes wrong.
+- **[Branching & workflow](./docs/BRANCHING_AND_WORKFLOW.md)** — Use `main` for production, `dev` for integration, and feature branches that merge into `dev` first.
+- **[Environments & Supabase](./docs/ENVIRONMENTS_AND_SUPABASE.md)** — Separate Supabase projects for dev and production; how to manage env vars locally and in Vercel.
+- **[Option B: Two projects setup](./docs/OPTION_B_TWO_PROJECTS_SETUP.md)** — Step-by-step for two Supabase projects, replicating prod → dev, clearing prod, Vercel envs, and domains (b2bmobiles.ca = production, stoq-bice.vercel.app = dev/preview).
+
 ## Project structure (quick)
 
 - `app/` — Next.js App Router routes

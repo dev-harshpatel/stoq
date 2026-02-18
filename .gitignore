@@ -33,6 +33,9 @@ pnpm-lock.yaml
 _env.local
 .env*
 
+# Production data dumps (never commit)
+prod_public_data.sql
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
