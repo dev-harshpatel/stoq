@@ -31,7 +31,7 @@ export const LoginModal = ({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, signOut } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,9 +41,15 @@ export const LoginModal = ({
       const { user } = await signIn(email, password);
 
       if (user) {
-        // Check if user is an admin
         const profile = await getUserProfile(user.id);
-        const isAdmin = profile?.role === "admin";
+
+        // Block admin login from the storefront — admins must use /admin/login
+        if (profile?.role === "admin") {
+          await signOut();
+          toast.error(TOAST_MESSAGES.LOGIN_FAILED);
+          setPassword("");
+          return;
+        }
 
         toast.success(TOAST_MESSAGES.LOGIN_SUCCESS);
 
@@ -51,17 +57,12 @@ export const LoginModal = ({
         setPassword("");
         onOpenChange(false);
 
-        // Redirect based on role
-        if (isAdmin) {
-          router.push("/admin/dashboard");
-        } else {
-          // Regular users stay on the current page or go to home
-          router.refresh(); // Refresh to trigger middleware redirect if needed
-        }
+        // Regular users stay on the current page
+        router.refresh();
       }
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Invalid email or password";
+        error instanceof Error ? error.message : TOAST_MESSAGES.LOGIN_FAILED;
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);

@@ -84,18 +84,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
-    // Prioritize NEXT_PUBLIC_SITE_URL for production, fallback to window.location.origin
-    // This ensures production uses the correct URL even if window.location is different
+    // Use the actual browser origin so the email link always matches
+    // the domain the user signed up from (works for both b2bmobiles.ca and stoq-bice.vercel.app)
     const getRedirectUrl = () => {
-      // In production, prefer the environment variable
-      if (process.env.NEXT_PUBLIC_SITE_URL) {
-        return `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
-      }
-      // In browser, use current origin
       if (typeof window !== "undefined") {
         return `${window.location.origin}/auth/callback`;
       }
-      // Fallback for SSR
+      // SSR fallback — use env var
+      if (process.env.NEXT_PUBLIC_SITE_URL) {
+        return `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "")}/auth/callback`;
+      }
       return "http://localhost:3000/auth/callback";
     };
 
