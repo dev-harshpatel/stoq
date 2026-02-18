@@ -1,33 +1,33 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { NextResponse, type NextRequest } from 'next/server'
-import { Database } from '@/lib/database.types'
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { NextResponse, type NextRequest } from "next/server";
+import { Database } from "@/lib/database.types";
 
 export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url)
-  const code = requestUrl.searchParams.get('code')
-  const origin = requestUrl.origin
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const origin = requestUrl.origin;
 
   if (!code) {
     // No code provided - redirect to error page
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
   }
 
   try {
-    const cookieStore = await cookies()
+    const cookieStore = await cookies();
     const supabase = createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
-            return cookieStore.getAll()
+            return cookieStore.getAll();
           },
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
                 cookieStore.set(name, value, options)
-              )
+              );
             } catch {
               // The `setAll` method was called from a Server Component.
               // This can be ignored if you have middleware refreshing
@@ -36,50 +36,107 @@ export async function GET(request: NextRequest) {
           },
         },
       }
-    )
+    );
 
     // Exchange the code for a session
-    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-    
+    const { data: sessionData, error: exchangeError } =
+      await supabase.auth.exchangeCodeForSession(code);
+
     if (exchangeError) {
+      // Check if user is already verified and can log in (common case: code already used or expired, but email verified)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user && user.email_confirmed_at) {
+        // User is already verified - redirect to home/login instead of error
+        // This handles the case where Supabase verified the email but the callback code was invalid
+        return NextResponse.redirect(`${origin}/`);
+      }
+
       // If the error is about redirect URL mismatch, provide helpful message
-      if (exchangeError.message?.includes('redirect') || exchangeError.message?.includes('URL')) {
+      if (
+        exchangeError.message?.includes("redirect") ||
+        exchangeError.message?.includes("URL")
+      ) {
         // This usually means the redirect URL in the email doesn't match the allowed URLs
         // Redirect to error page with specific message
-        return NextResponse.redirect(`${origin}/auth/auth-code-error?reason=redirect_mismatch`)
+        return NextResponse.redirect(
+          `${origin}/auth/auth-code-error?reason=redirect_mismatch`
+        );
       }
-      
+
+      // Log error for debugging (in production, check Vercel logs)
+      console.error("[Auth Callback] Exchange error:", {
+        message: exchangeError.message,
+        status: exchangeError.status,
+        origin,
+      });
+
       // Other errors - redirect to error page
-      return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+      return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
 
     // Successfully exchanged code for session
     if (sessionData?.session) {
       // Get user profile to determine redirect
-      const { data: { user } } = await supabase.auth.getUser()
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (user) {
         const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single()
+          .from("user_profiles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
 
         // Redirect based on role
-        if (profile && (profile as { role: string }).role === 'admin') {
-          return NextResponse.redirect(`${origin}/admin/dashboard`)
+        if (profile && (profile as { role: string }).role === "admin") {
+          return NextResponse.redirect(`${origin}/admin/dashboard`);
         } else {
-          return NextResponse.redirect(`${origin}/`)
+          return NextResponse.redirect(`${origin}/`);
         }
       }
-      
+
       // User exists but couldn't get profile - redirect to home
-      return NextResponse.redirect(`${origin}/`)
+      return NextResponse.redirect(`${origin}/`);
     }
 
     // No session after exchange - this shouldn't happen but handle it
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
   } catch (error: any) {
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+    // Log error for debugging
+    console.error("[Auth Callback] Unexpected error:", {
+      message: error?.message,
+      origin,
+    });
+
+    // Try to check if user is verified despite the error
+    try {
+      const cookieStore = await cookies();
+      const supabase = createServerClient<Database>(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll();
+            },
+            setAll() {},
+          },
+        }
+      );
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user && user.email_confirmed_at) {
+        // User is verified - redirect to home
+        return NextResponse.redirect(`${origin}/`);
+      }
+    } catch {
+      // Ignore errors in fallback check
+    }
+
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
   }
 }
