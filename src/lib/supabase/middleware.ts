@@ -112,11 +112,11 @@ export async function updateSession(request: NextRequest) {
   // All routes starting with /admin are protected
   // Note: pathname was already declared above for early return check
 
-  // Check if there's an auth code in the query params (email confirmation)
-  // This handles cases where Supabase redirects to root path with code
+  // Check if there's an auth token_hash or code in the query params (email confirmation)
+  // This handles cases where Supabase redirects to root path with auth params
   const code = request.nextUrl.searchParams.get("code");
-  if (code && pathname === "/") {
-    // Redirect to auth callback handler if code is present on root path
+  const token_hash = request.nextUrl.searchParams.get("token_hash");
+  if ((code || token_hash) && pathname === "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/callback";
     return NextResponse.redirect(url);

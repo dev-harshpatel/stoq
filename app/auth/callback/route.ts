@@ -2,141 +2,122 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { Database } from "@/lib/database.types";
+import { type EmailOtpType } from "@supabase/supabase-js";
+
+async function getSupabaseClient() {
+  const cookieStore = await cookies();
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Can be ignored if middleware is refreshing user sessions
+          }
+        },
+      },
+    }
+  );
+}
+
+async function redirectByRole(
+  supabase: Awaited<ReturnType<typeof getSupabaseClient>>,
+  origin: string
+) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profile && (profile as { role: string }).role === "admin") {
+      return NextResponse.redirect(`${origin}/admin/dashboard`);
+    }
+  }
+
+  return NextResponse.redirect(`${origin}/`);
+}
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
   const origin = requestUrl.origin;
-
-  if (!code) {
-    // No code provided - redirect to error page
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
-  }
+  const token_hash = requestUrl.searchParams.get("token_hash");
+  const type = requestUrl.searchParams.get("type") as EmailOtpType | null;
+  const code = requestUrl.searchParams.get("code");
 
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
-        },
-      }
-    );
+    const supabase = await getSupabaseClient();
 
-    // Exchange the code for a session
-    const { data: sessionData, error: exchangeError } =
-      await supabase.auth.exchangeCodeForSession(code);
-
-    if (exchangeError) {
-      // Check if user is already verified and can log in (common case: code already used or expired, but email verified)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user && user.email_confirmed_at) {
-        // User is already verified - redirect to home/login instead of error
-        // This handles the case where Supabase verified the email but the callback code was invalid
-        return NextResponse.redirect(`${origin}/`);
-      }
-
-      // If the error is about redirect URL mismatch, provide helpful message
-      if (
-        exchangeError.message?.includes("redirect") ||
-        exchangeError.message?.includes("URL")
-      ) {
-        // This usually means the redirect URL in the email doesn't match the allowed URLs
-        // Redirect to error page with specific message
-        return NextResponse.redirect(
-          `${origin}/auth/auth-code-error?reason=redirect_mismatch`
-        );
-      }
-
-      // Log error for debugging (in production, check Vercel logs)
-      console.error("[Auth Callback] Exchange error:", {
-        message: exchangeError.message,
-        status: exchangeError.status,
-        origin,
+    // Token hash flow (email confirmation links) — no PKCE verifier needed
+    if (token_hash && type) {
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash,
+        type,
       });
 
-      // Other errors - redirect to error page
-      return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+      if (error) {
+        console.error("[Auth Callback] Token verification error:", {
+          message: error.message,
+          status: error.status,
+        });
+        return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+      }
+
+      return redirectByRole(supabase, origin);
     }
 
-    // Successfully exchanged code for session
-    if (sessionData?.session) {
-      // Get user profile to determine redirect
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    // PKCE code flow (legacy / OAuth)
+    if (code) {
+      const { error: exchangeError } =
+        await supabase.auth.exchangeCodeForSession(code);
 
-      if (user) {
-        const { data: profile } = await supabase
-          .from("user_profiles")
-          .select("role")
-          .eq("user_id", user.id)
-          .single();
+      if (exchangeError) {
+        console.error("[Auth Callback] Code exchange error:", {
+          message: exchangeError.message,
+          status: exchangeError.status,
+        });
 
-        // Redirect based on role
-        if (profile && (profile as { role: string }).role === "admin") {
-          return NextResponse.redirect(`${origin}/admin/dashboard`);
-        } else {
+        // Check if user is already verified despite the error
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user && user.email_confirmed_at) {
           return NextResponse.redirect(`${origin}/`);
         }
-      }
 
-      // User exists but couldn't get profile - redirect to home
-      return NextResponse.redirect(`${origin}/`);
-    }
-
-    // No session after exchange - this shouldn't happen but handle it
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
-  } catch (error: any) {
-    // Log error for debugging
-    console.error("[Auth Callback] Unexpected error:", {
-      message: error?.message,
-      origin,
-    });
-
-    // Try to check if user is verified despite the error
-    try {
-      const cookieStore = await cookies();
-      const supabase = createServerClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return cookieStore.getAll();
-            },
-            setAll() {},
-          },
+        if (
+          exchangeError.message?.includes("redirect") ||
+          exchangeError.message?.includes("URL")
+        ) {
+          return NextResponse.redirect(
+            `${origin}/auth/auth-code-error?reason=redirect_mismatch`
+          );
         }
-      );
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user && user.email_confirmed_at) {
-        // User is verified - redirect to home
-        return NextResponse.redirect(`${origin}/`);
+
+        return NextResponse.redirect(`${origin}/auth/auth-code-error`);
       }
-    } catch {
-      // Ignore errors in fallback check
+
+      return redirectByRole(supabase, origin);
     }
 
+    // No token_hash and no code — invalid callback
+    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error("[Auth Callback] Unexpected error:", err?.message);
     return NextResponse.redirect(`${origin}/auth/auth-code-error`);
   }
 }
