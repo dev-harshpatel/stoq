@@ -128,11 +128,13 @@ export async function updateSession(request: NextRequest) {
     "/user",
     "/login",
     "/signup",
+    "/admin/login",
     "/auth/callback",
     "/auth/auth-code-error",
   ];
   const isAdminRoute = pathname.startsWith("/admin");
-  const isProtectedAdminRoute = isAdminRoute;
+  const isAdminLoginRoute = pathname === "/admin/login";
+  const isProtectedAdminRoute = isAdminRoute && !isAdminLoginRoute;
 
   // Redirect /admin/alerts to dashboard (page is no longer available)
   if (pathname === "/admin/alerts") {
@@ -148,10 +150,28 @@ export async function updateSession(request: NextRequest) {
 
   // If user is not authenticated and trying to access protected admin route
   if (!user && isProtectedAdminRoute) {
-    // Redirect to home page where they can use the login modal
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/admin/login";
     return NextResponse.redirect(url);
+  }
+
+  // If authenticated admin visits /admin/login, redirect to dashboard
+  if (user && isAdminLoginRoute) {
+    try {
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profile && (profile as { role: string }).role === "admin") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin/dashboard";
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      // If profile check fails, let them through to the login page
+    }
   }
 
   // If user is authenticated and trying to access login/signup pages, redirect based on role

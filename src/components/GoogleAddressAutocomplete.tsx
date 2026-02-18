@@ -1,106 +1,109 @@
-'use client'
+"use client";
 
-import { useEffect, useRef, useState } from 'react'
-import { MapPin, Loader2 } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
+import { useEffect, useRef, useState } from "react";
+import { MapPin, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import {
   loadGooglePlacesScript,
   initAutocomplete,
   extractAddressComponents,
   type AddressComponents,
-} from '@/lib/google/places'
+} from "@/lib/google/places";
 
 interface GoogleAddressAutocompleteProps {
-  value: string
-  onChange: (address: string, components: AddressComponents | null) => void
-  onError?: (error: string) => void
-  label?: string
-  placeholder?: string
-  required?: boolean
-  className?: string
-  error?: string
-  disabled?: boolean
+  value: string;
+  onChange: (address: string, components: AddressComponents | null) => void;
+  onError?: (error: string) => void;
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  className?: string;
+  error?: string;
+  disabled?: boolean;
 }
 
 export function GoogleAddressAutocomplete({
   value,
   onChange,
   onError,
-  label = 'Postal Address',
-  placeholder = 'Start typing your address...',
+  label = "Postal Address",
+  placeholder = "Start typing your address...",
   required = false,
   className,
   error,
   disabled = false,
 }: GoogleAddressAutocompleteProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const autocompleteRef = useRef<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false)
-  const [hasError, setHasError] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   useEffect(() => {
     if (!apiKey) {
       // API key not configured - allow manual entry
-      setHasError(false)
-      setIsLoading(false)
-      return
+      setHasError(false);
+      setIsLoading(false);
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     loadGooglePlacesScript(apiKey)
       .then(() => {
-        setIsScriptLoaded(true)
-        setHasError(false)
+        setIsScriptLoaded(true);
+        setHasError(false);
       })
       .catch((err) => {
         // Don't treat this as an error - just allow manual entry
-        setHasError(false)
+        setHasError(false);
       })
       .finally(() => {
-        setIsLoading(false)
-      })
-  }, [apiKey, onError])
+        setIsLoading(false);
+      });
+  }, [apiKey, onError]);
 
   useEffect(() => {
     if (!isScriptLoaded || !inputRef.current || disabled) {
-      return
+      return;
     }
 
     try {
       autocompleteRef.current = initAutocomplete(inputRef.current, (place) => {
         if (place.formatted_address) {
-          const components = extractAddressComponents(place)
-          onChange(place.formatted_address, components)
-          setHasError(false)
+          const components = extractAddressComponents(place);
+          onChange(place.formatted_address, components);
+          setHasError(false);
         }
-      })
+      });
     } catch (err) {
-      onError?.('Failed to initialize address autocomplete')
-      setHasError(true)
+      onError?.("Failed to initialize address autocomplete");
+      setHasError(true);
     }
 
     return () => {
       if (autocompleteRef.current) {
         // Cleanup if needed
-        autocompleteRef.current = null
+        autocompleteRef.current = null;
       }
-    }
-  }, [isScriptLoaded, onChange, onError, disabled])
+    };
+  }, [isScriptLoaded, onChange, onError, disabled]);
 
   const handleManualChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value
-    onChange(newValue, null)
-  }
+    const newValue = e.target.value;
+    onChange(newValue, null);
+  };
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn("space-y-2", className)}>
       {label && (
-        <Label htmlFor="address-input" className={cn(error && 'text-destructive')}>
+        <Label
+          htmlFor="address-input"
+          className={cn(error && "text-destructive")}
+        >
           {label}
           {required && <span className="text-destructive ml-1">*</span>}
         </Label>
@@ -117,9 +120,9 @@ export function GoogleAddressAutocomplete({
           required={required}
           disabled={disabled || isLoading}
           className={cn(
-            'pl-10',
-            error && 'border-destructive focus-visible:ring-destructive',
-            hasError && 'border-warning'
+            "pl-10",
+            error && "border-destructive focus-visible:ring-destructive",
+            hasError && "border-warning"
           )}
         />
         {isLoading && (
@@ -128,12 +131,10 @@ export function GoogleAddressAutocomplete({
           </div>
         )}
       </div>
-      {error && (
-        <p className="text-sm font-medium text-destructive">{error}</p>
-      )}
+      {error && <p className="text-sm font-medium text-destructive">{error}</p>}
       {!apiKey && (
         <p className="text-sm text-muted-foreground">
-          Address autocomplete is not configured. Please enter your address manually.
+          Going to be used for billing and shipping purposes.
         </p>
       )}
       {isScriptLoaded && value && (
@@ -143,5 +144,5 @@ export function GoogleAddressAutocomplete({
         </div>
       )}
     </div>
-  )
+  );
 }
