@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +31,6 @@ import {
   Mail,
   Menu,
   ShoppingCart,
-  User,
   UserCircle,
   X,
 } from "lucide-react";
@@ -170,11 +170,12 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2">
-                    <User className="h-4 w-4" />
-                    <span className="hidden sm:inline">
-                      {user?.email?.split("@")[0] || "User"}
-                    </span>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                    <Avatar className="h-9 w-9 border border-border">
+                      <AvatarFallback className="bg-accent text-accent-foreground text-xs font-medium">
+                        {user?.email?.substring(0, 2).toUpperCase() || "US"}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">

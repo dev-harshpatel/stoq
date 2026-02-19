@@ -55,17 +55,15 @@ export default function Inventory() {
   return (
     <div className="flex flex-col h-full">
       {/* Sticky Header Section */}
-      <div className="sticky top-0 z-10 bg-background pb-4 space-y-4 border-b border-border mb-4 -mx-4 lg:-mx-6 px-4 lg:px-6 pt-4 lg:pt-6">
+      <div className="sticky top-0 z-10 bg-background pb-3 space-y-3 border-b border-border mb-3 -mx-4 lg:-mx-6 px-4 lg:px-6 pt-3 lg:pt-4">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">
-              Inventory
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {totalCount} devices in stock
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-foreground">
+            Inventory
+            <span className="text-muted-foreground font-normal text-sm ml-2">
+              {totalCount} devices
+            </span>
+          </h2>
           <ExportActions
             onFetchAllData={() => fetchAllFilteredInventory(serverFilters)}
             filename="inventory"

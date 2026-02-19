@@ -21,6 +21,7 @@ import {
   cartItemsToStored,
   storedToCartItems,
   mergeCarts,
+  clearGuestCart,
   StoredCartItem,
 } from "@/lib/persistence/cart";
 import { getAvailableQuantityForUser } from "@/lib/utils/order";
@@ -85,29 +86,30 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const orders = ordersContext?.orders || [];
 
   /**
-   * Save cart to both localStorage and database (if logged in)
+   * Save cart — logged-in users go to DB, guests go to localStorage
    */
   const persistCart = useCallback(
     async (items: CartItem[]) => {
       const stored = cartItemsToStored(items);
 
-      // Always save to localStorage
-      saveCartToLocalStorage(stored);
-
-      // If user is logged in, also save to database
       if (user?.id) {
+        // Logged in: save to DB only (not localStorage)
         await saveCartToDatabase(user.id, stored);
+      } else {
+        // Guest: save to localStorage only
+        saveCartToLocalStorage(stored);
       }
     },
     [user],
   );
 
   /**
-   * Load cart from localStorage or database
+   * Load cart from localStorage (guest) or database (logged in)
+   * On login: merges any guest cart items into the user's DB cart, then clears guest storage
+   * On logout: clears cart state (no cross-user leakage)
    */
   const loadCart = useCallback(async () => {
     if (inventory.length === 0) {
-      // Wait for inventory to load
       return;
     }
 
@@ -117,30 +119,39 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       let storedItems: StoredCartItem[] = [];
 
       if (user?.id) {
-        // User is logged in - load from database
+        // User just logged in — load their DB cart
         const dbItems = await loadCartFromDatabase(user.id);
-        const localItems = loadCartFromLocalStorage();
 
-        // Merge localStorage cart with database cart
-        storedItems = mergeCarts(localItems, dbItems);
+        // Check if there's a guest cart to merge in (items added before login)
+        const guestItems = loadCartFromLocalStorage();
 
-        // Save merged cart back to both
-        saveCartToLocalStorage(storedItems);
-        await saveCartToDatabase(user.id, storedItems);
+        if (guestItems.length > 0) {
+          // Merge guest items into the user's DB cart (DB wins conflicts)
+          storedItems = mergeCarts(guestItems, dbItems);
+          // Save merged result to DB
+          await saveCartToDatabase(user.id, storedItems);
+        } else {
+          storedItems = dbItems;
+        }
+
+        // Always clear guest localStorage after login
+        clearGuestCart();
       } else {
-        // Guest user - load from localStorage only
+        // Guest user — load from localStorage only
         storedItems = loadCartFromLocalStorage();
       }
 
-      // Convert stored items to full cart items (with inventory data)
       const fullCartItems = await storedToCartItems(storedItems, inventory);
-
       setCartItems(fullCartItems);
     } catch (error) {
-      // On error, try to load from localStorage as fallback
-      const localItems = loadCartFromLocalStorage();
-      const fullCartItems = await storedToCartItems(localItems, inventory);
-      setCartItems(fullCartItems);
+      // On error for guests, try localStorage as fallback
+      if (!user?.id) {
+        const localItems = loadCartFromLocalStorage();
+        const fullCartItems = await storedToCartItems(localItems, inventory);
+        setCartItems(fullCartItems);
+      } else {
+        setCartItems([]);
+      }
     } finally {
       setIsLoading(false);
       setIsInitialized(true);
@@ -158,12 +169,19 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   useEffect(() => {
     const currentUserId = user?.id || null;
 
-    // Only reload if user actually changed (login or logout)
     if (isInitialized && inventory.length > 0 && currentUserId !== lastUserId) {
+      const previousUserId = lastUserId;
       setLastUserId(currentUserId);
-      loadCart();
+
+      if (!currentUserId && previousUserId) {
+        // Logout: clear cart immediately, don't load stale data
+        setCartItems([]);
+        clearGuestCart();
+      } else {
+        // Login or user switch: load the new user's cart (merges guest items)
+        loadCart();
+      }
     } else if (!isInitialized && inventory.length > 0) {
-      // Set initial user ID
       setLastUserId(currentUserId);
     }
   }, [user?.id, isInitialized, inventory.length, lastUserId, loadCart]);

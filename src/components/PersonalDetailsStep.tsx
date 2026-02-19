@@ -27,7 +27,7 @@ export function PersonalDetailsStep({ form }: PersonalDetailsStepProps) {
             <FormItem>
               <FormLabel>First Name</FormLabel>
               <FormControl>
-                <Input placeholder="John" {...field} />
+                <Input placeholder="Your first name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -41,7 +41,7 @@ export function PersonalDetailsStep({ form }: PersonalDetailsStepProps) {
             <FormItem>
               <FormLabel>Last Name</FormLabel>
               <FormControl>
-                <Input placeholder="Doe" {...field} />
+                <Input placeholder="Your last name" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

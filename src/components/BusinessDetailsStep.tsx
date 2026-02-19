@@ -159,7 +159,7 @@ export function BusinessDetailsStep({ form }: BusinessDetailsStepProps) {
           <FormItem>
             <FormLabel>Business Name</FormLabel>
             <FormControl>
-              <Input placeholder="Acme Corporation" {...field} />
+              <Input placeholder="Your business name" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>

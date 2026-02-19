@@ -571,7 +571,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
                               <FormControl>
                                 <Input
                                   type="email"
-                                  placeholder="john@example.com"
+                                  placeholder="Your email address"
                                   {...field}
                                 />
                               </FormControl>

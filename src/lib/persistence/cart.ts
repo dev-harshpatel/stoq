@@ -11,16 +11,17 @@ export interface StoredCartItem {
   quantity: number;
 }
 
-const CART_STORAGE_KEY = "stoq_cart";
+const GUEST_CART_KEY = "stoq_cart_guest";
 
 /**
- * Load cart from localStorage
+ * Load guest cart from localStorage
+ * Only used for unauthenticated users
  */
 export const loadCartFromLocalStorage = (): StoredCartItem[] => {
   if (typeof window === "undefined") return [];
 
   try {
-    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    const stored = localStorage.getItem(GUEST_CART_KEY);
     if (!stored) return [];
 
     const parsed = JSON.parse(stored);
@@ -31,15 +32,31 @@ export const loadCartFromLocalStorage = (): StoredCartItem[] => {
 };
 
 /**
- * Save cart to localStorage
+ * Save guest cart to localStorage
+ * Only used for unauthenticated users
  */
 export const saveCartToLocalStorage = (items: StoredCartItem[]): void => {
   if (typeof window === "undefined") return;
 
   try {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+    localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
   } catch (error) {
     console.error("Failed to save cart to localStorage:", error);
+  }
+};
+
+/**
+ * Clear the guest cart from localStorage
+ */
+export const clearGuestCart = (): void => {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.removeItem(GUEST_CART_KEY);
+    // Also clean up the old key from previous versions
+    localStorage.removeItem("stoq_cart");
+  } catch {
+    // ignore
   }
 };
 

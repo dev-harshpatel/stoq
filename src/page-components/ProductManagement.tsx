@@ -146,20 +146,18 @@ export default function ProductManagement() {
   return (
     <div className="flex flex-col h-full">
       {/* Sticky Header Section */}
-      <div className="sticky top-0 z-10 bg-background pb-4 space-y-4 border-b border-border mb-4 -mx-4 lg:-mx-6 px-4 lg:px-6 pt-4 lg:pt-6">
+      <div className="sticky top-0 z-10 bg-background pb-3 space-y-3 border-b border-border mb-3 -mx-4 lg:-mx-6 px-4 lg:px-6 pt-3 lg:pt-4">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">
-              Edit Products
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {totalCount} products total. Make changes to product details.
-            </p>
-          </div>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-foreground">
+            Edit Products
+            <span className="text-muted-foreground font-normal text-sm ml-2">
+              {totalCount} products
+            </span>
+          </h2>
+          <div className="flex gap-2 shrink-0">
             {hasChanges && (
-              <Button variant="outline" onClick={handleReset} className="gap-2">
+              <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
                 <RotateCcw className="h-4 w-4" />
                 Reset All
               </Button>
@@ -184,34 +182,34 @@ export default function ProductManagement() {
             <table className="w-full">
               <thead className="sticky top-0 z-10">
                 <tr className="border-b border-border bg-muted">
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5">
                     Device Name
                   </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Brand
                   </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Grade
                   </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Storage
                   </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Quantity
                   </th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Purchase Price
                   </th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     HST %
                   </th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Price/Unit
                   </th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Selling Price
                   </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5">
                     Actions
                   </th>
                 </tr>
@@ -225,34 +223,34 @@ export default function ProductManagement() {
                       index % 2 === 1 && "bg-muted/20"
                     )}
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-2">
                       <div className="h-9 w-[240px] rounded-md bg-muted" />
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2">
                       <div className="h-9 w-[140px] rounded-md bg-muted" />
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2">
                       <div className="mx-auto h-9 w-20 rounded-md bg-muted" />
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2">
                       <div className="h-9 w-[120px] rounded-md bg-muted" />
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2">
                       <div className="mx-auto h-9 w-24 rounded-md bg-muted" />
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2">
                       <div className="ml-auto h-9 w-28 rounded-md bg-muted" />
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2">
                       <div className="ml-auto h-9 w-20 rounded-md bg-muted" />
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2">
                       <div className="ml-auto h-9 w-24 rounded-md bg-muted" />
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2">
                       <div className="ml-auto h-9 w-28 rounded-md bg-muted" />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-2">
                       <div className="mx-auto h-9 w-24 rounded-md bg-muted" />
                     </td>
                   </tr>
@@ -271,34 +269,34 @@ export default function ProductManagement() {
             <table className="w-full">
               <thead className="sticky top-0 z-10">
                 <tr className="border-b border-border bg-muted">
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5">
                     Device Name
                   </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Brand
                   </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Grade
                   </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Storage
                   </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Quantity
                   </th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Purchase Price
                   </th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     HST %
                   </th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Price/Unit
                   </th>
-                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4">
+                  <th className="text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5">
                     Selling Price
                   </th>
-                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4">
+                  <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5">
                     Actions
                   </th>
                 </tr>
@@ -343,7 +341,7 @@ export default function ProductManagement() {
                         hasEdits && "bg-primary/5"
                       )}
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-2">
                         <Input
                           value={deviceName}
                           onChange={(e) =>
@@ -356,7 +354,7 @@ export default function ProductManagement() {
                           className="min-w-[200px]"
                         />
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2">
                         <Input
                           value={brand}
                           onChange={(e) =>
@@ -369,7 +367,7 @@ export default function ProductManagement() {
                           className="min-w-[120px]"
                         />
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2">
                         <Select
                           value={grade}
                           onValueChange={(value) =>
@@ -391,7 +389,7 @@ export default function ProductManagement() {
                           </SelectContent>
                         </Select>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2">
                         <Input
                           value={storage}
                           onChange={(e) =>
@@ -404,52 +402,70 @@ export default function ProductManagement() {
                           className="min-w-[100px]"
                         />
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2">
                         <Input
                           type="number"
-                          value={quantity}
-                          onChange={(e) =>
+                          value={quantity ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
                             handleFieldChange(
                               product.id,
                               "quantity",
-                              parseInt(e.target.value) || 0
-                            )
-                          }
+                              val === "" ? "" : (parseInt(val) || 0)
+                            );
+                          }}
+                          onBlur={() => {
+                            if (!quantity && quantity !== 0) {
+                              handleFieldChange(product.id, "quantity", 0);
+                            }
+                          }}
                           className="w-24 text-center"
                           min="0"
                         />
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-2">
                           <span className="text-muted-foreground">$</span>
                           <Input
                             type="number"
-                            value={purchasePrice}
-                            onChange={(e) =>
+                            value={purchasePrice ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleFieldChange(
                                 product.id,
                                 "purchasePrice",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
+                                val === "" ? "" : (parseFloat(val) || 0)
+                              );
+                            }}
+                            onBlur={() => {
+                              if (!purchasePrice && purchasePrice !== 0) {
+                                handleFieldChange(product.id, "purchasePrice", 0);
+                              }
+                            }}
                             className="w-28 text-right"
                             min="0"
                             step="0.01"
                           />
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-2">
                           <Input
                             type="number"
-                            value={hst}
-                            onChange={(e) =>
+                            value={hst ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleFieldChange(
                                 product.id,
                                 "hst",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
+                                val === "" ? "" : (parseFloat(val) || 0)
+                              );
+                            }}
+                            onBlur={() => {
+                              if (!hst && hst !== 0) {
+                                handleFieldChange(product.id, "hst", 0);
+                              }
+                            }}
                             className="w-20 text-right"
                             min="0"
                             step="0.01"
@@ -457,31 +473,37 @@ export default function ProductManagement() {
                           <span className="text-muted-foreground">%</span>
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2">
                         <span className="text-sm text-muted-foreground font-medium">
                           {formatPrice(calculatedPricePerUnit)}
                         </span>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-2">
                           <span className="text-muted-foreground">$</span>
                           <Input
                             type="number"
-                            value={sellingPrice}
-                            onChange={(e) =>
+                            value={sellingPrice ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
                               handleFieldChange(
                                 product.id,
                                 "sellingPrice",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
+                                val === "" ? "" : (parseFloat(val) || 0)
+                              );
+                            }}
+                            onBlur={() => {
+                              if (!sellingPrice && sellingPrice !== 0) {
+                                handleFieldChange(product.id, "sellingPrice", 0);
+                              }
+                            }}
                             className="w-28 text-right"
                             min="0"
                             step="0.01"
                           />
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-2">
                         <div className="flex items-center justify-center gap-2">
                           {hasEdits && (
                             <Button
