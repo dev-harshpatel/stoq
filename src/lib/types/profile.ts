@@ -23,7 +23,7 @@ export const profileFields: ProfileFieldConfig[] = [
     section: "personal",
     editable: true,
     required: true,
-    placeholder: "John",
+    placeholder: "Your first name",
   },
   {
     key: "lastName",
@@ -32,7 +32,7 @@ export const profileFields: ProfileFieldConfig[] = [
     section: "personal",
     editable: true,
     required: true,
-    placeholder: "Doe",
+    placeholder: "Your last name",
   },
   {
     key: "phone",
@@ -52,7 +52,7 @@ export const profileFields: ProfileFieldConfig[] = [
     section: "business",
     editable: true,
     required: true,
-    placeholder: "Acme Corporation",
+    placeholder: "Your business name",
   },
   {
     key: "businessAddress",

@@ -85,26 +85,30 @@ export const storedToWishlistItems = async (
 };
 
 /**
- * Load wishlist from database for a user
+ * Load wishlist from database for a user (uses wishlist_items JSONB on user_profiles)
  */
 export const loadWishlistFromDatabase = async (
   userId: string
 ): Promise<StoredWishlistItem[]> => {
   try {
     const { supabase } = await import("../supabase/client");
-    const { data, error } = await (supabase.from("wishlists") as any)
-      .select("item_id, created_at")
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("wishlist_items")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .single<{ wishlist_items: StoredWishlistItem[] | null }>();
 
-    if (error) {
+    if (error || !data) {
       console.error("Error loading wishlist from database:", error);
       return [];
     }
 
-    return (data || []).map((row: any) => ({
-      itemId: row.item_id,
-      addedAt: row.created_at,
+    const wishlistItems = data.wishlist_items;
+    if (!wishlistItems || !Array.isArray(wishlistItems)) return [];
+
+    return wishlistItems.map((item) => ({
+      itemId: item.itemId,
+      addedAt: item.addedAt,
     }));
   } catch (error) {
     console.error("Error loading wishlist from database:", error);
@@ -113,7 +117,7 @@ export const loadWishlistFromDatabase = async (
 };
 
 /**
- * Save wishlist to database for a user
+ * Save wishlist to database for a user (uses wishlist_items JSONB on user_profiles)
  */
 export const saveWishlistToDatabase = async (
   userId: string,
@@ -122,21 +126,9 @@ export const saveWishlistToDatabase = async (
   try {
     const { supabase } = await import("../supabase/client");
 
-    // Delete existing wishlist items
-    await (supabase.from("wishlists") as any).delete().eq("user_id", userId);
-
-    if (items.length === 0) return;
-
-    // Insert new wishlist items
-    const wishlistRows = items.map((item) => ({
-      user_id: userId,
-      item_id: item.itemId,
-      created_at: item.addedAt,
-    }));
-
-    const { error } = await (supabase.from("wishlists") as any).insert(
-      wishlistRows
-    );
+    const { error } = await (supabase.from("user_profiles") as any)
+      .update({ wishlist_items: items })
+      .eq("user_id", userId);
 
     if (error) {
       throw error;

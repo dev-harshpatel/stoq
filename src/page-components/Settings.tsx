@@ -571,13 +571,19 @@ export default function Settings() {
               <Input
                 id="low-stock"
                 type="number"
-                value={settings.lowStockThreshold}
-                onChange={(e) =>
+                value={settings.lowStockThreshold || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
                   setSettings({
                     ...settings,
-                    lowStockThreshold: parseInt(e.target.value),
-                  })
-                }
+                    lowStockThreshold: val === "" ? 0 : parseInt(val),
+                  });
+                }}
+                onBlur={() => {
+                  if (!settings.lowStockThreshold || settings.lowStockThreshold < 1) {
+                    setSettings({ ...settings, lowStockThreshold: 1 });
+                  }
+                }}
                 className="bg-background"
               />
               <p className="text-xs text-muted-foreground">
@@ -589,13 +595,19 @@ export default function Settings() {
               <Input
                 id="critical-stock"
                 type="number"
-                value={settings.criticalStockThreshold}
-                onChange={(e) =>
+                value={settings.criticalStockThreshold || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
                   setSettings({
                     ...settings,
-                    criticalStockThreshold: parseInt(e.target.value),
-                  })
-                }
+                    criticalStockThreshold: val === "" ? 0 : parseInt(val),
+                  });
+                }}
+                onBlur={() => {
+                  if (!settings.criticalStockThreshold || settings.criticalStockThreshold < 1) {
+                    setSettings({ ...settings, criticalStockThreshold: 1 });
+                  }
+                }}
                 className="bg-background"
               />
               <p className="text-xs text-muted-foreground">
@@ -607,13 +619,19 @@ export default function Settings() {
               <Input
                 id="refresh"
                 type="number"
-                value={settings.autoRefreshInterval}
-                onChange={(e) =>
+                value={settings.autoRefreshInterval || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
                   setSettings({
                     ...settings,
-                    autoRefreshInterval: parseInt(e.target.value),
-                  })
-                }
+                    autoRefreshInterval: val === "" ? 0 : parseInt(val),
+                  });
+                }}
+                onBlur={() => {
+                  if (!settings.autoRefreshInterval || settings.autoRefreshInterval < 1) {
+                    setSettings({ ...settings, autoRefreshInterval: 1 });
+                  }
+                }}
                 className="bg-background"
               />
             </div>

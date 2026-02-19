@@ -52,7 +52,7 @@ export const PaginationControls = memo(function PaginationControls({
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row items-center justify-between gap-4 py-4 w-full max-w-full min-w-0",
+        "flex flex-col sm:flex-row items-center justify-between gap-2 w-full max-w-full min-w-0",
         className
       )}
     >

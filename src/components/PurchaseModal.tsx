@@ -152,10 +152,20 @@ export const PurchaseModal = ({
               type="number"
               min="1"
               max={maxQuantity}
-              value={quantity}
+              value={quantity || ""}
               onChange={(e) => {
-                const newQuantity = Number.parseInt(e.target.value) || 1;
-                setQuantity(Math.min(newQuantity, maxQuantity));
+                const val = e.target.value;
+                if (val === "") {
+                  setQuantity(0);
+                  return;
+                }
+                const newQuantity = Number.parseInt(val);
+                if (!isNaN(newQuantity)) {
+                  setQuantity(Math.min(newQuantity, maxQuantity));
+                }
+              }}
+              onBlur={() => {
+                if (quantity < 1) setQuantity(1);
               }}
               required
               disabled={maxQuantity === 0}

@@ -397,13 +397,22 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                       <Input
                         type="number"
                         min="1"
-                        value={cartItem.quantity}
+                        value={cartItem.quantity || ""}
                         onChange={(e) => {
-                          const newQuantity =
-                            Number.parseInt(e.target.value) || 1;
-                          // The updateQuantity function will validate against available quantity
-                          // (accounting for pending orders)
-                          updateQuantity(cartItem.item.id, newQuantity);
+                          const val = e.target.value;
+                          if (val === "") {
+                            updateQuantity(cartItem.item.id, 0);
+                            return;
+                          }
+                          const newQuantity = Number.parseInt(val);
+                          if (!isNaN(newQuantity)) {
+                            updateQuantity(cartItem.item.id, newQuantity);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (cartItem.quantity < 1) {
+                            updateQuantity(cartItem.item.id, 1);
+                          }
                         }}
                         className="w-16 text-center"
                       />

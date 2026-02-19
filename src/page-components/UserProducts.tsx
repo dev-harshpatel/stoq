@@ -115,36 +115,25 @@ export default function UserProducts() {
     <>
       <div className="flex flex-col h-full">
         {/* Header Section - Sticky on desktop only */}
-        <div className="lg:sticky lg:top-0 z-10 bg-background pb-4 space-y-4 border-b border-border mb-4">
-          {/* Page Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold text-foreground">
-                Products
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {totalCount} devices available
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportPDF}
-              className="gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Download PDF</span>
-              <span className="sm:hidden">Download PDF</span>
-            </Button>
-          </div>
-
-          {/* Filter Bar */}
+        <div className="lg:sticky lg:top-0 z-10 bg-background pb-3 border-b border-border mb-3">
+          {/* Filter Bar with PDF export */}
           <FilterBar
             brands={filterOptions.brands}
             storageOptions={filterOptions.storageOptions}
             filters={filters}
             onFiltersChange={setFilters}
             onReset={handleResetFilters}
+            trailing={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPDF}
+                className="gap-2 shrink-0"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">PDF</span>
+              </Button>
+            }
           />
         </div>
 
@@ -157,28 +146,28 @@ export default function UserProducts() {
               <table className="w-full">
                 <thead>
                   <tr>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4 w-[22%]">
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5 w-[22%]">
                       Device Name
                     </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4 w-[10%]">
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[10%]">
                       Brand
                     </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4 w-[8%]">
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[8%]">
                       Grade
                     </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4 w-[10%]">
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[10%]">
                       Storage
                     </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4 w-[8%]">
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[8%]">
                       Qty
                     </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-4 w-[12%]">
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[12%]">
                       Price
                     </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4 w-[12%]">
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5 w-[12%]">
                       Status
                     </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-6 py-4 w-[18%]">
+                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5 w-[18%]">
                       Action
                     </th>
                   </tr>
@@ -220,27 +209,21 @@ export default function UserProducts() {
                               !isOutOfStock && handleBuyClick(item)
                             }
                           >
-                            <td className="px-6 py-4 text-center">
-                              <div className="flex flex-col items-center">
-                                <span
-                                  className={cn(
-                                    "font-medium",
-                                    isOutOfStock
-                                      ? "text-muted-foreground"
-                                      : "text-foreground"
-                                  )}
-                                >
-                                  {item.deviceName}
-                                </span>
-                                <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                  <Clock className="h-3 w-3" />
-                                  Updated {item.lastUpdated}
-                                </span>
-                              </div>
+                            <td className="px-4 py-2.5 text-center">
+                              <span
+                                className={cn(
+                                  "font-medium text-sm",
+                                  isOutOfStock
+                                    ? "text-muted-foreground"
+                                    : "text-foreground"
+                                )}
+                              >
+                                {item.deviceName}
+                              </span>
                             </td>
                             <td
                               className={cn(
-                                "px-4 py-4 text-center text-sm",
+                                "px-3 py-2.5 text-center text-sm",
                                 isOutOfStock
                                   ? "text-muted-foreground"
                                   : "text-foreground"
@@ -248,12 +231,12 @@ export default function UserProducts() {
                             >
                               {item.brand}
                             </td>
-                            <td className="px-4 py-4 text-center">
+                            <td className="px-3 py-2.5 text-center">
                               <GradeBadge grade={item.grade} />
                             </td>
                             <td
                               className={cn(
-                                "px-4 py-4 text-center text-sm",
+                                "px-3 py-2.5 text-center text-sm",
                                 isOutOfStock
                                   ? "text-muted-foreground"
                                   : "text-foreground"
@@ -261,10 +244,10 @@ export default function UserProducts() {
                             >
                               {item.storage}
                             </td>
-                            <td className="px-4 py-4 text-center">
+                            <td className="px-3 py-2.5 text-center">
                               <span
                                 className={cn(
-                                  "font-semibold",
+                                  "font-semibold text-sm",
                                   status === "out-of-stock" &&
                                     "text-destructive",
                                   status === "critical" && "text-destructive",
@@ -277,7 +260,7 @@ export default function UserProducts() {
                             </td>
                             <td
                               className={cn(
-                                "px-4 py-4 text-center font-medium text-sm",
+                                "px-3 py-2.5 text-center font-medium text-sm",
                                 isOutOfStock
                                   ? "text-muted-foreground"
                                   : "text-foreground"
@@ -285,10 +268,10 @@ export default function UserProducts() {
                             >
                               {formatPrice(item.sellingPrice)}
                             </td>
-                            <td className="px-6 py-4 text-center">
+                            <td className="px-4 py-2.5 text-center">
                               <StatusBadge quantity={item.quantity} />
                             </td>
-                            <td className="px-6 py-4 text-center">
+                            <td className="px-4 py-2.5 text-center">
                               <div className="flex items-center justify-center gap-2">
                                 <Button
                                   variant="ghost"
@@ -321,7 +304,7 @@ export default function UserProducts() {
                                   className="gap-2"
                                 >
                                   <ShoppingCart className="h-4 w-4" />
-                                  {isOutOfStock ? "Out of Stock" : "Buy"}
+                                  Buy
                                 </Button>
                               </div>
                             </td>
@@ -336,7 +319,7 @@ export default function UserProducts() {
           </div>
 
           {/* Mobile Cards - grouped by brand (company) */}
-          <div className="md:hidden space-y-6 pb-6">
+          <div className="md:hidden space-y-3 pb-4">
             {groupedByBrand.map(({ brand, items: groupItems }) => (
               <div key={brand} className="space-y-3">
                 {groupItems.map((item) => {
@@ -349,7 +332,7 @@ export default function UserProducts() {
                     <div
                       key={item.id}
                       className={cn(
-                        "p-4 bg-card rounded-lg border border-border",
+                        "p-3 bg-card rounded-lg border border-border",
                         isLowStock &&
                           "border-destructive/20 bg-destructive/[0.02]",
                         isOutOfStock && "bg-muted/50"
@@ -470,7 +453,7 @@ export default function UserProducts() {
                           disabled={isOutOfStock}
                         >
                           <ShoppingCart className="h-4 w-4" />
-                          {isOutOfStock ? "Out of Stock" : "Buy"}
+                          Buy
                         </Button>
                       </div>
                     </div>

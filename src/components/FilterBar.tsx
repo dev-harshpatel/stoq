@@ -43,6 +43,7 @@ interface FilterBarProps {
   className?: string;
   brands?: string[]; // Dynamic brands from inventory
   storageOptions?: string[]; // Dynamic storage options from inventory
+  trailing?: React.ReactNode; // Extra buttons to render at the end (desktop only)
 }
 
 export function FilterBar({
@@ -52,6 +53,7 @@ export function FilterBar({
   className,
   brands = [],
   storageOptions = [],
+  trailing,
 }: FilterBarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -72,7 +74,7 @@ export function FilterBar({
       {/* Desktop Filter Bar */}
       <div
         className={cn(
-          "hidden md:flex items-center gap-4 p-4 bg-card rounded-lg shadow-soft border border-border",
+          "hidden md:flex items-center gap-2 flex-wrap",
           className
         )}
       >
@@ -90,7 +92,7 @@ export function FilterBar({
           value={filters.brand}
           onValueChange={(v) => handleChange("brand", v)}
         >
-          <SelectTrigger className="w-36 bg-background border-border">
+          <SelectTrigger className="w-[130px] bg-background border-border">
             <SelectValue placeholder="Brand" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
@@ -107,7 +109,7 @@ export function FilterBar({
           value={filters.grade}
           onValueChange={(v) => handleChange("grade", v)}
         >
-          <SelectTrigger className="w-32 bg-background border-border">
+          <SelectTrigger className="w-[120px] bg-background border-border">
             <SelectValue placeholder="Grade" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
@@ -123,7 +125,7 @@ export function FilterBar({
           value={filters.storage}
           onValueChange={(v) => handleChange("storage", v)}
         >
-          <SelectTrigger className="w-36 bg-background border-border">
+          <SelectTrigger className="w-[130px] bg-background border-border">
             <SelectValue placeholder="Storage" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
@@ -140,7 +142,7 @@ export function FilterBar({
           value={filters.priceRange}
           onValueChange={(v) => handleChange("priceRange", v)}
         >
-          <SelectTrigger className="w-40 bg-background border-border">
+          <SelectTrigger className="w-[140px] bg-background border-border">
             <SelectValue placeholder="Price Range" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
@@ -155,7 +157,7 @@ export function FilterBar({
           value={filters.stockStatus}
           onValueChange={(v) => handleChange("stockStatus", v)}
         >
-          <SelectTrigger className="w-40 bg-background border-border">
+          <SelectTrigger className="w-[140px] bg-background border-border">
             <SelectValue placeholder="Stock Status" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
@@ -178,12 +180,13 @@ export function FilterBar({
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset
           </Button>
+          {trailing}
         </div>
       </div>
 
       {/* Mobile Filter Button & Modal */}
       <div className="md:hidden">
-        <div className="flex items-center gap-2 p-4">
+        <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
