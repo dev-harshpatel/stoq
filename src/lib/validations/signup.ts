@@ -57,7 +57,7 @@ export const businessDetailsSchema = z.object({
   businessYears: z
     .number()
     .int('Years must be a whole number')
-    .min(0, 'Years cannot be negative')
+    .min(1, 'Must be at least 1 year')
     .max(100, 'Years cannot exceed 100'),
   businessWebsite: z
     .string()

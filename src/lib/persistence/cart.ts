@@ -96,7 +96,7 @@ export const storedToCartItems = async (
 };
 
 /**
- * Load cart from database for a user
+ * Load cart from database for a user (uses cart_items JSONB on user_profiles)
  */
 export const loadCartFromDatabase = async (
   userId: string
@@ -104,18 +104,22 @@ export const loadCartFromDatabase = async (
   try {
     const { supabase } = await import("../supabase/client");
     const { data, error } = await supabase
-      .from("carts")
-      .select("item_id, quantity")
-      .eq("user_id", userId);
+      .from("user_profiles")
+      .select("cart_items")
+      .eq("user_id", userId)
+      .single<{ cart_items: StoredCartItem[] | null }>();
 
-    if (error) {
+    if (error || !data) {
       console.error("Error loading cart from database:", error);
       return [];
     }
 
-    return (data || []).map((row: any) => ({
-      itemId: row.item_id,
-      quantity: row.quantity,
+    const cartItems = data.cart_items;
+    if (!cartItems || !Array.isArray(cartItems)) return [];
+
+    return cartItems.map((item) => ({
+      itemId: item.itemId,
+      quantity: item.quantity,
     }));
   } catch (error) {
     console.error("Error loading cart from database:", error);
@@ -124,7 +128,7 @@ export const loadCartFromDatabase = async (
 };
 
 /**
- * Save cart to database for a user
+ * Save cart to database for a user (uses cart_items JSONB on user_profiles)
  */
 export const saveCartToDatabase = async (
   userId: string,
@@ -133,19 +137,9 @@ export const saveCartToDatabase = async (
   try {
     const { supabase } = await import("../supabase/client");
 
-    // Delete existing cart items
-    await (supabase.from("carts") as any).delete().eq("user_id", userId);
-
-    if (items.length === 0) return;
-
-    // Insert new cart items
-    const cartRows = items.map((item) => ({
-      user_id: userId,
-      item_id: item.itemId,
-      quantity: item.quantity,
-    }));
-
-    const { error } = await (supabase.from("carts") as any).insert(cartRows);
+    const { error } = await (supabase.from("user_profiles") as any)
+      .update({ cart_items: items })
+      .eq("user_id", userId);
 
     if (error) {
       throw error;

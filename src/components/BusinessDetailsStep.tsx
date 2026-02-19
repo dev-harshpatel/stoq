@@ -290,13 +290,15 @@ export function BusinessDetailsStep({ form }: BusinessDetailsStepProps) {
               <FormControl>
                 <Input
                   type="number"
-                  min="0"
+                  min="1"
                   max="100"
-                  placeholder="5"
+                  placeholder="e.g. 5"
                   {...field}
-                  onChange={(e) =>
-                    field.onChange(parseInt(e.target.value) || 0)
-                  }
+                  value={field.value || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    field.onChange(val === "" ? 0 : parseInt(val));
+                  }}
                 />
               </FormControl>
               <FormMessage />
