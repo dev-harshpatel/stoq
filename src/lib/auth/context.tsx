@@ -30,14 +30,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           error,
         } = await supabase.auth.getUser();
 
-        // Handle refresh token errors gracefully
-        if (error && error.message?.includes("refresh_token_not_found")) {
-          // Refresh token missing - user is not authenticated
+        // Handle expected unauthenticated states gracefully
+        if (
+          error &&
+          (error.message?.includes("refresh_token_not_found") ||
+            error.message?.includes("Auth session missing"))
+        ) {
+          // No active session - user is not authenticated
           setUser(null);
-          // Clear any invalid cookies
           await supabase.auth.signOut({ scope: "local" });
         } else if (error) {
-          // Other auth errors
+          // Unexpected auth errors
           console.error("Auth error:", error.message);
           setUser(null);
         } else {
