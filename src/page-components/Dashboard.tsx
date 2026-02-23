@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { useOrders } from "@/contexts/OrdersContext";
 import { formatPrice } from "@/lib/utils";
-import { Loader } from "@/components/Loader";
 import { EmptyState } from "@/components/EmptyState";
 import { StatCard } from "@/components/StatCard";
 import { fetchInventoryStats, fetchOrderStats } from "@/lib/supabase/queries";
@@ -84,8 +83,6 @@ export default function Dashboard() {
       completedOrders: orderStats.completedOrders,
     };
   }, [inventoryStats, orderStats]);
-
-  const isLoading = isLoadingStats || ordersLoading;
 
   // Generate recent activity from real data
   // Note: Still uses orders from context for recent activity (small dataset)
@@ -166,10 +163,6 @@ export default function Dashboard() {
     // For now, keeping it simple since it's not critical
     return [];
   }, []);
-
-  if (isLoading) {
-    return <Loader size="lg" text="Loading dashboard..." />;
-  }
 
   return (
     <div className="flex flex-col h-full overflow-y-auto lg:overflow-hidden">
