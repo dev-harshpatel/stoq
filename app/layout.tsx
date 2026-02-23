@@ -7,6 +7,7 @@ import "@/index.css";
 export const metadata: Metadata = {
   title: "Stock Flow - Inventory Management",
   description: "Modern inventory management system",
+  icons: { icon: "data:," },
 };
 
 export default function RootLayout({
