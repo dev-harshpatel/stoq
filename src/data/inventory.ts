@@ -1,8 +1,10 @@
+import type { Grade } from "@/lib/constants/grades";
+
 export interface InventoryItem {
   id: string;
   deviceName: string;
   brand: string;
-  grade: "A" | "B" | "C" | "D";
+  grade: Grade;
   storage: string;
   quantity: number;
   pricePerUnit: number;

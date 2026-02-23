@@ -39,13 +39,20 @@ import {
 import { format } from "date-fns";
 import { OrderStatus } from "@/types/order";
 import { cn } from "@/lib/utils";
+import {
+  type Grade,
+  GRADES,
+  GRADE_LABELS,
+} from "@/lib/constants/grades";
 
-// Grade colors: A=Green, B=Yellow, C=Blue, D=Red
+// Grade colors for charts
 const GRADE_COLORS: Record<string, string> = {
-  "Grade A": "hsl(142, 76%, 36%)", // Green
-  "Grade B": "hsl(38, 92%, 50%)", // Yellow
-  "Grade C": "hsl(217, 91%, 60%)", // Blue
-  "Grade D": "hsl(0, 72%, 51%)", // Red
+  "Brand New Sealed": "hsl(160, 84%, 39%)",
+  "Brand New Open Box": "hsl(174, 72%, 40%)",
+  "Grade A": "hsl(142, 76%, 36%)",
+  "Grade B": "hsl(38, 92%, 50%)",
+  "Grade C": "hsl(217, 91%, 60%)",
+  "Grade D": "hsl(0, 72%, 51%)",
 };
 
 // Fallback colors for other charts
@@ -62,7 +69,7 @@ interface ReportFilters {
     to: Date | null;
   };
   orderStatus: OrderStatus | "all";
-  grade: "A" | "B" | "C" | "D" | "all";
+  grade: Grade | "all";
   brand: string | "all";
 }
 
@@ -203,24 +210,12 @@ export default function Reports() {
 
   // Stock by Grade (filtered)
   const stockByGrade = useMemo(() => {
-    const gradeA = filteredInventory
-      .filter((i) => i.grade === "A")
-      .reduce((s, i) => s + i.quantity, 0);
-    const gradeB = filteredInventory
-      .filter((i) => i.grade === "B")
-      .reduce((s, i) => s + i.quantity, 0);
-    const gradeC = filteredInventory
-      .filter((i) => i.grade === "C")
-      .reduce((s, i) => s + i.quantity, 0);
-    const gradeD = filteredInventory
-      .filter((i) => i.grade === "D")
-      .reduce((s, i) => s + i.quantity, 0);
-    return [
-      { name: "Grade A", value: gradeA },
-      { name: "Grade B", value: gradeB },
-      { name: "Grade C", value: gradeC },
-      { name: "Grade D", value: gradeD },
-    ].filter((d) => d.value > 0);
+    return GRADES.map((g) => ({
+      name: GRADE_LABELS[g],
+      value: filteredInventory
+        .filter((i) => i.grade === g)
+        .reduce((s, i) => s + i.quantity, 0),
+    })).filter((d) => d.value > 0);
   }, [filteredInventory]);
 
   // Stock by Status (filtered)
@@ -496,19 +491,20 @@ export default function Reports() {
                 onValueChange={(value) =>
                   setFilters((prev) => ({
                     ...prev,
-                    grade: value as "A" | "B" | "C" | "D" | "all",
+                    grade: value as Grade | "all",
                   }))
                 }
               >
-                <SelectTrigger className="w-full sm:w-[140px]">
+                <SelectTrigger className="w-full sm:w-[160px]">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Grades</SelectItem>
-                  <SelectItem value="A">Grade A</SelectItem>
-                  <SelectItem value="B">Grade B</SelectItem>
-                  <SelectItem value="C">Grade C</SelectItem>
-                  <SelectItem value="D">Grade D</SelectItem>
+                  {GRADES.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {GRADE_LABELS[g]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 

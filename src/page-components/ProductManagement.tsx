@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { RotateCcw, Save } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { GRADES } from "@/lib/constants/grades";
 import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import { EmptyState } from "@/components/EmptyState";
 import { Switch } from "@/components/ui/switch";
@@ -358,11 +359,7 @@ export default function ProductManagement() {
                     "deviceName"
                   ) as string;
                   const brand = getFieldValue(product, "brand") as string;
-                  const grade = getFieldValue(product, "grade") as
-                    | "A"
-                    | "B"
-                    | "C"
-                    | "D";
+                  const grade = getFieldValue(product, "grade") as string;
                   const storage = getFieldValue(product, "storage") as string;
                   const quantity = getFieldValue(product, "quantity") as number;
                   const purchasePrice = (getFieldValue(
@@ -425,21 +422,18 @@ export default function ProductManagement() {
                         <Select
                           value={grade}
                           onValueChange={(value) =>
-                            handleFieldChange(
-                              product.id,
-                              "grade",
-                              value as "A" | "B" | "C" | "D"
-                            )
+                            handleFieldChange(product.id, "grade", value)
                           }
                         >
-                          <SelectTrigger className="w-20">
+                          <SelectTrigger className="min-w-[140px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="A">A</SelectItem>
-                            <SelectItem value="B">B</SelectItem>
-                            <SelectItem value="C">C</SelectItem>
-                            <SelectItem value="D">D</SelectItem>
+                            {GRADES.map((g) => (
+                              <SelectItem key={g} value={g}>
+                                {g}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </td>

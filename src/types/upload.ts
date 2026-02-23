@@ -11,10 +11,12 @@ export interface UploadHistory {
   updatedAt: string;
 }
 
+import type { Grade } from "@/lib/constants/grades";
+
 export interface ParsedProduct {
   deviceName: string;
   brand: string;
-  grade: 'A' | 'B' | 'C' | 'D';
+  grade: Grade;
   storage: string;
   quantity: number;
   purchasePrice: number;

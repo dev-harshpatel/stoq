@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { toast } from "sonner";
+import { GRADE_LABELS } from "@/lib/constants/grades";
 import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import { cn } from "@/lib/utils";
 import { LoginModal } from "@/components/LoginModal";
@@ -367,7 +368,7 @@ export const CartModal = ({ open, onOpenChange }: CartModalProps) => {
                     </h4>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="text-xs">
-                        Grade {cartItem.item.grade}
+                        {GRADE_LABELS[cartItem.item.grade] ?? cartItem.item.grade}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
                         {cartItem.item.storage}

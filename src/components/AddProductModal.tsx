@@ -46,6 +46,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useInventory } from "@/contexts/InventoryContext";
+import {
+  type Grade,
+  GRADES,
+  GRADE_BADGE_LABELS,
+  GRADE_LABELS,
+} from "@/lib/constants/grades";
 
 interface AddProductModalProps {
   open: boolean;
@@ -56,7 +62,7 @@ interface AddProductModalProps {
 interface ProductForm {
   deviceName: string;
   brand: string;
-  grade: "A" | "B" | "C" | "D" | "";
+  grade: Grade | "";
   storage: string;
   quantity: string;
   purchasePrice: string;
@@ -76,6 +82,8 @@ const defaultForm: ProductForm = {
 };
 
 const GRADE_STYLES: Record<string, string> = {
+  "Brand New Sealed": "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
+  "Brand New Open Box": "bg-teal-500/10 text-teal-700 border-teal-500/30",
   A: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30",
   B: "bg-blue-500/10 text-blue-700 border-blue-500/30",
   C: "bg-amber-500/10 text-amber-700 border-amber-500/30",
@@ -190,7 +198,7 @@ export function AddProductModal({
             id: "",
             deviceName: form.deviceName.trim(),
             brand: form.brand.trim(),
-            grade: form.grade as "A" | "B" | "C" | "D",
+            grade: form.grade as Grade,
             storage: form.storage.trim(),
             quantity: newQuantity,
             purchasePrice: newPurchasePrice,
@@ -423,18 +431,18 @@ export function AddProductModal({
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["A", "B", "C", "D"] as const).map((g) => (
+                  {GRADES.map((g) => (
                     <SelectItem key={g} value={g}>
                       <span className="flex items-center gap-2">
                         <span
                           className={cn(
-                            "inline-flex items-center justify-center w-5 h-5 rounded text-xs font-bold border",
+                            "inline-flex items-center justify-center rounded text-xs font-bold border px-1.5 py-0.5 min-w-[1.5rem]",
                             GRADE_STYLES[g]
                           )}
                         >
-                          {g}
+                          {GRADE_BADGE_LABELS[g]}
                         </span>
-                        Grade {g}
+                        {GRADE_LABELS[g]}
                       </span>
                     </SelectItem>
                   ))}
