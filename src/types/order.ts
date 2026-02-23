@@ -36,6 +36,8 @@ export interface Order {
   // Addresses (full address string only)
   shippingAddress?: string | null;
   billingAddress?: string | null;
+  // IMEI numbers keyed by item index (e.g. {"0": "123456789012345"})
+  imeiNumbers?: Record<string, string> | null;
 }
 
 // Extended order with user profile info (for display)

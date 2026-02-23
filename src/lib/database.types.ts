@@ -156,6 +156,7 @@ export interface Database {
           selling_price: number | null;
           last_updated: string;
           price_change: string | null;
+          is_active: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -172,6 +173,7 @@ export interface Database {
           selling_price?: number | null;
           last_updated: string;
           price_change?: string | null;
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -188,6 +190,7 @@ export interface Database {
           selling_price?: number | null;
           last_updated?: string;
           price_change?: string | null;
+          is_active?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -222,6 +225,7 @@ export interface Database {
           shipping_amount?: number | null;
           shipping_address?: string | null;
           billing_address?: string | null;
+          imei_numbers?: Json | null;
         };
         Insert: {
           id?: string;
@@ -251,6 +255,7 @@ export interface Database {
           shipping_amount?: number | null;
           shipping_address?: string | null;
           billing_address?: string | null;
+          imei_numbers?: Json | null;
         };
         Update: {
           id?: string;
@@ -280,6 +285,7 @@ export interface Database {
           shipping_amount?: number | null;
           shipping_address?: string | null;
           billing_address?: string | null;
+          imei_numbers?: Json | null;
         };
         Relationships: [
           {

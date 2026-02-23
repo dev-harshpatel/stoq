@@ -434,3 +434,22 @@ export const updateUserProfileApprovalStatus = async (
     throw error;
   }
 };
+
+/**
+ * Permanently delete a user from the platform (auth + profile)
+ * Requires admin privileges — calls server API route
+ */
+export const deleteUser = async (userId: string): Promise<void> => {
+  const response = await fetch("/api/users/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ error: "Failed to delete user" }));
+    throw new Error(errorData.error || "Failed to delete user");
+  }
+};

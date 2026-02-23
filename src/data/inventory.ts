@@ -11,6 +11,7 @@ export interface InventoryItem {
   sellingPrice: number;
   lastUpdated: string;
   priceChange?: "up" | "down" | "stable";
+  isActive?: boolean;
 }
 
 // Helper to calculate price per unit: (purchasePrice / quantity) * (1 + hst/100)

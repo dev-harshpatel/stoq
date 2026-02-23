@@ -159,20 +159,24 @@ const styles = StyleSheet.create({
   },
   // Column widths
   colItem: {
-    width: "45%",
+    width: "35%",
     paddingRight: 10,
   },
   colQuantity: {
-    width: "15%",
+    width: "10%",
     textAlign: "center",
   },
-  colRate: {
+  colImei: {
     width: "20%",
+    paddingRight: 10,
+  },
+  colRate: {
+    width: "17%",
     textAlign: "right",
     paddingRight: 10,
   },
   colAmount: {
-    width: "20%",
+    width: "18%",
     textAlign: "right",
   },
   // Summary Section
@@ -312,9 +316,9 @@ export const InvoicePDFDocument = ({
   invoiceData,
   order,
 }: InvoicePDFDocumentProps) => {
-  // Prepare table data
+  // Prepare table data (include IMEI per line item, keyed by index)
   const tableRows = Array.isArray(order.items)
-    ? order.items.map((orderItem) => {
+    ? order.items.map((orderItem, index) => {
         if (orderItem?.item) {
           const itemName = `${orderItem.item.deviceName} ${orderItem.item.storage}`;
           const quantity = orderItem.quantity;
@@ -322,7 +326,8 @@ export const InvoicePDFDocument = ({
             orderItem.item.sellingPrice ?? orderItem.item.pricePerUnit;
           const rate = itemPrice;
           const amount = itemPrice * orderItem.quantity;
-          return { itemName, quantity, rate, amount };
+          const imei = order.imeiNumbers?.[String(index)]?.trim() || "";
+          return { itemName, quantity, rate, amount, imei };
         }
         return null;
       })
@@ -334,6 +339,7 @@ export const InvoicePDFDocument = ({
     quantity: number;
     rate: number;
     amount: number;
+    imei: string;
   }>;
 
   // Calculate financial summary
@@ -406,8 +412,9 @@ export const InvoicePDFDocument = ({
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderCell, styles.colItem]}>Item</Text>
             <Text style={[styles.tableHeaderCell, styles.colQuantity]}>
-              Quantity
+              Qty
             </Text>
+            <Text style={[styles.tableHeaderCell, styles.colImei]}>IMEI</Text>
             <Text style={[styles.tableHeaderCell, styles.colRate]}>Rate</Text>
             <Text style={[styles.tableHeaderCell, styles.colAmount]}>
               Amount
@@ -425,6 +432,9 @@ export const InvoicePDFDocument = ({
               </Text>
               <Text style={[styles.tableCell, styles.colQuantity]}>
                 {row.quantity}
+              </Text>
+              <Text style={[styles.tableCell, styles.colImei]}>
+                {row.imei || "—"}
               </Text>
               <Text style={[styles.tableCell, styles.colRate]}>
                 {formatPrice(row.rate)}

@@ -59,32 +59,32 @@ export function Navbar({ onMenuClick, className }: NavbarProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur-sm",
+        "sticky top-0 z-40 w-full min-w-0 border-b border-border bg-card/80 backdrop-blur-sm",
         className
       )}
     >
-      <div className="flex h-16 items-center justify-between px-4 lg:px-6">
-        <div className="flex items-center gap-4">
+      <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6 min-w-0">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={onMenuClick}
-            className="lg:hidden"
+            className="lg:hidden shrink-0"
           >
             <Menu className="h-5 w-5" />
           </Button>
 
-          <div className="flex flex-col">
-            <h1 className="text-lg font-semibold text-foreground">
+          <div className="flex flex-col min-w-0">
+            <h1 className="text-lg font-semibold text-foreground truncate">
               b2bMobiles
             </h1>
-            <p className="text-xs text-muted-foreground hidden sm:block">
+            <p className="text-xs text-muted-foreground hidden sm:block truncate">
               Wholesale Stock Dashboard
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 lg:gap-6">
+        <div className="flex items-center gap-4 lg:gap-6 shrink-0 pr-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">

@@ -70,7 +70,10 @@ export function InvoiceConfirmationDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>
+          <AlertDialogAction
+            onClick={onConfirm}
+            disabled={!!order.invoiceConfirmed}
+          >
             Confirm Invoice
           </AlertDialogAction>
         </AlertDialogFooter>

@@ -34,6 +34,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import { EmptyState } from "@/components/EmptyState";
+import { Switch } from "@/components/ui/switch";
 
 const TableLoadingOverlay = ({ label }: { label: string }) => {
   return (
@@ -51,6 +52,12 @@ export default function ProductManagement() {
   const [editedProducts, setEditedProducts] = useState<
     Record<string, Partial<InventoryItem>>
   >({});
+  const [pendingToggles, setPendingToggles] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [togglingProducts, setTogglingProducts] = useState<Set<string>>(
+    new Set()
+  );
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
   const filterOptions = useFilterOptions();
 
@@ -72,7 +79,8 @@ export default function ProductManagement() {
     rangeText,
   } = usePaginatedReactQuery<InventoryItem>({
     queryKey,
-    fetchFn: (range) => fetchPaginatedInventory(serverFilters, range),
+    fetchFn: (range) =>
+      fetchPaginatedInventory(serverFilters, range, { showInactive: true }),
     currentPage,
     setCurrentPage,
     filtersKey,
@@ -125,6 +133,42 @@ export default function ProductManagement() {
     // No explicit refresh - Realtime will trigger refetch automatically
   };
 
+  const handleToggleActive = async (product: InventoryItem) => {
+    const currentIsActive =
+      pendingToggles[product.id] ?? product.isActive ?? true;
+    const newIsActive = !currentIsActive;
+
+    // Optimistic update
+    setPendingToggles((prev) => ({ ...prev, [product.id]: newIsActive }));
+    setTogglingProducts((prev) => new Set(prev).add(product.id));
+
+    try {
+      await updateProduct(product.id, { isActive: newIsActive });
+      toast.success(
+        newIsActive ? "Product is now listed" : "Product has been unlisted",
+        {
+          description: newIsActive
+            ? "Users can see and order this product."
+            : "Users can no longer see or order this product.",
+        }
+      );
+    } catch {
+      // Revert optimistic update on failure
+      setPendingToggles((prev) => {
+        const next = { ...prev };
+        delete next[product.id];
+        return next;
+      });
+      toast.error("Failed to update product listing status");
+    } finally {
+      setTogglingProducts((prev) => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+    }
+  };
+
   const getFieldValue = (
     product: InventoryItem,
     field: keyof InventoryItem
@@ -157,7 +201,12 @@ export default function ProductManagement() {
           </h2>
           <div className="flex gap-2 shrink-0">
             {hasChanges && (
-              <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="gap-2"
+              >
                 <RotateCcw className="h-4 w-4" />
                 Reset All
               </Button>
@@ -332,13 +381,18 @@ export default function ProductManagement() {
                     hst
                   );
 
+                  const isActive =
+                    pendingToggles[product.id] ?? product.isActive ?? true;
+                  const isToggling = togglingProducts.has(product.id);
+
                   return (
                     <tr
                       key={product.id}
                       className={cn(
                         "transition-colors hover:bg-muted/50",
                         index % 2 === 1 && "bg-muted/20",
-                        hasEdits && "bg-primary/5"
+                        hasEdits && "bg-primary/5",
+                        !isActive && "opacity-50"
                       )}
                     >
                       <td className="px-4 py-2">
@@ -411,7 +465,7 @@ export default function ProductManagement() {
                             handleFieldChange(
                               product.id,
                               "quantity",
-                              val === "" ? "" : (parseInt(val) || 0)
+                              val === "" ? "" : parseInt(val) || 0
                             );
                           }}
                           onBlur={() => {
@@ -434,12 +488,16 @@ export default function ProductManagement() {
                               handleFieldChange(
                                 product.id,
                                 "purchasePrice",
-                                val === "" ? "" : (parseFloat(val) || 0)
+                                val === "" ? "" : parseFloat(val) || 0
                               );
                             }}
                             onBlur={() => {
                               if (!purchasePrice && purchasePrice !== 0) {
-                                handleFieldChange(product.id, "purchasePrice", 0);
+                                handleFieldChange(
+                                  product.id,
+                                  "purchasePrice",
+                                  0
+                                );
                               }
                             }}
                             className="w-28 text-right"
@@ -458,7 +516,7 @@ export default function ProductManagement() {
                               handleFieldChange(
                                 product.id,
                                 "hst",
-                                val === "" ? "" : (parseFloat(val) || 0)
+                                val === "" ? "" : parseFloat(val) || 0
                               );
                             }}
                             onBlur={() => {
@@ -489,12 +547,16 @@ export default function ProductManagement() {
                               handleFieldChange(
                                 product.id,
                                 "sellingPrice",
-                                val === "" ? "" : (parseFloat(val) || 0)
+                                val === "" ? "" : parseFloat(val) || 0
                               );
                             }}
                             onBlur={() => {
                               if (!sellingPrice && sellingPrice !== 0) {
-                                handleFieldChange(product.id, "sellingPrice", 0);
+                                handleFieldChange(
+                                  product.id,
+                                  "sellingPrice",
+                                  0
+                                );
                               }
                             }}
                             className="w-28 text-right"
@@ -504,17 +566,32 @@ export default function ProductManagement() {
                         </div>
                       </td>
                       <td className="px-4 py-2">
-                        <div className="flex items-center justify-center gap-2">
-                          {hasEdits && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleSave(product.id)}
-                              className="gap-2"
-                            >
-                              <Save className="h-3 w-3" />
-                              Save
-                            </Button>
-                          )}
+                        <div className="flex items-center justify-center gap-3">
+                          <Button
+                            size="sm"
+                            variant={hasEdits ? "default" : "ghost"}
+                            onClick={() => handleSave(product.id)}
+                            disabled={!hasEdits}
+                            className={cn(
+                              "gap-1.5",
+                              !hasEdits && "text-muted-foreground"
+                            )}
+                            title={
+                              hasEdits ? "Save changes" : "No changes to save"
+                            }
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                          </Button>
+                          <Switch
+                            checked={isActive}
+                            onCheckedChange={() => handleToggleActive(product)}
+                            disabled={isToggling}
+                            title={
+                              isActive
+                                ? "Listed — click to unlist"
+                                : "Unlisted — click to list"
+                            }
+                          />
                         </div>
                       </td>
                     </tr>

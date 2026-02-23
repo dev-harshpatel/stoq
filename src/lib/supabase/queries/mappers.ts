@@ -84,6 +84,7 @@ export const dbRowToInventoryItem = (row: InventoryRow): InventoryItem => ({
     | "down"
     | "stable"
     | undefined,
+  isActive: (row as any).is_active ?? true,
 });
 
 export const dbRowToOrder = (row: OrderRow): Order => {
@@ -195,6 +196,12 @@ export const dbRowToOrder = (row: OrderRow): Order => {
       : 0,
     shippingAddress: (row as any).shipping_address ?? null,
     billingAddress: (row as any).billing_address ?? null,
+    imeiNumbers:
+      (row as any).imei_numbers != null &&
+      typeof (row as any).imei_numbers === "object" &&
+      !Array.isArray((row as any).imei_numbers)
+        ? ((row as any).imei_numbers as Record<string, string>)
+        : null,
   };
 };
 
