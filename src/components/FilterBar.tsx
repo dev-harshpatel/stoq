@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, Filter, X, RotateCcw } from "lucide-react";
+import { GRADES, GRADE_LABELS } from "@/lib/constants/grades";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -109,15 +110,16 @@ export function FilterBar({
           value={filters.grade}
           onValueChange={(v) => handleChange("grade", v)}
         >
-          <SelectTrigger className="w-[120px] bg-background border-border">
+          <SelectTrigger className="w-[160px] bg-background border-border">
             <SelectValue placeholder="Grade" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
             <SelectItem value="all">All Grades</SelectItem>
-            <SelectItem value="A">Grade A</SelectItem>
-            <SelectItem value="B">Grade B</SelectItem>
-            <SelectItem value="C">Grade C</SelectItem>
-            <SelectItem value="D">Grade D</SelectItem>
+            {GRADES.map((g) => (
+              <SelectItem key={g} value={g}>
+                {GRADE_LABELS[g]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -256,10 +258,11 @@ export function FilterBar({
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
                       <SelectItem value="all">All Grades</SelectItem>
-                      <SelectItem value="A">Grade A</SelectItem>
-                      <SelectItem value="B">Grade B</SelectItem>
-                      <SelectItem value="C">Grade C</SelectItem>
-                      <SelectItem value="D">Grade D</SelectItem>
+                      {GRADES.map((g) => (
+                        <SelectItem key={g} value={g}>
+                          {GRADE_LABELS[g]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

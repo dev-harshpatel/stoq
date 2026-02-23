@@ -9,6 +9,34 @@ import { cn } from '@/lib/utils';
 
 const gradeInfo = [
   {
+    grade: 'Brand New Sealed' as const,
+    title: 'Brand New Sealed',
+    description: 'Factory-sealed, never opened. Original packaging intact with all seals',
+    conditions: [
+      'Completely unopened original packaging',
+      'All manufacturer seals intact',
+      'Full manufacturer warranty',
+      'All original accessories included',
+      'Pristine condition, never used',
+      'Ideal for retail or gifting',
+    ],
+    color: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
+  },
+  {
+    grade: 'Brand New Open Box' as const,
+    title: 'Brand New Open Box',
+    description: 'Brand new device, packaging opened for inspection or display',
+    conditions: [
+      'Device never used or activated',
+      'Original packaging may have been opened',
+      'All accessories included and unused',
+      'Full manufacturer warranty',
+      'May have been display unit',
+      'Cosmetically perfect condition',
+    ],
+    color: 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-800',
+  },
+  {
     grade: 'A' as const,
     title: 'Grade A - Excellent Condition',
     description: 'Like-new condition with minimal to no signs of use',
@@ -83,9 +111,9 @@ const termsAndConditions = [
   {
     title: 'Warranty & Returns',
     items: [
-      'Grade A, B, and C items come with a 30-day warranty',
+      'Brand New Sealed, Brand New Open Box, and Grade A, B, C items come with a 30-day warranty',
       'Grade D items are sold as-is with no warranty',
-      'Returns accepted within 14 days for Grade A, B, and C items',
+      'Returns accepted within 14 days for Brand New and Grade A, B, C items',
       'Grade D items are final sale - no returns or exchanges',
       'All returns must be in original condition',
     ],
@@ -105,7 +133,7 @@ const termsAndConditions = [
       'Original accessories included when available',
       'Missing accessories will be clearly stated in product description',
       'Original packaging may not be included for all items',
-      'Generic packaging may be used for Grade B, C, and D items',
+      'Generic packaging may be used for Grade B, C, and D items (Brand New Sealed includes original packaging)',
     ],
   },
   {

@@ -1,6 +1,10 @@
 import * as XLSX from "xlsx";
 import { ParsedProduct } from "@/types/upload";
 import { calculatePricePerUnit } from "@/data/inventory";
+import {
+  GRADES,
+  normalizeGrade,
+} from "@/lib/constants/grades";
 
 /**
  * Parse Excel file and extract product data
@@ -109,12 +113,12 @@ export async function parseExcelFile(file: File): Promise<ParsedProduct[]> {
             continue;
           }
 
+          const rawGrade = String(row[gradeIndex] || "").trim();
+          const normalizedGrade = normalizeGrade(rawGrade);
           const product: ParsedProduct = {
             deviceName: String(row[deviceNameIndex] || "").trim(),
             brand: String(row[brandIndex] || "").trim(),
-            grade: String(row[gradeIndex] || "")
-              .trim()
-              .toUpperCase() as "A" | "B" | "C" | "D",
+            grade: normalizedGrade ?? "A",
             storage: String(row[storageIndex] || "").trim(),
             quantity: parseNumber(row[quantityIndex]),
             purchasePrice: parseNumber(row[purchasePriceIndex]),
@@ -205,9 +209,11 @@ export function validateProductData(data: Partial<ParsedProduct>): {
   if (!data.grade) {
     errors.push("Grade is required");
   } else {
-    const validGrades = ["A", "B", "C", "D"];
-    if (!validGrades.includes(data.grade.toUpperCase())) {
-      errors.push(`Grade must be one of: ${validGrades.join(", ")}`);
+    const normalized = normalizeGrade(data.grade);
+    if (!normalized || !GRADES.includes(normalized)) {
+      errors.push(
+        `Grade must be one of: ${GRADES.join(", ")}`
+      );
     }
   }
 

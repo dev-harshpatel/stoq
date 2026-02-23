@@ -4,6 +4,7 @@
  */
 
 import { InventoryItem } from "@/data/inventory";
+import type { Grade } from "@/lib/constants/grades";
 import { Database } from "@/lib/types/database";
 import { Order, OrderItem } from "@/types/order";
 import { UserProfile } from "@/types/user";
@@ -54,10 +55,17 @@ const readNullableNumber = (
 const readString = (value: string | number | null | undefined): string =>
   value == null ? "" : String(value);
 
-const readGrade = (value: string | null | undefined): "A" | "B" | "C" | "D" =>
-  value === "A" || value === "B" || value === "C" || value === "D"
-    ? value
-    : "A";
+const VALID_GRADES: Grade[] = [
+  "Brand New Sealed",
+  "Brand New Open Box",
+  "A",
+  "B",
+  "C",
+  "D",
+];
+
+const readGrade = (value: string | null | undefined): Grade =>
+  value && VALID_GRADES.includes(value as Grade) ? (value as Grade) : "A";
 
 const readPriceChange = (
   value: string | null | undefined
@@ -68,7 +76,7 @@ export const dbRowToInventoryItem = (row: InventoryRow): InventoryItem => ({
   id: row.id,
   deviceName: row.device_name,
   brand: row.brand,
-  grade: row.grade as "A" | "B" | "C" | "D",
+  grade: row.grade as Grade,
   storage: row.storage,
   quantity: row.quantity,
   pricePerUnit: Number(row.price_per_unit),
