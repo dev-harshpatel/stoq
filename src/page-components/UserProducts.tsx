@@ -107,6 +107,14 @@ export default function UserProducts() {
     }
   };
 
+  const hasActiveFilters =
+    serverFilters.search !== "" ||
+    serverFilters.brand !== "all" ||
+    serverFilters.grade !== "all" ||
+    serverFilters.storage !== "all" ||
+    serverFilters.priceRange !== "all" ||
+    serverFilters.stockStatus !== "all";
+
   if (isLoading) {
     return <Loader size="lg" text="Loading products..." />;
   }
@@ -139,115 +147,284 @@ export default function UserProducts() {
 
         {/* Content Area */}
         <div className="flex-1 min-h-0">
-          {/* Desktop Table */}
-          <div className="hidden md:flex md:flex-col rounded-lg border border-border bg-card h-full overflow-hidden">
-            {/* Fixed Header */}
-            <div className="flex-shrink-0 bg-muted border-b border-border">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5 w-[22%]">
-                      Device Name
-                    </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[10%]">
-                      Brand
-                    </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[8%]">
-                      Grade
-                    </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[10%]">
-                      Storage
-                    </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[8%]">
-                      Qty
-                    </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[12%]">
-                      Price
-                    </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5 w-[12%]">
-                      Status
-                    </th>
-                    <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5 w-[18%]">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-              </table>
-            </div>
-            {/* Scrollable Body */}
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <table className="w-full">
-                <colgroup>
-                  <col className="w-[22%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[8%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[18%]" />
-                </colgroup>
-                <tbody className="divide-y divide-border">
-                  {groupedByBrand.map(({ brand, items: groupItems }) => (
-                    <Fragment key={brand}>
-                      {groupItems.map((item, index) => {
-                        const status = getStockStatus(item.quantity);
-                        const isLowStock =
-                          status === "low-stock" || status === "critical";
-                        const isOutOfStock = status === "out-of-stock";
+          {filteredItems.length === 0 && !isFetching ? (
+            <EmptyState
+              title={
+                hasActiveFilters ? "No products found" : "No products available"
+              }
+              description={
+                hasActiveFilters
+                  ? "Try adjusting your search or filter criteria to find what you're looking for."
+                  : "Our inventory is currently empty. Check back soon for new devices!"
+              }
+            />
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:flex md:flex-col rounded-lg border border-border bg-card h-full overflow-hidden">
+                {/* Fixed Header */}
+                <div className="flex-shrink-0 bg-muted border-b border-border">
+                  <table className="w-full">
+                    <thead>
+                      <tr>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5 w-[22%]">
+                          Device Name
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[10%]">
+                          Brand
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[8%]">
+                          Grade
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[10%]">
+                          Storage
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[8%]">
+                          Qty
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2.5 w-[12%]">
+                          Price
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5 w-[12%]">
+                          Status
+                        </th>
+                        <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2.5 w-[18%]">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                  </table>
+                </div>
+                {/* Scrollable Body */}
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  <table className="w-full">
+                    <colgroup>
+                      <col className="w-[22%]" />
+                      <col className="w-[10%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[10%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[18%]" />
+                    </colgroup>
+                    <tbody className="divide-y divide-border">
+                      {groupedByBrand.map(({ brand, items: groupItems }) => (
+                        <Fragment key={brand}>
+                          {groupItems.map((item, index) => {
+                            const status = getStockStatus(item.quantity);
+                            const isLowStock =
+                              status === "low-stock" || status === "critical";
+                            const isOutOfStock = status === "out-of-stock";
 
-                        return (
-                          <tr
-                            key={item.id}
-                            className={cn(
-                              "transition-colors hover:bg-table-hover cursor-pointer",
-                              index % 2 === 1 && "bg-table-zebra",
-                              isLowStock && "bg-destructive/[0.02]",
-                              isOutOfStock && "bg-muted/50"
-                            )}
-                            onClick={() =>
-                              !isOutOfStock && handleBuyClick(item)
-                            }
-                          >
-                            <td className="px-4 py-2.5 text-center">
-                              <span
+                            return (
+                              <tr
+                                key={item.id}
                                 className={cn(
-                                  "font-medium text-sm",
+                                  "transition-colors hover:bg-table-hover cursor-pointer",
+                                  index % 2 === 1 && "bg-table-zebra",
+                                  isLowStock && "bg-destructive/[0.02]",
+                                  isOutOfStock && "bg-muted/50"
+                                )}
+                                onClick={() =>
+                                  !isOutOfStock && handleBuyClick(item)
+                                }
+                              >
+                                <td className="px-4 py-2.5 text-center">
+                                  <span
+                                    className={cn(
+                                      "font-medium text-sm",
+                                      isOutOfStock
+                                        ? "text-muted-foreground"
+                                        : "text-foreground"
+                                    )}
+                                  >
+                                    {item.deviceName}
+                                  </span>
+                                </td>
+                                <td
+                                  className={cn(
+                                    "px-3 py-2.5 text-center text-sm",
+                                    isOutOfStock
+                                      ? "text-muted-foreground"
+                                      : "text-foreground"
+                                  )}
+                                >
+                                  {item.brand}
+                                </td>
+                                <td className="px-3 py-2.5 text-center">
+                                  <GradeBadge grade={item.grade} />
+                                </td>
+                                <td
+                                  className={cn(
+                                    "px-3 py-2.5 text-center text-sm",
+                                    isOutOfStock
+                                      ? "text-muted-foreground"
+                                      : "text-foreground"
+                                  )}
+                                >
+                                  {item.storage}
+                                </td>
+                                <td className="px-3 py-2.5 text-center">
+                                  <span
+                                    className={cn(
+                                      "font-semibold text-sm",
+                                      status === "out-of-stock" &&
+                                        "text-destructive",
+                                      status === "critical" &&
+                                        "text-destructive",
+                                      status === "low-stock" && "text-warning",
+                                      status === "in-stock" && "text-foreground"
+                                    )}
+                                  >
+                                    {item.quantity}
+                                  </span>
+                                </td>
+                                <td
+                                  className={cn(
+                                    "px-3 py-2.5 text-center font-medium text-sm",
+                                    isOutOfStock
+                                      ? "text-muted-foreground"
+                                      : "text-foreground"
+                                  )}
+                                >
+                                  {formatPrice(item.sellingPrice)}
+                                </td>
+                                <td className="px-4 py-2.5 text-center">
+                                  <StatusBadge quantity={item.quantity} />
+                                </td>
+                                <td className="px-4 py-2.5 text-center">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className={cn(
+                                        "h-8 w-8",
+                                        isInWishlist(item.id)
+                                          ? "text-destructive hover:text-destructive"
+                                          : "text-muted-foreground hover:text-destructive"
+                                      )}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleWishlist(item);
+                                      }}
+                                    >
+                                      <Heart
+                                        className={cn(
+                                          "h-4 w-4",
+                                          isInWishlist(item.id) &&
+                                            "fill-current"
+                                        )}
+                                      />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!isOutOfStock) handleBuyClick(item);
+                                      }}
+                                      disabled={isOutOfStock}
+                                      className="gap-2"
+                                    >
+                                      <ShoppingCart className="h-4 w-4" />
+                                      Buy
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mobile Cards - grouped by brand (company) */}
+              <div className="md:hidden space-y-3 pb-4">
+                {groupedByBrand.map(({ brand, items: groupItems }) => (
+                  <div key={brand} className="space-y-3">
+                    {groupItems.map((item) => {
+                      const status = getStockStatus(item.quantity);
+                      const isLowStock =
+                        status === "low-stock" || status === "critical";
+                      const isOutOfStock = status === "out-of-stock";
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "p-3 bg-card rounded-lg border border-border",
+                            isLowStock &&
+                              "border-destructive/20 bg-destructive/[0.02]",
+                            isOutOfStock && "bg-muted/50"
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="flex-1">
+                              <h3
+                                className={cn(
+                                  "font-medium",
                                   isOutOfStock
                                     ? "text-muted-foreground"
                                     : "text-foreground"
                                 )}
                               >
                                 {item.deviceName}
+                              </h3>
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                <Clock className="h-3 w-3" />
+                                Updated {item.lastUpdated}
                               </span>
-                            </td>
-                            <td
-                              className={cn(
-                                "px-3 py-2.5 text-center text-sm",
-                                isOutOfStock
-                                  ? "text-muted-foreground"
-                                  : "text-foreground"
-                              )}
-                            >
-                              {item.brand}
-                            </td>
-                            <td className="px-3 py-2.5 text-center">
-                              <GradeBadge grade={item.grade} />
-                            </td>
-                            <td
-                              className={cn(
-                                "px-3 py-2.5 text-center text-sm",
-                                isOutOfStock
-                                  ? "text-muted-foreground"
-                                  : "text-foreground"
-                              )}
-                            >
-                              {item.storage}
-                            </td>
-                            <td className="px-3 py-2.5 text-center">
+                            </div>
+                            <StatusBadge quantity={item.quantity} />
+                          </div>
+
+                          <div className="grid grid-cols-5 gap-3 text-sm mb-4">
+                            <div>
+                              <span className="text-xs text-muted-foreground block mb-1">
+                                Brand
+                              </span>
                               <span
                                 className={cn(
-                                  "font-semibold text-sm",
+                                  "font-medium",
+                                  isOutOfStock
+                                    ? "text-muted-foreground"
+                                    : "text-foreground"
+                                )}
+                              >
+                                {item.brand}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block mb-1">
+                                Grade
+                              </span>
+                              <GradeBadge grade={item.grade} />
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block mb-1">
+                                Storage
+                              </span>
+                              <span
+                                className={cn(
+                                  "font-medium",
+                                  isOutOfStock
+                                    ? "text-muted-foreground"
+                                    : "text-foreground"
+                                )}
+                              >
+                                {item.storage}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block mb-1">
+                                Qty
+                              </span>
+                              <span
+                                className={cn(
+                                  "font-semibold",
                                   status === "out-of-stock" &&
                                     "text-destructive",
                                   status === "critical" && "text-destructive",
@@ -257,213 +434,62 @@ export default function UserProducts() {
                               >
                                 {item.quantity}
                               </span>
-                            </td>
-                            <td
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block mb-1">
+                                Price
+                              </span>
+                              <span
+                                className={cn(
+                                  "font-medium",
+                                  isOutOfStock
+                                    ? "text-muted-foreground"
+                                    : "text-foreground"
+                                )}
+                              >
+                                {formatPrice(item.sellingPrice)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
                               className={cn(
-                                "px-3 py-2.5 text-center font-medium text-sm",
-                                isOutOfStock
-                                  ? "text-muted-foreground"
-                                  : "text-foreground"
+                                "h-10 w-10 flex-shrink-0",
+                                isInWishlist(item.id)
+                                  ? "text-destructive hover:text-destructive border-destructive/20"
+                                  : "text-muted-foreground hover:text-destructive"
                               )}
+                              onClick={() => toggleWishlist(item)}
                             >
-                              {formatPrice(item.sellingPrice)}
-                            </td>
-                            <td className="px-4 py-2.5 text-center">
-                              <StatusBadge quantity={item.quantity} />
-                            </td>
-                            <td className="px-4 py-2.5 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className={cn(
-                                    "h-8 w-8",
-                                    isInWishlist(item.id)
-                                      ? "text-destructive hover:text-destructive"
-                                      : "text-muted-foreground hover:text-destructive"
-                                  )}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleWishlist(item);
-                                  }}
-                                >
-                                  <Heart
-                                    className={cn(
-                                      "h-4 w-4",
-                                      isInWishlist(item.id) && "fill-current"
-                                    )}
-                                  />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!isOutOfStock) handleBuyClick(item);
-                                  }}
-                                  disabled={isOutOfStock}
-                                  className="gap-2"
-                                >
-                                  <ShoppingCart className="h-4 w-4" />
-                                  Buy
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Mobile Cards - grouped by brand (company) */}
-          <div className="md:hidden space-y-3 pb-4">
-            {groupedByBrand.map(({ brand, items: groupItems }) => (
-              <div key={brand} className="space-y-3">
-                {groupItems.map((item) => {
-                  const status = getStockStatus(item.quantity);
-                  const isLowStock =
-                    status === "low-stock" || status === "critical";
-                  const isOutOfStock = status === "out-of-stock";
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        "p-3 bg-card rounded-lg border border-border",
-                        isLowStock &&
-                          "border-destructive/20 bg-destructive/[0.02]",
-                        isOutOfStock && "bg-muted/50"
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex-1">
-                          <h3
-                            className={cn(
-                              "font-medium",
-                              isOutOfStock
-                                ? "text-muted-foreground"
-                                : "text-foreground"
-                            )}
-                          >
-                            {item.deviceName}
-                          </h3>
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                            <Clock className="h-3 w-3" />
-                            Updated {item.lastUpdated}
-                          </span>
+                              <Heart
+                                className={cn(
+                                  "h-5 w-5",
+                                  isInWishlist(item.id) && "fill-current"
+                                )}
+                              />
+                            </Button>
+                            <Button
+                              className="flex-1 gap-2"
+                              onClick={() =>
+                                !isOutOfStock && handleBuyClick(item)
+                              }
+                              disabled={isOutOfStock}
+                            >
+                              <ShoppingCart className="h-4 w-4" />
+                              Buy
+                            </Button>
+                          </div>
                         </div>
-                        <StatusBadge quantity={item.quantity} />
-                      </div>
-
-                      <div className="grid grid-cols-5 gap-3 text-sm mb-4">
-                        <div>
-                          <span className="text-xs text-muted-foreground block mb-1">
-                            Brand
-                          </span>
-                          <span
-                            className={cn(
-                              "font-medium",
-                              isOutOfStock
-                                ? "text-muted-foreground"
-                                : "text-foreground"
-                            )}
-                          >
-                            {item.brand}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground block mb-1">
-                            Grade
-                          </span>
-                          <GradeBadge grade={item.grade} />
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground block mb-1">
-                            Storage
-                          </span>
-                          <span
-                            className={cn(
-                              "font-medium",
-                              isOutOfStock
-                                ? "text-muted-foreground"
-                                : "text-foreground"
-                            )}
-                          >
-                            {item.storage}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground block mb-1">
-                            Qty
-                          </span>
-                          <span
-                            className={cn(
-                              "font-semibold",
-                              status === "out-of-stock" && "text-destructive",
-                              status === "critical" && "text-destructive",
-                              status === "low-stock" && "text-warning",
-                              status === "in-stock" && "text-foreground"
-                            )}
-                          >
-                            {item.quantity}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-xs text-muted-foreground block mb-1">
-                            Price
-                          </span>
-                          <span
-                            className={cn(
-                              "font-medium",
-                              isOutOfStock
-                                ? "text-muted-foreground"
-                                : "text-foreground"
-                            )}
-                          >
-                            {formatPrice(item.sellingPrice)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className={cn(
-                            "h-10 w-10 flex-shrink-0",
-                            isInWishlist(item.id)
-                              ? "text-destructive hover:text-destructive border-destructive/20"
-                              : "text-muted-foreground hover:text-destructive"
-                          )}
-                          onClick={() => toggleWishlist(item)}
-                        >
-                          <Heart
-                            className={cn(
-                              "h-5 w-5",
-                              isInWishlist(item.id) && "fill-current"
-                            )}
-                          />
-                        </Button>
-                        <Button
-                          className="flex-1 gap-2"
-                          onClick={() => !isOutOfStock && handleBuyClick(item)}
-                          disabled={isOutOfStock}
-                        >
-                          <ShoppingCart className="h-4 w-4" />
-                          Buy
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-
-          {filteredItems.length === 0 && !isFetching && <EmptyState />}
+            </>
+          )}
         </div>
 
         {/* Pagination - Fixed at bottom on mobile, sticky on desktop */}

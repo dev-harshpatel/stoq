@@ -9,11 +9,21 @@ import { cn } from "@/lib/utils";
 interface InventoryTableProps {
   items: InventoryItem[];
   className?: string;
+  hasActiveFilters?: boolean;
 }
 
-export function InventoryTable({ items, className }: InventoryTableProps) {
+export function InventoryTable({ items, className, hasActiveFilters }: InventoryTableProps) {
   if (items.length === 0) {
-    return <EmptyState />;
+    return (
+      <EmptyState
+        title={hasActiveFilters ? "No inventory found" : "Inventory is empty"}
+        description={
+          hasActiveFilters
+            ? "Try adjusting your search or filter criteria to find what you're looking for."
+            : "Add your first product using the 'Add Product' button above to get started."
+        }
+      />
+    );
   }
 
   return (

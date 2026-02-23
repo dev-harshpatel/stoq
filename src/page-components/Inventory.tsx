@@ -98,7 +98,18 @@ export default function Inventory() {
 
       {/* Content Area */}
       <div className="flex-1 min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6">
-        <InventoryTable items={data} className="h-full" />
+        <InventoryTable
+          items={data}
+          className="h-full"
+          hasActiveFilters={
+            serverFilters.search !== "" ||
+            serverFilters.brand !== "all" ||
+            serverFilters.grade !== "all" ||
+            serverFilters.storage !== "all" ||
+            serverFilters.priceRange !== "all" ||
+            serverFilters.stockStatus !== "all"
+          }
+        />
       </div>
 
       {/* Pagination - Sticky at bottom so it stays visible when scrolling on mobile */}
