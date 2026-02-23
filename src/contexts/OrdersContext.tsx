@@ -51,6 +51,7 @@ interface OrdersContextType {
       discountAmount?: number;
       discountType?: string;
       shippingAmount?: number;
+      imeiNumbers?: Record<string, string> | null;
     }
   ) => Promise<void>;
   confirmInvoice: (orderId: string) => Promise<void>;
@@ -368,6 +369,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         discountAmount?: number;
         discountType?: string;
         shippingAmount?: number;
+        imeiNumbers?: Record<string, string> | null;
       }
     ): Promise<void> => {
       try {
@@ -389,6 +391,20 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         const newTaxAmount = result * taxRate;
         const newTotal = Math.max(0, result + newTaxAmount);
 
+        // Build plain object for JSONB - ensure valid JSON-serializable object
+        const imeiNumbersPayload: Record<string, string> = {};
+        if (
+          invoiceData.imeiNumbers &&
+          typeof invoiceData.imeiNumbers === "object" &&
+          !Array.isArray(invoiceData.imeiNumbers)
+        ) {
+          for (const [k, v] of Object.entries(invoiceData.imeiNumbers)) {
+            if (typeof k === "string" && typeof v === "string") {
+              imeiNumbersPayload[k] = v;
+            }
+          }
+        }
+
         const updateData: OrderUpdate = {
           invoice_number: invoiceData.invoiceNumber,
           invoice_date: invoiceData.invoiceDate,
@@ -406,6 +422,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
           invoice_confirmed: false, // Reset confirmation when updating
           invoice_confirmed_at: null,
           updated_at: new Date().toISOString(),
+          imei_numbers: imeiNumbersPayload,
         };
 
         const { error } = await (supabase.from("orders") as any)

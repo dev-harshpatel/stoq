@@ -66,6 +66,7 @@ const toInventoryUpdate = (
   }
   if (updates.quantity !== undefined) updateData.quantity = updates.quantity;
   if (updates.storage !== undefined) updateData.storage = updates.storage;
+  if (updates.isActive !== undefined) (updateData as any).is_active = updates.isActive;
 
   return updateData;
 };

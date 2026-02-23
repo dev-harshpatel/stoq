@@ -59,13 +59,18 @@ function applyInventoryFilters(query: any, filters: InventoryFilters) {
 
 export async function fetchPaginatedInventory(
   filters: InventoryFilters,
-  range: { from: number; to: number }
+  range: { from: number; to: number },
+  options?: { showInactive?: boolean }
 ): Promise<PaginatedResult<InventoryItem>> {
   let query = supabase
     .from("inventory")
     .select("*", { count: "exact" })
     .order("created_at", INVENTORY_SORT_ORDER.created_at)
     .order("id", INVENTORY_SORT_ORDER.id); // Stable sort - prevents reshuffling when created_at ties
+
+  if (!options?.showInactive) {
+    query = query.eq("is_active", true);
+  }
 
   query = applyInventoryFilters(query, filters);
   query = query.range(range.from, range.to);
@@ -106,13 +111,18 @@ export async function fetchFilterOptions(): Promise<{
 }
 
 export async function fetchAllFilteredInventory(
-  filters: InventoryFilters
+  filters: InventoryFilters,
+  options?: { showInactive?: boolean }
 ): Promise<InventoryItem[]> {
   let query = supabase
     .from("inventory")
     .select("*")
     .order("created_at", INVENTORY_SORT_ORDER.created_at)
     .order("id", INVENTORY_SORT_ORDER.id);
+
+  if (!options?.showInactive) {
+    query = query.eq("is_active", true);
+  }
 
   query = applyInventoryFilters(query, filters);
 
@@ -134,6 +144,7 @@ export async function fetchInventoryByIds(
     .from("inventory")
     .select("*")
     .in("id", itemIds)
+    .eq("is_active", true)
     .order("created_at", INVENTORY_SORT_ORDER.created_at)
     .order("id", INVENTORY_SORT_ORDER.id);
 

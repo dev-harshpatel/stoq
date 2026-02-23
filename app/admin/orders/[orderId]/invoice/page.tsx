@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useOrders } from "@/contexts/OrdersContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,13 +79,13 @@ export default function InvoicePage() {
     isLoading: ordersLoading,
   } = useOrders();
   const { isAdmin } = useUserProfile();
-  const { toast } = useToast();
   const [order, setOrder] =
     useState<ReturnType<typeof getOrderById>>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
+  const [imeiNumbers, setImeiNumbers] = useState<Record<string, string>>({});
   const [customerInfo, setCustomerInfo] = useState<{
     businessName?: string | null;
     businessAddress?: string | null;
@@ -107,6 +107,17 @@ export default function InvoicePage() {
       shippingAmount: "0",
     },
   });
+
+  // IMEI changed vs saved order (so Save is enabled when only IMEI is edited)
+  const isImeiDirty = (() => {
+    const saved = order?.imeiNumbers ?? {};
+    const keys = new Set([...Object.keys(imeiNumbers), ...Object.keys(saved)]);
+    for (const key of keys) {
+      if ((imeiNumbers[key] ?? "").trim() !== (saved[key] ?? "").trim())
+        return true;
+    }
+    return false;
+  })();
 
   // Redirect if not admin
   useEffect(() => {
@@ -138,16 +149,17 @@ export default function InvoicePage() {
         }
 
         if (!currentOrder) {
-          toast({
-            title: "Order not found",
-            description: "The order you are looking for does not exist.",
-            variant: "destructive",
-          });
+          toast.error("The order you are looking for does not exist.");
           router.push("/admin/orders");
           return;
         }
 
         setOrder(currentOrder);
+
+        // Initialize IMEI numbers from saved order data
+        if (currentOrder.imeiNumbers) {
+          setImeiNumbers(currentOrder.imeiNumbers);
+        }
 
         // Load customer info
         const customerProfile = await getUserProfile(currentOrder.userId);
@@ -226,11 +238,7 @@ export default function InvoicePage() {
           });
         }
       } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load order data.",
-          variant: "destructive",
-        });
+        toast.error("Failed to load order data.");
       } finally {
         setIsLoading(false);
       }
@@ -286,10 +294,11 @@ export default function InvoicePage() {
         discountAmount: finalDiscountAmount,
         discountType: discountType,
         shippingAmount: shippingAmount,
+        imeiNumbers: imeiNumbers,
       });
 
-      // Immediately update local order state with the saved invoiceNumber
-      // This ensures buttons appear right away without waiting for database refresh
+      // Update local order state with the saved data immediately.
+      // Set invoiceConfirmed: false so Confirm Invoice button shows again after any update.
       setOrder({
         ...order,
         invoiceNumber: data.invoiceNumber,
@@ -303,73 +312,30 @@ export default function InvoicePage() {
         discountAmount: finalDiscountAmount,
         discountType: discountType as "percentage" | "cad",
         shippingAmount: shippingAmount,
+        imeiNumbers: imeiNumbers,
+        invoiceConfirmed: false,
+        invoiceConfirmedAt: null,
       });
 
-      // Wait for order to be updated in context (retry mechanism) for complete refresh
-      let updatedOrder = getOrderById(orderId);
-      let retries = 0;
-      const maxRetries = 10;
-      const retryDelay = 100; // 100ms between retries
-
-      // Wait for the order to be refreshed in context (but don't block on invoiceNumber since we already have it)
-      while (!updatedOrder && retries < maxRetries) {
-        await new Promise((resolve) => setTimeout(resolve, retryDelay));
-        updatedOrder = getOrderById(orderId);
-        retries++;
-      }
-
-      // Update local state with the refreshed order ONLY if it has the invoiceNumber
-      // This prevents overwriting our immediate state update with stale data from the context
-      if (updatedOrder && updatedOrder.invoiceNumber) {
-        setOrder(updatedOrder);
-        // Update form with the refreshed order data to ensure UI is in sync
-        const refreshedInvoiceDate =
-          updatedOrder.invoiceDate || updatedOrder.createdAt.split("T")[0];
-        const refreshedPaymentTerms = updatedOrder.paymentTerms || "CHQ";
-        const refreshedDueDate =
-          updatedOrder.dueDate ||
-          calculateDueDate(refreshedInvoiceDate, refreshedPaymentTerms);
-
-        // IMPORTANT: Preserve the discountType and discountAmount that were just saved
-        // Use the values from the form data (data parameter) which represents what was just saved
-        // This ensures we don't toggle between CAD and percentage
-        const savedDiscountType = discountType; // This is the type that was just saved
-        const savedDiscountAmount = data.discountAmount || "0"; // This is the amount the user entered
-
-        // Get current form values to preserve other fields that weren't changed
-        const currentFormValues = form.getValues();
-
-        // Only reset the form with updated values, preserving the discount type and amount that were just saved
-        form.reset({
-          invoiceNumber:
-            updatedOrder.invoiceNumber || currentFormValues.invoiceNumber,
-          invoiceDate: refreshedInvoiceDate,
-          poNumber: updatedOrder.poNumber || currentFormValues.poNumber,
-          paymentTerms: refreshedPaymentTerms,
-          dueDate: refreshedDueDate,
-          hstNumber: updatedOrder.hstNumber || currentFormValues.hstNumber,
-          invoiceNotes:
-            updatedOrder.invoiceNotes || currentFormValues.invoiceNotes,
-          invoiceTerms:
-            updatedOrder.invoiceTerms || currentFormValues.invoiceTerms,
-          discountType: savedDiscountType, // Preserve the type that was just saved
-          discountAmount: savedDiscountAmount, // Preserve the amount that was just entered
-          shippingAmount: updatedOrder.shippingAmount
-            ? updatedOrder.shippingAmount.toString()
-            : data.shippingAmount || "0",
-        });
-      }
-
-      toast({
-        title: "Invoice saved",
-        description: "Invoice has been saved successfully.",
+      // Reset form with the saved values so form state is clean for subsequent saves
+      form.reset({
+        invoiceNumber: data.invoiceNumber,
+        invoiceDate: data.invoiceDate,
+        poNumber: data.poNumber,
+        paymentTerms: data.paymentTerms,
+        dueDate: data.dueDate,
+        hstNumber: data.hstNumber || "797155074RT0001",
+        invoiceNotes: data.invoiceNotes || "",
+        invoiceTerms: data.invoiceTerms || "",
+        discountType: (data.discountType || "cad") as "percentage" | "cad",
+        discountAmount: data.discountAmount || "0",
+        shippingAmount: data.shippingAmount || "0",
       });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save invoice. Please try again.",
-        variant: "destructive",
-      });
+
+      toast.success("Invoice has been saved successfully.");
+    } catch (error: any) {
+      console.error("Failed to save invoice:", error);
+      toast.error("Failed to save invoice. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -381,16 +347,9 @@ export default function InvoicePage() {
     setIsDownloading(true);
     try {
       await downloadInvoicePDF(order.id);
-      toast({
-        title: "Invoice downloaded",
-        description: "Invoice PDF has been downloaded.",
-      });
+      toast.success("Invoice PDF has been downloaded.");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to download invoice. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to download invoice. Please try again.");
     } finally {
       setIsDownloading(false);
     }
@@ -398,24 +357,30 @@ export default function InvoicePage() {
 
   const handleConfirm = async () => {
     if (!order) return;
+    if (order.invoiceConfirmed) {
+      toast.success("Invoice is already confirmed.");
+      setConfirmationDialogOpen(false);
+      return;
+    }
 
     try {
       await confirmInvoice(order.id);
-      const updatedOrder = getOrderById(orderId);
-      setOrder(updatedOrder || order);
-
-      toast({
-        title: "Invoice confirmed",
-        description:
-          "Invoice has been confirmed. Customer can now download it.",
-      });
+      // Optimistically update local order so the Confirm button hides immediately
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              invoiceConfirmed: true,
+              invoiceConfirmedAt: new Date().toISOString(),
+            }
+          : prev
+      );
+      toast.success(
+        "Invoice has been confirmed. Customer can now download it."
+      );
       setConfirmationDialogOpen(false);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to confirm invoice. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to confirm invoice. Please try again.");
     }
   };
 
@@ -468,19 +433,13 @@ export default function InvoicePage() {
                 </>
               )}
             </Button>
-            {order.invoiceNumber && !order.invoiceConfirmed && (
-              <Button onClick={() => setConfirmationDialogOpen(true)}>
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Confirm Invoice
-              </Button>
-            )}
           </div>
         </div>
       </div>
 
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto min-h-0 -mx-4 lg:-mx-6 px-4 lg:px-6 md:overflow-hidden">
-        <div className="flex flex-col md:flex-row gap-6 md:h-full">
+        <div className="flex flex-col md:flex-row gap-6 md:h-full md:min-h-0">
           {/* Invoice Form */}
           <div className="flex-1 md:overflow-y-auto md:min-h-0 space-y-6">
             <Form {...form}>
@@ -714,27 +673,50 @@ export default function InvoicePage() {
                     )}
                   />
 
-                  <Button type="submit" disabled={isSaving} className="w-full">
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Invoice
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      type="submit"
+                      disabled={
+                        isSaving ||
+                        (!!order.invoiceNumber &&
+                          !form.formState.isDirty &&
+                          !isImeiDirty)
+                      }
+                      className="flex-1"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Invoice
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={
+                        !order.invoiceNumber || !!order.invoiceConfirmed
+                      }
+                      onClick={() => setConfirmationDialogOpen(true)}
+                      aria-label="Confirm invoice"
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Confirm Invoice
+                    </Button>
+                  </div>
                 </div>
               </form>
             </Form>
           </div>
 
-          {/* Order Summary */}
-          <div className="md:w-72 lg:w-80 md:flex-shrink-0 md:sticky md:top-4 md:self-start space-y-6">
-            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+          {/* Order Summary + Order Items - scrollable column so both stay visible when summary expands */}
+          <div className="md:w-72 lg:w-80 md:flex-shrink-0 md:min-h-0 md:overflow-y-auto space-y-6">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-4 shrink-0">
               <h2 className="text-lg font-semibold text-foreground">
                 Order Summary
               </h2>
@@ -891,34 +873,57 @@ export default function InvoicePage() {
             </div>
 
             {/* Order Items */}
-            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-4 shrink-0">
               <h2 className="text-lg font-semibold text-foreground">
                 Order Items
               </h2>
-              <div className="space-y-3">
+              <div className="max-h-[320px] overflow-y-auto -mr-2 pr-2 space-y-0">
                 {Array.isArray(order.items) && order.items.length > 0 ? (
                   order.items.map((orderItem, index) => {
                     if (!orderItem?.item) return null;
+                    const itemKey = String(index);
                     return (
-                      <div key={index} className="flex justify-between text-sm">
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">
-                            {orderItem.item.deviceName}
-                          </p>
-                          <p className="text-muted-foreground">
-                            {orderItem.item.storage} • Qty: {orderItem.quantity}
+                      <div
+                        key={index}
+                        className="py-3 border-b border-border last:border-b-0 space-y-2"
+                      >
+                        <div className="flex justify-between text-sm">
+                          <div className="flex-1 min-w-0 pr-2">
+                            <p className="font-medium text-foreground truncate">
+                              {orderItem.item.deviceName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {orderItem.item.storage} • Qty:{" "}
+                              {orderItem.quantity}
+                            </p>
+                          </div>
+                          <p className="font-medium text-foreground text-sm shrink-0">
+                            {formatPrice(
+                              orderItem.item.pricePerUnit * orderItem.quantity
+                            )}
                           </p>
                         </div>
-                        <p className="font-medium text-foreground">
-                          {formatPrice(
-                            orderItem.item.pricePerUnit * orderItem.quantity
-                          )}
-                        </p>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            IMEI
+                          </p>
+                          <Input
+                            placeholder="Enter IMEI number"
+                            value={imeiNumbers[itemKey] ?? ""}
+                            onChange={(e) =>
+                              setImeiNumbers((prev) => ({
+                                ...prev,
+                                [itemKey]: e.target.value,
+                              }))
+                            }
+                            className="h-7 text-xs"
+                          />
+                        </div>
                       </div>
                     );
                   })
                 ) : (
-                  <p className="text-sm text-muted-foreground">No items</p>
+                  <p className="text-sm text-muted-foreground py-2">No items</p>
                 )}
               </div>
             </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import {
   FilterBar,
   FilterValues,
@@ -10,7 +12,9 @@ import {
 import { ExportActions } from "@/components/ExportActions";
 import { InventoryTable } from "@/components/InventoryTable";
 import { PaginationControls } from "@/components/PaginationControls";
+import { AddProductModal } from "@/components/AddProductModal";
 import { Loader } from "@/components/Loader";
+import { Button } from "@/components/ui/button";
 import { InventoryItem } from "@/data/inventory";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usePaginatedReactQuery } from "@/hooks/use-paginated-react-query";
@@ -24,7 +28,9 @@ import { useFilterOptions } from "@/hooks/use-filter-options";
 
 export default function Inventory() {
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
+  const [addProductOpen, setAddProductOpen] = useState(false);
   const filterOptions = useFilterOptions();
+  const queryClient = useQueryClient();
 
   const debouncedSearch = useDebounce(filters.search);
 
@@ -64,10 +70,20 @@ export default function Inventory() {
               {totalCount} devices
             </span>
           </h2>
-          <ExportActions
-            onFetchAllData={() => fetchAllFilteredInventory(serverFilters)}
-            filename="inventory"
-          />
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => setAddProductOpen(true)}
+              className="gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              Add Product
+            </Button>
+            <ExportActions
+              onFetchAllData={() => fetchAllFilteredInventory(serverFilters)}
+              filename="inventory"
+            />
+          </div>
         </div>
 
         {/* Filter Bar */}
@@ -94,6 +110,14 @@ export default function Inventory() {
           rangeText={rangeText}
         />
       </div>
+
+      <AddProductModal
+        open={addProductOpen}
+        onOpenChange={setAddProductOpen}
+        onSuccess={() =>
+          queryClient.invalidateQueries({ queryKey: queryKeys.inventory })
+        }
+      />
     </div>
   );
 }

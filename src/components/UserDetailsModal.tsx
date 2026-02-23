@@ -2,6 +2,7 @@ import { UserProfile, ApprovalStatus } from "@/types/user";
 import {
   updateUserProfileApprovalStatus,
   updateUserProfileDetails,
+  deleteUser,
 } from "@/lib/supabase/utils";
 import {
   Dialog,
@@ -30,6 +31,7 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Trash2,
   User,
   Building2,
   Mail,
@@ -84,8 +86,10 @@ export const UserDetailsModal = ({
 }: UserDetailsModalProps) => {
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirmApprove, setShowConfirmApprove] = useState(false);
   const [showConfirmReject, setShowConfirmReject] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -188,10 +192,25 @@ export const UserDetailsModal = ({
     }
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteUser(user.userId);
+      toast.success("User has been permanently deleted from the platform.");
+      setShowConfirmDelete(false);
+      onStatusUpdate?.();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("Failed to delete user. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const canApprove =
     user.approvalStatus === "pending" || user.approvalStatus === "rejected";
-  const canReject =
-    user.approvalStatus === "pending" || user.approvalStatus === "approved";
+  const canReject = user.approvalStatus === "pending";
+  const canDelete = user.approvalStatus === "approved";
 
   const fullName =
     [user.firstName, user.lastName].filter(Boolean).join(" ") || "N/A";
@@ -539,10 +558,29 @@ export const UserDetailsModal = ({
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isApproving || isRejecting}
+              disabled={isApproving || isRejecting || isDeleting}
             >
               Close
             </Button>
+            {canDelete && (
+              <Button
+                variant="destructive"
+                onClick={() => setShowConfirmDelete(true)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete User
+                  </>
+                )}
+              </Button>
+            )}
             {canReject && (
               <Button
                 variant="destructive"
@@ -648,6 +686,59 @@ export const UserDetailsModal = ({
                   </>
                 ) : (
                   "Reject"
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {showConfirmDelete && (
+        <Dialog open={showConfirmDelete} onOpenChange={setShowConfirmDelete}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="h-5 w-5" />
+                Delete User
+              </DialogTitle>
+              <DialogDescription className="space-y-2 pt-1">
+                <span className="block">
+                  You are about to permanently delete{" "}
+                  <span className="font-semibold text-foreground">
+                    {[user.firstName, user.lastName].filter(Boolean).join(" ") ||
+                      "this user"}
+                  </span>{" "}
+                  from the platform.
+                </span>
+                <span className="block text-destructive font-medium">
+                  This action cannot be undone. All their data, orders, and
+                  account access will be permanently removed.
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowConfirmDelete(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Yes, Delete User
+                  </>
                 )}
               </Button>
             </div>
