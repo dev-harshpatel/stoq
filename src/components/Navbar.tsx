@@ -78,9 +78,6 @@ export function Navbar({ onMenuClick, className }: NavbarProps) {
             <h1 className="text-lg font-semibold text-foreground truncate">
               b2bMobiles
             </h1>
-            <p className="text-xs text-muted-foreground hidden sm:block truncate">
-              Wholesale Stock Dashboard
-            </p>
           </div>
         </div>
 

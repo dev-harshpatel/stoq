@@ -169,7 +169,9 @@ export function UploadPreviewTable({
                     </td>
                     <td className="px-4 py-4 text-right">
                       <span className="font-medium text-foreground">
-                        {formatPrice(product.hst)}
+                        {typeof product.hst === "number"
+                          ? `${product.hst}%`
+                          : `${Number(product.hst) || 0}%`}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -311,7 +313,9 @@ export function UploadPreviewTable({
                     HST
                   </span>
                   <span className="font-medium text-foreground">
-                    {formatPrice(product.hst)}
+                    {typeof product.hst === "number"
+                      ? `${product.hst}%`
+                      : `${Number(product.hst) || 0}%`}
                   </span>
                 </div>
               </div>

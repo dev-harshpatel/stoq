@@ -526,7 +526,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle>Create Your Account</DialogTitle>
             <DialogDescription>
-              Join Stoq to start ordering your devices
+              Join b2bMobiles to start ordering your devices
             </DialogDescription>
           </DialogHeader>
 

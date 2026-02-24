@@ -38,6 +38,11 @@ export interface Order {
   billingAddress?: string | null;
   // IMEI numbers keyed by item index (e.g. {"0": "123456789012345"})
   imeiNumbers?: Record<string, string> | null;
+  // Manual sale fields (when admin records an off-platform sale)
+  isManualSale?: boolean;
+  manualCustomerName?: string | null;
+  manualCustomerEmail?: string | null;
+  manualCustomerPhone?: string | null;
 }
 
 // Extended order with user profile info (for display)

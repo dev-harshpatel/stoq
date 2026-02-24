@@ -116,14 +116,21 @@ export function AddProductModal({
   const hstValue = Number(form.hst) || 0;
   const sellingPrice = Number(form.sellingPrice) || 0;
 
-  // Weighted-average merge preview when restocking an existing product
+  // Weighted-average merge preview when restocking an existing product.
+  // If the item is out of stock (qty = 0) there is nothing to average —
+  // the new batch IS the full stock, so we use it directly.
   const mergePreview = useMemo(() => {
     if (!selectedExisting || newQuantity <= 0 || newPurchasePrice <= 0)
       return null;
-    const totalQty = selectedExisting.quantity + newQuantity;
-    const totalPP = (selectedExisting.purchasePrice ?? 0) + newPurchasePrice;
+    const isOutOfStock = selectedExisting.quantity === 0;
+    const totalQty = isOutOfStock
+      ? newQuantity
+      : selectedExisting.quantity + newQuantity;
+    const totalPP = isOutOfStock
+      ? newPurchasePrice
+      : (selectedExisting.purchasePrice ?? 0) + newPurchasePrice;
     const avgPricePerUnit = calculatePricePerUnit(totalPP, totalQty, hstValue);
-    return { totalQty, totalPP, avgPricePerUnit };
+    return { totalQty, totalPP, avgPricePerUnit, isOutOfStock };
   }, [selectedExisting, newQuantity, newPurchasePrice, hstValue]);
 
   // Price/unit preview for a brand-new product
@@ -550,57 +557,84 @@ export function AddProductModal({
           {/* ── Merge preview for restocking ──────────────────────────────── */}
           {selectedExisting && mergePreview && (
             <div className="rounded-lg border border-border overflow-hidden">
-              <div className="px-4 py-2 bg-muted/50 border-b border-border">
+              <div className="px-4 py-2 bg-muted/50 border-b border-border flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Merge Preview
+                  {mergePreview.isOutOfStock ? "Fresh Batch" : "Merge Preview"}
                 </p>
+                {mergePreview.isOutOfStock && (
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    Item was out of stock — existing cost not carried forward
+                  </span>
+                )}
               </div>
-              <div className="p-4 grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Current Qty</p>
-                  <p className="text-sm font-semibold tabular-nums">
-                    {selectedExisting.quantity}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Adding</p>
-                  <p className="text-sm font-semibold text-primary tabular-nums">
-                    +{newQuantity}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">New Total</p>
-                  <p className="text-sm font-bold tabular-nums">
-                    {mergePreview.totalQty}
-                  </p>
-                </div>
 
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">
-                    Existing Cost
-                  </p>
-                  <p className="text-sm font-semibold tabular-nums">
-                    {formatPrice(selectedExisting.purchasePrice ?? 0)}
-                  </p>
+              {mergePreview.isOutOfStock ? (
+                /* Out-of-stock: treat as a brand-new batch, no averaging */
+                <div className="p-4 grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">New Qty</p>
+                    <p className="text-sm font-bold tabular-nums">
+                      {mergePreview.totalQty}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Batch Cost</p>
+                    <p className="text-sm font-bold tabular-nums">
+                      {formatPrice(mergePreview.totalPP)}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Batch Cost</p>
-                  <p className="text-sm font-semibold text-primary tabular-nums">
-                    +{formatPrice(newPurchasePrice)}
-                  </p>
+              ) : (
+                /* In-stock: weighted average across existing + new batch */
+                <div className="p-4 grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Current Qty</p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {selectedExisting.quantity}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Adding</p>
+                    <p className="text-sm font-semibold text-primary tabular-nums">
+                      +{newQuantity}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">New Total</p>
+                    <p className="text-sm font-bold tabular-nums">
+                      {mergePreview.totalQty}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      Existing Cost
+                    </p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {formatPrice(selectedExisting.purchasePrice ?? 0)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Batch Cost</p>
+                    <p className="text-sm font-semibold text-primary tabular-nums">
+                      +{formatPrice(newPurchasePrice)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Total Cost</p>
+                    <p className="text-sm font-bold tabular-nums">
+                      {formatPrice(mergePreview.totalPP)}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Total Cost</p>
-                  <p className="text-sm font-bold tabular-nums">
-                    {formatPrice(mergePreview.totalPP)}
-                  </p>
-                </div>
-              </div>
+              )}
 
               <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-t border-border">
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Info className="h-3.5 w-3.5" />
-                  Avg. Price / Unit (incl. HST)
+                  {mergePreview.isOutOfStock
+                    ? "Price / Unit (incl. HST)"
+                    : "Avg. Price / Unit (incl. HST)"}
                 </span>
                 <span className="text-sm font-bold tabular-nums text-foreground">
                   {formatPrice(mergePreview.avgPricePerUnit)}

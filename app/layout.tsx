@@ -5,8 +5,8 @@ import { Providers } from "@/components/Providers";
 import "@/index.css";
 
 export const metadata: Metadata = {
-  title: "Stock Flow - Inventory Management",
-  description: "Modern inventory management system",
+  title: "b2bMobiles - Your Mobile Device Supplier",
+  description: "Your Mobile Device Supplier",
   icons: { icon: "data:," },
 };
 

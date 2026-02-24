@@ -30,6 +30,7 @@ import {
   Download,
   FileText,
   Loader2,
+  ShoppingBag,
   XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -67,7 +68,8 @@ export const OrderDetailsModal = ({
 
   useEffect(() => {
     const fetchCustomerEmail = async () => {
-      if (!order?.userId) return;
+      // Manual sales store customer info directly — no need to look up by userId
+      if (!order?.userId || order?.isManualSale) return;
 
       try {
         const response = await fetch("/api/users/emails", {
@@ -270,15 +272,44 @@ export const OrderDetailsModal = ({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto min-h-0 space-y-6">
+          {/* Manual Sale Banner */}
+          {order.isManualSale && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-orange-50 border border-orange-200 dark:bg-orange-950 dark:border-orange-800 text-sm text-orange-700 dark:text-orange-400">
+              <ShoppingBag className="h-4 w-4 flex-shrink-0" />
+              <span>
+                This is a manually recorded sale — it was created directly by an
+                admin.
+              </span>
+            </div>
+          )}
+
           {/* Order Info */}
           <div className="space-y-3">
             <h3 className="font-semibold text-foreground">Order Information</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Customer:</span>
-                <p className="font-medium text-foreground mt-1">
-                  {customerEmail || order.userId.slice(0, 8) + "..."}
-                </p>
+                {order.isManualSale ? (
+                  <>
+                    <p className="font-medium text-foreground mt-1">
+                      {order.manualCustomerName || "Walk-in Customer"}
+                    </p>
+                    {order.manualCustomerEmail && (
+                      <p className="text-xs text-muted-foreground">
+                        {order.manualCustomerEmail}
+                      </p>
+                    )}
+                    {order.manualCustomerPhone && (
+                      <p className="text-xs text-muted-foreground">
+                        {order.manualCustomerPhone}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="font-medium text-foreground mt-1">
+                    {customerEmail || order.userId.slice(0, 8) + "..."}
+                  </p>
+                )}
               </div>
               <div>
                 <span className="text-muted-foreground">Order Date:</span>

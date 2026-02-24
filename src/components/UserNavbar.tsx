@@ -133,9 +133,6 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             <h1 className="text-lg font-semibold text-foreground">
               b2bMobiles
             </h1>
-            <p className="text-xs text-muted-foreground hidden sm:block">
-              Wholesale Stock Marketplace
-            </p>
           </button>
 
           {/* Desktop Navigation and Actions */}
@@ -170,7 +167,10 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-9 w-9 rounded-full"
+                  >
                     <Avatar className="h-9 w-9 border border-border">
                       <AvatarFallback className="bg-accent text-accent-foreground text-xs font-medium">
                         {user?.email?.substring(0, 2).toUpperCase() || "US"}

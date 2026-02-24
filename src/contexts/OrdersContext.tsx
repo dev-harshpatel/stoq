@@ -30,6 +30,13 @@ interface OrdersContextType {
     taxAmount?: number,
     addresses?: OrderAddresses
   ) => Promise<Order>;
+  createManualOrder: (
+    adminUserId: string,
+    items: OrderItem[],
+    customerInfo: { name: string; email?: string; phone?: string },
+    paymentMethod: string,
+    notes?: string
+  ) => Promise<Order>;
   updateOrderStatus: (
     orderId: string,
     status: OrderStatus,
@@ -269,6 +276,63 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     []
   );
 
+  const createManualOrder = useCallback(
+    async (
+      adminUserId: string,
+      items: OrderItem[],
+      customerInfo: { name: string; email?: string; phone?: string },
+      paymentMethod: string,
+      notes?: string
+    ): Promise<Order> => {
+      if (!items || items.length === 0) {
+        throw new Error("Order must have at least one item");
+      }
+
+      const subtotal = calculateOrderSubtotal(items);
+      const itemsJson: Json = items as unknown as Json;
+
+      const generateUUID = () =>
+        "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === "x" ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+
+      const newOrder = {
+        id: generateUUID(),
+        user_id: adminUserId,
+        items: itemsJson,
+        subtotal,
+        tax_rate: null,
+        tax_amount: null,
+        total_price: subtotal,
+        status: "approved",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_manual_sale: true,
+        manual_customer_name: customerInfo.name,
+        manual_customer_email: customerInfo.email || null,
+        manual_customer_phone: customerInfo.phone || null,
+        payment_terms: paymentMethod,
+        invoice_notes: notes || null,
+      };
+
+      const { data, error } = await (supabase.from("orders") as any)
+        .insert([newOrder])
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message || "Failed to record sale");
+      }
+
+      const createdOrder = dbRowToOrder(data);
+      setOrders((prev) => [createdOrder, ...prev]);
+      return createdOrder;
+    },
+    []
+  );
+
   const getOrderById = useCallback(
     (orderId: string): Order | undefined => {
       return orders.find((order) => order.id === orderId);
@@ -492,8 +556,26 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         const { generateInvoicePDF } = await import("@/lib/invoice/pdf");
         const { getUserProfile } = await import("@/lib/supabase/utils");
 
-        // Get customer info
-        const customerProfile = await getUserProfile(order.userId);
+        // Get customer info — manual sales use stored data, platform orders fetch profile
+        let customerInfo: {
+          businessName: string | null;
+          businessAddress: string | null;
+        };
+        if (order.isManualSale) {
+          customerInfo = {
+            businessName: order.manualCustomerName || "Walk-in Customer",
+            businessAddress:
+              [order.manualCustomerEmail, order.manualCustomerPhone]
+                .filter(Boolean)
+                .join(" | ") || null,
+          };
+        } else {
+          const customerProfile = await getUserProfile(order.userId);
+          customerInfo = {
+            businessName: customerProfile?.businessName || null,
+            businessAddress: customerProfile?.businessAddress || null,
+          };
+        }
 
         // Prepare invoice data
         const invoiceData = {
@@ -508,10 +590,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         };
 
         // Generate and download PDF
-        await generateInvoicePDF(order, invoiceData, {
-          businessName: customerProfile?.businessName || null,
-          businessAddress: customerProfile?.businessAddress || null,
-        });
+        await generateInvoicePDF(order, invoiceData, customerInfo);
       } catch (error) {
         throw error;
       }
@@ -524,6 +603,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       value={{
         orders,
         createOrder,
+        createManualOrder,
         updateOrderStatus,
         updateInvoice,
         confirmInvoice,

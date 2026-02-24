@@ -30,8 +30,12 @@ export const StatCard = memo(function StatCard({
     <div className="p-6 bg-card rounded-lg border border-border shadow-soft">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="text-2xl font-semibold text-foreground mt-1">{value}</p>
+          <p className="stat-card-title text-sm text-muted-foreground">
+            {title}
+          </p>
+          <p className="stat-card-value text-2xl font-semibold text-foreground mt-1">
+            {value}
+          </p>
           {description && (
             <p className="text-xs text-muted-foreground mt-1">{description}</p>
           )}
