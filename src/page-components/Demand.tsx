@@ -8,15 +8,37 @@ import { Badge } from "@/components/ui/badge";
 import { GradeBadge } from "@/components/GradeBadge";
 import { Loader } from "@/components/Loader";
 import { EmptyState } from "@/components/EmptyState";
+import { AddProductModal } from "@/components/AddProductModal";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertTriangle,
+  Bell,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Loader2,
   MessageSquare,
   Package,
+  PackagePlus,
+  Send,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -60,6 +82,40 @@ interface DemandGroup {
   totalUnitsWanted: number;
 }
 
+/* ─── Preset notification messages ──────────────────────────────────── */
+
+const PRESET_MESSAGES = [
+  {
+    key: "back_in_stock",
+    label: "Back in stock",
+    template: (item: string) =>
+      `Great news! ${item} is back in stock — grab yours before it sells out.`,
+  },
+  {
+    key: "ready_to_order",
+    label: "Ready to order",
+    template: (item: string) =>
+      `We've just restocked ${item}. Your requested item is ready to order.`,
+  },
+  {
+    key: "available_now",
+    label: "Available now",
+    template: (item: string) =>
+      `${item} is now available. Order now to secure your units.`,
+  },
+  {
+    key: "limited_stock",
+    label: "Limited stock alert",
+    template: (_item: string) =>
+      `Your waitlisted item is back! Be quick — stock is limited.`,
+  },
+  {
+    key: "custom",
+    label: "Write a custom message…",
+    template: () => "",
+  },
+];
+
 /* ─── Component ──────────────────────────────────────────────────────── */
 
 export default function Demand() {
@@ -67,7 +123,26 @@ export default function Demand() {
   const [userEmails, setUserEmails] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [fulfillingItem, setFulfillingItem] = useState<string | null>(null);
+
+  // Fulfill message dialog
+  const [messageDialogGroup, setMessageDialogGroup] =
+    useState<DemandGroup | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState("back_in_stock");
+  const [customMessage, setCustomMessage] = useState("");
+  const [isFulfilling, setIsFulfilling] = useState(false);
+
+  // Restock required dialog
+  const [restockDialogGroup, setRestockDialogGroup] =
+    useState<DemandGroup | null>(null);
+
+  // AddProductModal for restock
+  const [addProductOpen, setAddProductOpen] = useState(false);
+  const [addProductItemId, setAddProductItemId] = useState<
+    string | undefined
+  >();
+  // After restock, open message dialog for the same group
+  const [pendingFulfillGroup, setPendingFulfillGroup] =
+    useState<DemandGroup | null>(null);
 
   /* ── Data loading ── */
   const loadRequests = useCallback(async () => {
@@ -158,26 +233,90 @@ export default function Demand() {
       return next;
     });
 
-  const handleFulfilGroup = async (group: DemandGroup) => {
-    setFulfillingItem(group.inventoryItemId);
+  /**
+   * Entry point when admin clicks "Fulfill Order".
+   * If item is out of stock → prompt restock first.
+   * If item is in stock → open message composer.
+   */
+  const handleFulfillClick = (group: DemandGroup) => {
+    if (group.currentStock === 0) {
+      setRestockDialogGroup(group);
+    } else {
+      openMessageDialog(group);
+    }
+  };
+
+  const openMessageDialog = (group: DemandGroup) => {
+    setMessageDialogGroup(group);
+    setSelectedPreset("back_in_stock");
+    setCustomMessage("");
+  };
+
+  /** Compose the final message to send */
+  const resolveMessage = (group: DemandGroup): string => {
+    const itemLabel = `${group.deviceName} ${group.storage} (Grade ${group.grade})`;
+    if (selectedPreset === "custom") {
+      return customMessage.trim();
+    }
+    const preset = PRESET_MESSAGES.find((p) => p.key === selectedPreset);
+    return preset ? preset.template(itemLabel) : "";
+  };
+
+  /** Final confirmation: mark all requests fulfilled + save admin message */
+  const confirmFulfill = async () => {
+    if (!messageDialogGroup) return;
+    const message = resolveMessage(messageDialogGroup);
+    if (!message) {
+      toast.error("Please write or select a message for your customers.");
+      return;
+    }
+
+    setIsFulfilling(true);
     try {
       const { error } = await (supabase.from("stock_requests") as any)
-        .update({ status: "fulfilled", updated_at: new Date().toISOString() })
+        .update({
+          status: "fulfilled",
+          admin_message: message,
+          fulfilled_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .in(
           "id",
-          group.requests.map((r) => r.id)
+          messageDialogGroup.requests.map((r) => r.id)
         );
 
       if (error) throw error;
 
+      const count = messageDialogGroup.requests.length;
       toast.success(
-        `${group.requests.length} request${group.requests.length !== 1 ? "s" : ""} marked as fulfilled`
+        `${count} customer${count !== 1 ? "s" : ""} notified — ${messageDialogGroup.deviceName} marked as restocked`
       );
+      setMessageDialogGroup(null);
+      setPendingFulfillGroup(null);
       await loadRequests();
     } catch {
-      toast.error("Failed to mark requests as fulfilled");
+      toast.error("Failed to notify customers. Please try again.");
     } finally {
-      setFulfillingItem(null);
+      setIsFulfilling(false);
+    }
+  };
+
+  /** Admin chose to restock from the restock-required dialog */
+  const handleRestockNow = (group: DemandGroup) => {
+    setPendingFulfillGroup(group);
+    setRestockDialogGroup(null);
+    setAddProductItemId(group.inventoryItemId);
+    setAddProductOpen(true);
+  };
+
+  /** After AddProductModal restocks the item, auto-open the message dialog */
+  const handleRestockComplete = () => {
+    setAddProductOpen(false);
+    if (pendingFulfillGroup) {
+      // Reload so currentStock updates, then open message dialog
+      loadRequests().then(() => {
+        openMessageDialog(pendingFulfillGroup);
+      });
     }
   };
 
@@ -227,7 +366,6 @@ export default function Demand() {
           <div className="space-y-3">
             {groups.map((group) => {
               const isExpanded = expandedItems.has(group.inventoryItemId);
-              const isFulfilling = fulfillingItem === group.inventoryItemId;
 
               return (
                 <div
@@ -274,6 +412,11 @@ export default function Demand() {
                           {group.currentStock} unit
                           {group.currentStock !== 1 ? "s" : ""}
                         </span>
+                        {group.currentStock === 0 && (
+                          <span className="ml-2 text-destructive font-medium">
+                            · Needs restocking
+                          </span>
+                        )}
                       </p>
                     </div>
 
@@ -334,25 +477,33 @@ export default function Demand() {
                         ))}
                       </div>
 
-                      {/* ── Fulfil action ── */}
+                      {/* ── Fulfill action ── */}
                       <div className="px-5 py-3 bg-muted/30 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <p className="text-xs text-muted-foreground">
-                          Mark all as fulfilled once you've restocked this
-                          item. Requests are removed from the demand list.
-                        </p>
+                        <div className="space-y-0.5">
+                          <p className="text-xs text-muted-foreground">
+                            Restock this item and notify all waiting customers
+                            with a message.
+                          </p>
+                          {group.currentStock === 0 && (
+                            <p className="text-xs text-destructive font-medium flex items-center gap-1">
+                              <AlertTriangle className="h-3 w-3" />
+                              Item is currently out of stock
+                            </p>
+                          )}
+                        </div>
                         <Button
                           size="sm"
-                          variant="outline"
-                          onClick={() => handleFulfilGroup(group)}
-                          disabled={isFulfilling}
+                          onClick={() => handleFulfillClick(group)}
                           className="gap-2 flex-shrink-0"
                         >
-                          {isFulfilling ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {group.currentStock === 0 ? (
+                            <PackagePlus className="h-3.5 w-3.5" />
                           ) : (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <Send className="h-3.5 w-3.5" />
                           )}
-                          Mark All Fulfilled
+                          {group.currentStock === 0
+                            ? "Restock & Notify"
+                            : "Fulfill Order"}
                         </Button>
                       </div>
                     </div>
@@ -363,6 +514,198 @@ export default function Demand() {
           </div>
         </div>
       )}
+
+      {/* ── Restock Required Dialog ── */}
+      <Dialog
+        open={!!restockDialogGroup}
+        onOpenChange={(open) => !open && setRestockDialogGroup(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10 shrink-0">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+              </div>
+              Item Out of Stock
+            </DialogTitle>
+            <DialogDescription>
+              <span className="font-semibold text-foreground">
+                {restockDialogGroup?.deviceName} {restockDialogGroup?.storage}{" "}
+                (Grade {restockDialogGroup?.grade})
+              </span>{" "}
+              currently has{" "}
+              <span className="font-semibold text-destructive">0 units</span>.
+              You need to restock it before notifying customers.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
+            <p className="font-medium">Recommended flow:</p>
+            <ol className="mt-1 space-y-1 list-decimal list-inside text-xs">
+              <li>Restock the item using the Add Product form</li>
+              <li>
+                Write a message to notify the{" "}
+                {restockDialogGroup?.requests.length} waiting customer
+                {restockDialogGroup?.requests.length !== 1 ? "s" : ""}
+              </li>
+            </ol>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setRestockDialogGroup(null);
+                if (restockDialogGroup) openMessageDialog(restockDialogGroup);
+              }}
+            >
+              <Bell className="h-3.5 w-3.5 mr-1.5" />
+              Notify Anyway
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              onClick={() =>
+                restockDialogGroup && handleRestockNow(restockDialogGroup)
+              }
+            >
+              <PackagePlus className="h-3.5 w-3.5" />
+              Restock Item First
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Fulfillment Message Dialog ── */}
+      <Dialog
+        open={!!messageDialogGroup}
+        onOpenChange={(open) => !open && setMessageDialogGroup(null)}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                <Send className="h-4 w-4 text-primary" />
+              </div>
+              Notify Waiting Customers
+            </DialogTitle>
+            <DialogDescription>
+              Send a message to all{" "}
+              <span className="font-semibold text-foreground">
+                {messageDialogGroup?.requests.length} customer
+                {messageDialogGroup?.requests.length !== 1 ? "s" : ""}
+              </span>{" "}
+              waiting for{" "}
+              <span className="font-semibold text-foreground">
+                {messageDialogGroup?.deviceName} {messageDialogGroup?.storage}{" "}
+                (Grade {messageDialogGroup?.grade})
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Preset selector */}
+            <div className="space-y-2">
+              <Label htmlFor="preset-select">Message template</Label>
+              <Select
+                value={selectedPreset}
+                onValueChange={(val) => {
+                  setSelectedPreset(val);
+                  if (val !== "custom") setCustomMessage("");
+                }}
+              >
+                <SelectTrigger id="preset-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRESET_MESSAGES.map((p) => (
+                    <SelectItem key={p.key} value={p.key}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Message preview / custom input */}
+            {selectedPreset !== "custom" ? (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs">Preview</Label>
+                <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-foreground leading-relaxed">
+                  {messageDialogGroup &&
+                    PRESET_MESSAGES.find(
+                      (p) => p.key === selectedPreset
+                    )?.template(
+                      `${messageDialogGroup.deviceName} ${messageDialogGroup.storage} (Grade ${messageDialogGroup.grade})`
+                    )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="custom-msg">Your message</Label>
+                <Textarea
+                  id="custom-msg"
+                  placeholder="e.g. We have restocked this item in limited quantity. Order now!"
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value)}
+                  className="min-h-[90px] resize-none"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {customMessage.length}/500 characters
+                </p>
+              </div>
+            )}
+
+            {/* Customer count reminder */}
+            <div className="rounded-lg border border-border bg-card p-3 flex items-center gap-3">
+              <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                This will mark{" "}
+                <span className="font-semibold text-foreground">
+                  {messageDialogGroup?.requests.length} request
+                  {messageDialogGroup?.requests.length !== 1 ? "s" : ""}
+                </span>{" "}
+                as fulfilled and customers will see your message in real-time.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setMessageDialogGroup(null)}
+              disabled={isFulfilling}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmFulfill}
+              disabled={
+                isFulfilling ||
+                (selectedPreset === "custom" && !customMessage.trim())
+              }
+              className="gap-2"
+            >
+              {isFulfilling ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              Send & Mark Fulfilled
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── AddProductModal (triggered from Restock flow) ── */}
+      <AddProductModal
+        open={addProductOpen}
+        onOpenChange={setAddProductOpen}
+        onSuccess={() => {}}
+        initialItemId={addProductItemId}
+        onRestockComplete={handleRestockComplete}
+      />
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useStockRequests } from "@/contexts/StockRequestContext";
 import { useAuth } from "@/lib/auth/context";
+import { useRouter } from "next/navigation";
 import type { InventoryItem } from "@/data/inventory";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ export function StockRequestButton({
 }: StockRequestButtonProps) {
   const { user } = useAuth();
   const { userRequestMap, createRequest, cancelRequest } = useStockRequests();
+  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [quantity, setQuantity] = useState("1");
   const [note, setNote] = useState("");
@@ -58,9 +60,14 @@ export function StockRequestButton({
     setIsSubmitting(true);
     try {
       await createRequest(item.id, qty, note.trim() || undefined);
-      toast.success(
-        `Request submitted — we'll prioritise restocking ${item.deviceName}`
-      );
+      toast.success(`Added to your waitlist`, {
+        description: `We'll notify you when ${item.deviceName} is back. Check your waitlist in Orders.`,
+        action: {
+          label: "View Waitlist",
+          onClick: () => router.push("/user/orders?tab=waitlist"),
+        },
+        duration: 6000,
+      });
       setDialogOpen(false);
     } catch {
       toast.error("Failed to submit request. Please try again.");
