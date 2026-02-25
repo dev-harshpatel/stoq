@@ -13,6 +13,7 @@ import {
   buildServerFilters,
 } from "@/components/FilterBar";
 import { PurchaseModal } from "@/components/PurchaseModal";
+import { StockRequestButton } from "@/components/StockRequestButton";
 import { GradeBadge } from "@/components/GradeBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
@@ -317,18 +318,24 @@ export default function UserProducts() {
                                         )}
                                       />
                                     </Button>
-                                    <Button
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (!isOutOfStock) handleBuyClick(item);
-                                      }}
-                                      disabled={isOutOfStock}
-                                      className="gap-2"
-                                    >
-                                      <ShoppingCart className="h-4 w-4" />
-                                      Buy
-                                    </Button>
+                                    {isOutOfStock ? (
+                                      <StockRequestButton
+                                        item={item}
+                                        className="h-8 w-8"
+                                      />
+                                    ) : (
+                                      <Button
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleBuyClick(item);
+                                        }}
+                                        title="Buy"
+                                      >
+                                        <ShoppingCart className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                   </div>
                                 </td>
                               </tr>
@@ -471,16 +478,21 @@ export default function UserProducts() {
                                 )}
                               />
                             </Button>
-                            <Button
-                              className="flex-1 gap-2"
-                              onClick={() =>
-                                !isOutOfStock && handleBuyClick(item)
-                              }
-                              disabled={isOutOfStock}
-                            >
-                              <ShoppingCart className="h-4 w-4" />
-                              Buy
-                            </Button>
+                            {isOutOfStock ? (
+                              <StockRequestButton
+                                item={item}
+                                className="h-10 w-10"
+                              />
+                            ) : (
+                              <Button
+                                size="icon"
+                                className="h-10 w-10"
+                                onClick={() => handleBuyClick(item)}
+                                title="Buy"
+                              >
+                                <ShoppingCart className="h-5 w-5" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       );

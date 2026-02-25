@@ -1,14 +1,14 @@
-'use client'
+"use client";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
-import { useMemo } from 'react';
-import { UserLayout } from '@/components/UserLayout';
-import { useOrders } from '@/contexts/OrdersContext';
-import { useAuth } from '@/lib/auth/context';
-import { StatCard } from '@/components/StatCard';
-import { formatPrice } from '@/data/inventory';
-import { Loader } from '@/components/Loader';
+import { useMemo } from "react";
+import { UserLayout } from "@/components/UserLayout";
+import { useOrders } from "@/contexts/OrdersContext";
+import { useAuth } from "@/lib/auth/context";
+import { StatCard } from "@/components/StatCard";
+import { formatPrice } from "@/data/inventory";
+import { Loader } from "@/components/Loader";
 import {
   DollarSign,
   ShoppingCart,
@@ -18,8 +18,8 @@ import {
   TrendingUp,
   Clock,
   XCircle,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function UserStatsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -33,17 +33,25 @@ export default function UserStatsPage() {
   const stats = useMemo(() => {
     // Total expenditure (approved and completed orders)
     const totalExpenditure = userOrders
-      .filter((o) => o.status === 'approved' || o.status === 'completed')
+      .filter((o) => o.status === "approved" || o.status === "completed")
       .reduce((sum, order) => sum + order.totalPrice, 0);
 
     // Total orders placed
     const totalOrders = userOrders.length;
 
     // Orders by status
-    const approvedOrders = userOrders.filter((o) => o.status === 'approved').length;
-    const completedOrders = userOrders.filter((o) => o.status === 'completed').length;
-    const pendingOrders = userOrders.filter((o) => o.status === 'pending').length;
-    const rejectedOrders = userOrders.filter((o) => o.status === 'rejected').length;
+    const approvedOrders = userOrders.filter(
+      (o) => o.status === "approved"
+    ).length;
+    const completedOrders = userOrders.filter(
+      (o) => o.status === "completed"
+    ).length;
+    const pendingOrders = userOrders.filter(
+      (o) => o.status === "pending"
+    ).length;
+    const rejectedOrders = userOrders.filter(
+      (o) => o.status === "rejected"
+    ).length;
 
     // Total discount earned (from confirmed invoices)
     const totalDiscount = userOrders
@@ -53,7 +61,7 @@ export default function UserStatsPage() {
     // Most loved brands - count items by brand
     const brandCounts: Record<string, { count: number; spent: number }> = {};
     userOrders
-      .filter((o) => o.status === 'approved' || o.status === 'completed')
+      .filter((o) => o.status === "approved" || o.status === "completed")
       .forEach((order) => {
         if (Array.isArray(order.items)) {
           order.items.forEach((orderItem) => {
@@ -79,20 +87,28 @@ export default function UserStatsPage() {
 
     // Total items purchased
     const totalItemsPurchased = userOrders
-      .filter((o) => o.status === 'approved' || o.status === 'completed')
+      .filter((o) => o.status === "approved" || o.status === "completed")
       .reduce((sum, order) => {
         if (Array.isArray(order.items)) {
-          return sum + order.items.reduce((itemSum, item) => itemSum + (item.quantity || 1), 0);
+          return (
+            sum +
+            order.items.reduce(
+              (itemSum, item) => itemSum + (item.quantity || 1),
+              0
+            )
+          );
         }
         return sum;
       }, 0);
 
     // Average order value
     const successfulOrders = userOrders.filter(
-      (o) => o.status === 'approved' || o.status === 'completed'
+      (o) => o.status === "approved" || o.status === "completed"
     );
     const avgOrderValue =
-      successfulOrders.length > 0 ? totalExpenditure / successfulOrders.length : 0;
+      successfulOrders.length > 0
+        ? totalExpenditure / successfulOrders.length
+        : 0;
 
     return {
       totalExpenditure,
@@ -124,7 +140,9 @@ export default function UserStatsPage() {
       <UserLayout>
         <div className="flex flex-col items-center justify-center h-full text-center">
           <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Please login to view your stats</p>
+          <p className="text-muted-foreground">
+            Please login to view your stats
+          </p>
         </div>
       </UserLayout>
     );
@@ -136,7 +154,9 @@ export default function UserStatsPage() {
         <div className="space-y-6 pb-6">
           {/* Page Header */}
           <div>
-            <h2 className="text-2xl font-semibold text-foreground">My Statistics</h2>
+            <h2 className="text-2xl font-semibold text-foreground">
+              My Statistics
+            </h2>
             <p className="text-sm text-muted-foreground mt-1">
               Overview of your purchase history and activity
             </p>
@@ -174,7 +194,9 @@ export default function UserStatsPage() {
 
           {/* Order Status Stats */}
           <div>
-            <h3 className="text-lg font-semibold text-foreground mb-4">Order Status Breakdown</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Order Status Breakdown
+            </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatCard
                 title="Pending"
@@ -212,15 +234,22 @@ export default function UserStatsPage() {
                   <Heart className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Favorite Brand</h3>
-                  <p className="text-xs text-muted-foreground">Your most ordered brand</p>
+                  <h3 className="font-semibold text-foreground">
+                    Favorite Brand
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Your most ordered brand
+                  </p>
                 </div>
               </div>
               {stats.topBrand ? (
                 <div>
-                  <p className="text-3xl font-bold text-foreground">{stats.topBrand.brand}</p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {stats.topBrand.brand}
+                  </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {stats.topBrand.count} items purchased · {formatPrice(stats.topBrand.spent)} spent
+                    {stats.topBrand.count} items purchased ·{" "}
+                    {formatPrice(stats.topBrand.spent)} spent
                   </p>
                 </div>
               ) : (
@@ -229,21 +258,26 @@ export default function UserStatsPage() {
             </div>
 
             {/* Average Order Value Card */}
-            <div className="bg-card rounded-lg border border-border shadow-soft p-6">
+            <div className="stats-extra-card bg-card rounded-lg border border-border shadow-soft p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 rounded-lg bg-primary/10 text-primary">
                   <TrendingUp className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Average Order Value</h3>
-                  <p className="text-xs text-muted-foreground">Your typical order size</p>
+                  <h3 className="font-semibold text-foreground">
+                    Average Order Value
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Your typical order size
+                  </p>
                 </div>
               </div>
               <p className="text-3xl font-bold text-foreground">
                 {formatPrice(stats.avgOrderValue)}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Based on {stats.approvedOrders + stats.completedOrders} successful orders
+                Based on {stats.approvedOrders + stats.completedOrders}{" "}
+                successful orders
               </p>
             </div>
           </div>
@@ -252,7 +286,9 @@ export default function UserStatsPage() {
           {stats.sortedBrands.length > 0 && (
             <div className="bg-card rounded-lg border border-border shadow-soft">
               <div className="px-6 py-4 border-b border-border">
-                <h3 className="font-semibold text-foreground">Brand Preferences</h3>
+                <h3 className="font-semibold text-foreground">
+                  Brand Preferences
+                </h3>
                 <p className="text-xs text-muted-foreground mt-1">
                   Breakdown of your purchases by brand
                 </p>
@@ -261,7 +297,9 @@ export default function UserStatsPage() {
                 {stats.sortedBrands.slice(0, 5).map((brandData, idx) => {
                   const percentage =
                     stats.totalItemsPurchased > 0
-                      ? Math.round((brandData.count / stats.totalItemsPurchased) * 100)
+                      ? Math.round(
+                          (brandData.count / stats.totalItemsPurchased) * 100
+                        )
                       : 0;
 
                   return (
@@ -270,15 +308,17 @@ export default function UserStatsPage() {
                         <div className="flex items-center gap-3">
                           <span
                             className={cn(
-                              'text-xs font-medium w-6 h-6 rounded-full flex items-center justify-center',
+                              "text-xs font-medium w-6 h-6 rounded-full flex items-center justify-center",
                               idx === 0
-                                ? 'bg-primary/10 text-primary'
-                                : 'bg-muted text-muted-foreground'
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted text-muted-foreground"
                             )}
                           >
                             {idx + 1}
                           </span>
-                          <span className="font-medium text-foreground">{brandData.brand}</span>
+                          <span className="font-medium text-foreground">
+                            {brandData.brand}
+                          </span>
                         </div>
                         <div className="text-right">
                           <span className="text-sm font-semibold text-foreground">
@@ -293,13 +333,15 @@ export default function UserStatsPage() {
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div
                           className={cn(
-                            'h-full rounded-full transition-all',
-                            idx === 0 ? 'bg-primary' : 'bg-muted-foreground/30'
+                            "h-full rounded-full transition-all",
+                            idx === 0 ? "bg-primary" : "bg-muted-foreground/30"
                           )}
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{percentage}% of purchases</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {percentage}% of purchases
+                      </p>
                     </div>
                   );
                 })}
@@ -311,7 +353,9 @@ export default function UserStatsPage() {
           {stats.totalOrders === 0 && (
             <div className="bg-card rounded-lg border border-border shadow-soft p-12 text-center">
               <ShoppingCart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No Orders Yet</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                No Orders Yet
+              </h3>
               <p className="text-muted-foreground">
                 Start shopping to see your purchase statistics here!
               </p>

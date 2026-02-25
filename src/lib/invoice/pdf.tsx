@@ -12,6 +12,27 @@ import { downloadBlob } from "../export/download";
 import { DEFAULT_COMPANY_NAME, DEFAULT_COMPANY_ADDRESS } from "../constants";
 
 /**
+ * Fetch an image from a URL and convert it to a base64 data URI.
+ * @react-pdf/renderer can struggle with external URLs due to browser CORS
+ * restrictions, so we pre-fetch and embed the image as a data URI.
+ */
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get company information from settings or defaults
  */
 async function getCompanyInfo(): Promise<
@@ -79,10 +100,16 @@ export async function generateInvoicePDF(
     // Get company information with logo
     const companyInfo = await getCompanyInfo();
 
+    // Pre-fetch logo as base64 so @react-pdf/renderer doesn't hit CORS
+    // when trying to load the Supabase Storage URL at render time
+    const logoDataUrl = companyInfo.logoUrl
+      ? await fetchImageAsBase64(companyInfo.logoUrl)
+      : null;
+
     // Create PDF document
     const pdfDocument = (
       <InvoicePDFDocument
-        companyInfo={companyInfo}
+        companyInfo={{ ...companyInfo, logoUrl: logoDataUrl }}
         customerInfo={customerInfo || {}}
         invoiceData={invoiceData}
         order={order}

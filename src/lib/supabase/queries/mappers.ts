@@ -210,6 +210,10 @@ export const dbRowToOrder = (row: OrderRow): Order => {
       !Array.isArray((row as any).imei_numbers)
         ? ((row as any).imei_numbers as Record<string, string>)
         : null,
+    isManualSale: (row as any).is_manual_sale ?? false,
+    manualCustomerName: (row as any).manual_customer_name ?? null,
+    manualCustomerEmail: (row as any).manual_customer_email ?? null,
+    manualCustomerPhone: (row as any).manual_customer_phone ?? null,
   };
 };
 

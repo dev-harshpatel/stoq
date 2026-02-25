@@ -15,6 +15,7 @@ import { useNavigation } from "@/contexts/NavigationContext";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/lib/auth/context";
+import { useStockRequests } from "@/contexts/StockRequestContext";
 import { cn } from "@/lib/utils";
 import { CartModal } from "./CartModal";
 import { LoginModal } from "./LoginModal";
@@ -47,6 +48,7 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
   const { user, signOut } = useAuth();
   const { getUniqueItemsCount } = useCart();
   const { getWishlistCount } = useWishlist();
+  const { newlyFulfilledCount } = useStockRequests();
   const { startNavigation } = useNavigation();
   const router = useRouter();
   const pathname = usePathname();
@@ -133,9 +135,6 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             <h1 className="text-lg font-semibold text-foreground">
               b2bMobiles
             </h1>
-            <p className="text-xs text-muted-foreground hidden sm:block">
-              Wholesale Stock Marketplace
-            </p>
           </button>
 
           {/* Desktop Navigation and Actions */}
@@ -170,7 +169,10 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-9 w-9 rounded-full"
+                  >
                     <Avatar className="h-9 w-9 border border-border">
                       <AvatarFallback className="bg-accent text-accent-foreground text-xs font-medium">
                         {user?.email?.substring(0, 2).toUpperCase() || "US"}
@@ -253,6 +255,14 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     View Orders
+                    {newlyFulfilledCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs"
+                      >
+                        {newlyFulfilledCount > 9 ? "9+" : newlyFulfilledCount}
+                      </Badge>
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={(e) => {
@@ -519,6 +529,14 @@ export const UserNavbar = ({ className }: UserNavbarProps) => {
                 >
                   <FileText className="h-4 w-4" />
                   View Orders
+                  {newlyFulfilledCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {newlyFulfilledCount > 9 ? "9+" : newlyFulfilledCount}
+                    </Badge>
+                  )}
                 </button>
                 <button
                   onClick={() => {

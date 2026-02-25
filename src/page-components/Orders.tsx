@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo } from "react";
 import { Order, OrderStatus } from "@/types/order";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, RotateCcw, Search } from "lucide-react";
+import { Eye, RotateCcw, Search, ShoppingBag } from "lucide-react";
 import { RejectionNote } from "@/components/RejectionNote";
 import { Input } from "@/components/ui/input";
 import { formatPrice, formatDateInOntario } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { OrderDetailsModal } from "@/components/OrderDetailsModal";
+import { ManualSaleModal } from "@/components/ManualSaleModal";
 import { EmptyState } from "@/components/EmptyState";
 import { PaginationControls } from "@/components/PaginationControls";
 import { Loader } from "@/components/Loader";
@@ -30,6 +31,7 @@ import { getStatusColor, getStatusLabel } from "@/lib/utils/status";
 export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [manualSaleOpen, setManualSaleOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [userEmails, setUserEmails] = useState<Record<string, string>>({});
@@ -62,9 +64,14 @@ export default function Orders() {
   });
 
   // Create a stable key based on unique user IDs from current page to fetch emails
+  // Skip manual sales — they have customer info stored directly on the order
   const userIdsKey = useMemo(() => {
     const uniqueUserIds = Array.from(
-      new Set(filteredOrders.map((order) => order.userId))
+      new Set(
+        filteredOrders
+          .filter((order) => !order.isManualSale)
+          .map((order) => order.userId)
+      )
     ).sort();
     return uniqueUserIds.join(",");
   }, [filteredOrders]);
@@ -134,6 +141,13 @@ export default function Orders() {
                 {totalCount} {hasActiveFilters ? "filtered" : "total"} orders
               </p>
             </div>
+            <Button
+              onClick={() => setManualSaleOpen(true)}
+              className="gap-2 sm:w-auto w-full"
+            >
+              <ShoppingBag className="h-4 w-4" />
+              Record Sale
+            </Button>
           </div>
 
           {/* Search and Status Filter */}
@@ -236,13 +250,25 @@ export default function Orders() {
                         )}
                       >
                         <td className="px-6 py-4">
-                          <span className="font-medium text-foreground">
-                            #{order.id.slice(-8).toUpperCase()}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">
+                              #{order.id.slice(-8).toUpperCase()}
+                            </span>
+                            {order.isManualSale && (
+                              <Badge
+                                variant="outline"
+                                className="text-xs px-1.5 py-0 text-orange-600 border-orange-300 bg-orange-50 dark:bg-orange-950 dark:border-orange-800 dark:text-orange-400"
+                              >
+                                Manual
+                              </Badge>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
-                          {userEmails[order.userId] ||
-                            order.userId.slice(0, 8) + "..."}
+                          {order.isManualSale
+                            ? order.manualCustomerName || "Walk-in Customer"
+                            : userEmails[order.userId] ||
+                              order.userId.slice(0, 8) + "..."}
                         </td>
                         <td className="px-4 py-4 text-sm text-foreground">
                           {Array.isArray(order.items) && order.items.length > 0
@@ -326,6 +352,11 @@ export default function Orders() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         order={selectedOrder}
+      />
+
+      <ManualSaleModal
+        open={manualSaleOpen}
+        onOpenChange={setManualSaleOpen}
       />
     </>
   );

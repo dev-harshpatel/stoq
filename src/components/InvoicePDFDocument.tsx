@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   // Column widths
   colItem: {
-    width: "35%",
+    width: "33%",
     paddingRight: 10,
   },
   colQuantity: {
@@ -167,8 +167,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   colImei: {
-    width: "20%",
-    paddingRight: 10,
+    width: "22%",
+    paddingLeft: 6,
+    paddingRight: 8,
+    overflow: "hidden",
   },
   colRate: {
     width: "17%",
@@ -326,8 +328,11 @@ export const InvoicePDFDocument = ({
             orderItem.item.sellingPrice ?? orderItem.item.pricePerUnit;
           const rate = itemPrice;
           const amount = itemPrice * orderItem.quantity;
-          const imei = order.imeiNumbers?.[String(index)]?.trim() || "";
-          return { itemName, quantity, rate, amount, imei };
+          const rawImei = order.imeiNumbers?.[String(index)]?.trim() || "";
+          const imeiList = rawImei
+            ? rawImei.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
+          return { itemName, quantity, rate, amount, imeiList };
         }
         return null;
       })
@@ -339,7 +344,7 @@ export const InvoicePDFDocument = ({
     quantity: number;
     rate: number;
     amount: number;
-    imei: string;
+    imeiList: string[];
   }>;
 
   // Calculate financial summary
@@ -433,9 +438,24 @@ export const InvoicePDFDocument = ({
               <Text style={[styles.tableCell, styles.colQuantity]}>
                 {row.quantity}
               </Text>
-              <Text style={[styles.tableCell, styles.colImei]}>
-                {row.imei || "—"}
-              </Text>
+              <View style={styles.colImei}>
+                {row.imeiList.length > 0 ? (
+                  row.imeiList.map((imei, i) => (
+                    <Text
+                      key={i}
+                      style={[
+                        styles.tableCell,
+                        { fontSize: 8 },
+                        i < row.imeiList.length - 1 && { marginBottom: 3 },
+                      ]}
+                    >
+                      {imei}
+                    </Text>
+                  ))
+                ) : (
+                  <Text style={styles.tableCell}>—</Text>
+                )}
+              </View>
               <Text style={[styles.tableCell, styles.colRate]}>
                 {formatPrice(row.rate)}
               </Text>

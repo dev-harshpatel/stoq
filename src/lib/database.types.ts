@@ -11,6 +11,35 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      stock_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          inventory_item_id: string;
+          quantity: number;
+          note: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          inventory_item_id: string;
+          quantity?: number;
+          note?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          quantity?: number;
+          note?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       user_profiles: {
         Row: {
           id: string;
@@ -226,6 +255,10 @@ export interface Database {
           shipping_address?: string | null;
           billing_address?: string | null;
           imei_numbers?: Json | null;
+          is_manual_sale?: boolean | null;
+          manual_customer_name?: string | null;
+          manual_customer_email?: string | null;
+          manual_customer_phone?: string | null;
         };
         Insert: {
           id?: string;
@@ -256,6 +289,10 @@ export interface Database {
           shipping_address?: string | null;
           billing_address?: string | null;
           imei_numbers?: Json | null;
+          is_manual_sale?: boolean | null;
+          manual_customer_name?: string | null;
+          manual_customer_email?: string | null;
+          manual_customer_phone?: string | null;
         };
         Update: {
           id?: string;
@@ -286,6 +323,10 @@ export interface Database {
           shipping_address?: string | null;
           billing_address?: string | null;
           imei_numbers?: Json | null;
+          is_manual_sale?: boolean | null;
+          manual_customer_name?: string | null;
+          manual_customer_email?: string | null;
+          manual_customer_phone?: string | null;
         };
         Relationships: [
           {

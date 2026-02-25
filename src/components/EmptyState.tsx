@@ -5,9 +5,9 @@ interface EmptyStateProps {
   description?: string;
 }
 
-export function EmptyState({ 
-  title = "No inventory found", 
-  description = "Try adjusting your search or filter criteria to find what you're looking for." 
+export function EmptyState({
+  title = "No inventory found",
+  description = "Try adjusting your search or filter criteria to find what you're looking for."
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">

@@ -6,6 +6,7 @@ import { AuthProvider } from "@/lib/auth/context";
 import { UserProfileProvider } from "@/contexts/UserProfileContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
+import { StockRequestProvider } from "@/contexts/StockRequestContext";
 import { InventoryProvider } from "@/contexts/InventoryContext";
 import { OrdersProvider } from "@/contexts/OrdersContext";
 import { NavigationProvider } from "@/contexts/NavigationContext";
@@ -49,11 +50,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <InventoryProvider>
                   <CartProvider>
                     <WishlistProvider>
+                      <StockRequestProvider>
                       <OrdersProvider>
                         {children}
                         <NavigationIndicator />
                         <Sonner />
                       </OrdersProvider>
+                      </StockRequestProvider>
                     </WishlistProvider>
                   </CartProvider>
                 </InventoryProvider>

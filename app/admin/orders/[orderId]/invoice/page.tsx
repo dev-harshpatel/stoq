@@ -161,12 +161,25 @@ export default function InvoicePage() {
           setImeiNumbers(currentOrder.imeiNumbers);
         }
 
-        // Load customer info
-        const customerProfile = await getUserProfile(currentOrder.userId);
-        setCustomerInfo({
-          businessName: customerProfile?.businessName || null,
-          businessAddress: customerProfile?.businessAddress || null,
-        });
+        // Load customer info — for manual sales use the stored customer data
+        if (currentOrder.isManualSale) {
+          setCustomerInfo({
+            businessName: currentOrder.manualCustomerName || "Walk-in Customer",
+            businessAddress:
+              [
+                currentOrder.manualCustomerEmail,
+                currentOrder.manualCustomerPhone,
+              ]
+                .filter(Boolean)
+                .join(" | ") || null,
+          });
+        } else {
+          const customerProfile = await getUserProfile(currentOrder.userId);
+          setCustomerInfo({
+            businessName: customerProfile?.businessName || null,
+            businessAddress: customerProfile?.businessAddress || null,
+          });
+        }
 
         // Pre-fill form with existing invoice data or defaults
         const orderDate = new Date(currentOrder.createdAt);
@@ -903,21 +916,58 @@ export default function InvoicePage() {
                             )}
                           </p>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">
+                        <div className="mt-1">
+                          <p className="text-xs text-muted-foreground mb-1.5">
                             IMEI
+                            {orderItem.quantity > 1
+                              ? ` — ${orderItem.quantity} units, comma-separated`
+                              : ""}
                           </p>
-                          <Input
-                            placeholder="Enter IMEI number"
-                            value={imeiNumbers[itemKey] ?? ""}
-                            onChange={(e) =>
-                              setImeiNumbers((prev) => ({
-                                ...prev,
-                                [itemKey]: e.target.value,
-                              }))
-                            }
-                            className="h-7 text-xs"
-                          />
+                          {orderItem.quantity > 1 ? (
+                            <>
+                              <Textarea
+                                placeholder={`Enter ${orderItem.quantity} IMEI numbers separated by commas`}
+                                value={imeiNumbers[itemKey] ?? ""}
+                                onChange={(e) =>
+                                  setImeiNumbers((prev) => ({
+                                    ...prev,
+                                    [itemKey]: e.target.value,
+                                  }))
+                                }
+                                className="text-xs min-h-[80px] resize-none border-border focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-offset-0"
+                              />
+                              {(() => {
+                                const entered = (imeiNumbers[itemKey] ?? "")
+                                  .split(",")
+                                  .map((s) => s.trim())
+                                  .filter(Boolean).length;
+                                return entered > 0 ? (
+                                  <p
+                                    className={`text-xs mt-1 ${
+                                      entered === orderItem.quantity
+                                        ? "text-green-600"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  >
+                                    {entered}/{orderItem.quantity} IMEI numbers
+                                    entered
+                                  </p>
+                                ) : null;
+                              })()}
+                            </>
+                          ) : (
+                            <Input
+                              placeholder="Enter IMEI number"
+                              value={imeiNumbers[itemKey] ?? ""}
+                              onChange={(e) =>
+                                setImeiNumbers((prev) => ({
+                                  ...prev,
+                                  [itemKey]: e.target.value,
+                                }))
+                              }
+                              className="h-8 text-xs border-border focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-offset-0"
+                            />
+                          )}
                         </div>
                       </div>
                     );
