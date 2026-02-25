@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Check,
   ChevronsUpDown,
@@ -57,6 +57,10 @@ interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** Pre-select an existing inventory item (e.g. from Demand page restock flow) */
+  initialItemId?: string;
+  /** Called after a successful restock of an existing item */
+  onRestockComplete?: (itemId: string) => void;
 }
 
 interface ProductForm {
@@ -94,6 +98,8 @@ export function AddProductModal({
   open,
   onOpenChange,
   onSuccess,
+  initialItemId,
+  onRestockComplete,
 }: AddProductModalProps) {
   const { inventory, updateProduct, bulkInsertProducts } = useInventory();
   const [form, setForm] = useState<ProductForm>(defaultForm);
@@ -102,6 +108,17 @@ export function AddProductModal({
   );
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Pre-select item when initialItemId is provided (e.g. from Demand restock flow)
+  useEffect(() => {
+    if (open && initialItemId) {
+      const item = inventory.find((i) => i.id === initialItemId);
+      if (item) {
+        handleSelectExisting(item);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialItemId]);
 
   const selectedExisting = useMemo(
     () =>
@@ -193,6 +210,7 @@ export function AddProductModal({
         toast.success(
           `${form.deviceName} restocked — ${newQuantity} unit${newQuantity !== 1 ? "s" : ""} added`
         );
+        onRestockComplete?.(selectedExisting.id);
       } else {
         // ── Insert brand-new product ──────────────────────────────────────────
         const pricePerUnit = calculatePricePerUnit(

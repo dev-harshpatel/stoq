@@ -7,6 +7,20 @@ export interface StockRequest {
   quantity: number;
   note?: string | null;
   status: StockRequestStatus;
+  adminMessage?: string | null;
+  fulfilledAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface StockRequestWithItem extends StockRequest {
+  item: {
+    id: string;
+    deviceName: string;
+    brand: string;
+    grade: string;
+    storage: string;
+    quantity: number;
+    sellingPrice: number;
+  } | null;
 }
