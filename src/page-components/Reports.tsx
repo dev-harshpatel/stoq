@@ -310,14 +310,38 @@ export default function Reports() {
     };
   }, [filteredOrders]);
 
-  // Estimated profit: from current inventory (selling - cost) * qty. Unchanged by date range.
+  // Cost per unit WITHOUT HST: purchasePrice/quantity (e.g. 10500/50 = 210).
+  // pricePerUnit includes HST, so we use purchasePrice/quantity to exclude it.
+  const getCostPerUnitWithoutHst = (
+    purchasePrice: number | null | undefined,
+    quantity: number,
+    pricePerUnit: number,
+    hst: number | null | undefined
+  ): number | null => {
+    if (quantity <= 0) return null;
+    if (purchasePrice != null) {
+      return purchasePrice / quantity;
+    }
+    if (hst != null && hst > 0) {
+      return pricePerUnit / (1 + hst / 100);
+    }
+    return pricePerUnit;
+  };
+
+  // Estimated profit: (selling - cost) × qty. Cost is per-unit WITHOUT HST.
   const estimatedProfitStats = useMemo(() => {
     let totalProfit = 0;
     let itemsWithData = 0;
 
     filteredInventory.forEach((item) => {
-      if (item.purchasePrice != null) {
-        totalProfit += (item.sellingPrice - item.pricePerUnit) * item.quantity;
+      const costPerUnit = getCostPerUnitWithoutHst(
+        item.purchasePrice,
+        item.quantity,
+        item.pricePerUnit,
+        item.hst
+      );
+      if (costPerUnit != null) {
+        totalProfit += (item.sellingPrice - costPerUnit) * item.quantity;
         itemsWithData++;
       }
     });
@@ -326,7 +350,7 @@ export default function Reports() {
   }, [filteredInventory]);
 
   // Profit from orders in the selected date range (approved/completed only).
-  // Per line: (sellingPrice - pricePerUnit) * quantity.
+  // Per line: (selling - cost) × qty. Cost is per-unit WITHOUT HST.
   const profitFromOrdersStats = useMemo(() => {
     const completedOrders = filteredOrders.filter(
       (o) => o.status === "approved" || o.status === "completed"
@@ -341,7 +365,14 @@ export default function Reports() {
         const item = orderItem.item;
         const qty = orderItem.quantity ?? 0;
         const selling = item?.sellingPrice ?? item?.pricePerUnit ?? 0;
-        const cost = item?.pricePerUnit ?? 0;
+        const batchQty = item?.quantity ?? 1;
+        const costPerUnit = getCostPerUnitWithoutHst(
+          item?.purchasePrice,
+          batchQty,
+          item?.pricePerUnit ?? 0,
+          item?.hst
+        );
+        const cost = costPerUnit ?? item?.pricePerUnit ?? 0;
         totalProfit += (selling - cost) * qty;
       });
     });
@@ -573,7 +604,7 @@ export default function Reports() {
               {formatPrice(estimatedProfitStats.totalProfit)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              (Selling - Cost) × Qty · {estimatedProfitStats.itemsWithData}{" "}
+              (Selling − Cost/unit) × Qty · Excl. HST · {estimatedProfitStats.itemsWithData}{" "}
               items
             </p>
           </div>
