@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Package,
   Pencil,
+  Receipt,
   Settings,
   ShoppingBag,
   TrendingUp,
@@ -31,6 +32,7 @@ const navItems = [
   { label: 'Demand', icon: TrendingUp, href: '/admin/demand' },
   { label: 'Users', icon: Users, href: '/admin/users' },
   { label: 'Reports', icon: BarChart3, href: '/admin/reports' },
+  { label: 'HST', icon: Receipt, href: '/admin/hst' },
   { label: 'Settings', icon: Settings, href: '/admin/settings' },
 ];
 
