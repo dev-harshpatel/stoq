@@ -36,16 +36,17 @@ import {
   Search,
   ShoppingBag,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PAYMENT_METHODS } from "@/lib/constants";
 
-const MANUAL_PAYMENT_METHODS = [
-  { value: "CASH", label: "Cash" },
-  { value: "EMT", label: "E-Transfer (EMT)" },
-  { value: "WIRE", label: "Wire Transfer" },
-  { value: "CHQ", label: "Cheque" },
-  { value: "CREDIT", label: "Credit Card" },
-  { value: "NET 15", label: "Net 15" },
-  { value: "NET 30", label: "Net 30" },
-];
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  EMT: "E-Transfer (EMT)",
+  WIRE: "Wire Transfer",
+  CHQ: "Cheque",
+  "NET 15": "Net 15",
+  "NET 30": "Net 30",
+  "NET 60": "Net 60",
+};
 
 interface SelectedItem {
   item: InventoryItem;
@@ -72,7 +73,11 @@ export function ManualSaleModal({ open, onOpenChange }: ManualSaleModalProps) {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [billingAddress, setBillingAddress] = useState("");
+  const [shippingAddress, setShippingAddress] = useState("");
+  const [sameAsShipping, setSameAsShipping] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [hstPercent, setHstPercent] = useState("13");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -98,6 +103,9 @@ export function ManualSaleModal({ open, onOpenChange }: ManualSaleModalProps) {
       sum + (item.sellingPrice ?? item.pricePerUnit) * quantity,
     0
   );
+  const hstRate = Math.max(0, parseFloat(hstPercent) || 0) / 100;
+  const hstAmount = subtotal * hstRate;
+  const total = subtotal + hstAmount;
 
   const handleToggleItem = (item: InventoryItem) => {
     setSelectedItems((prev) => {
@@ -129,7 +137,11 @@ export function ManualSaleModal({ open, onOpenChange }: ManualSaleModalProps) {
     setCustomerName("");
     setCustomerEmail("");
     setCustomerPhone("");
+    setBillingAddress("");
+    setShippingAddress("");
+    setSameAsShipping(false);
     setPaymentMethod("");
+    setHstPercent("13");
     setNotes("");
     onOpenChange(false);
   };
@@ -149,15 +161,24 @@ export function ManualSaleModal({ open, onOpenChange }: ManualSaleModalProps) {
         ({ item, quantity }) => ({ item, quantity })
       );
 
+      const finalShippingAddress = sameAsShipping
+        ? billingAddress.trim()
+        : shippingAddress.trim();
+
       const order = await createManualOrder(
         user.id,
         orderItems,
         {
           name: customerName.trim(),
           email: customerEmail.trim() || undefined,
-          phone: customerPhone.trim() || undefined,
+          phone: customerPhone.trim()
+            ? `+1${customerPhone.trim()}`
+            : undefined,
         },
         paymentMethod,
+        Math.max(0, parseFloat(hstPercent) || 0),
+        billingAddress.trim() || undefined,
+        finalShippingAddress || undefined,
         notes.trim() || undefined
       );
 
@@ -361,7 +382,7 @@ export function ManualSaleModal({ open, onOpenChange }: ManualSaleModalProps) {
               <p className="text-sm text-muted-foreground">
                 {selectedItemsList.length > 0 ? (
                   <span className="font-medium text-foreground">
-                    {selectedItemsList.length} item(s) —{" "}
+                    {selectedItemsList.length} item(s) — subtotal{" "}
                     {formatPrice(subtotal)}
                   </span>
                 ) : (
@@ -386,7 +407,7 @@ export function ManualSaleModal({ open, onOpenChange }: ManualSaleModalProps) {
         {/* ── STEP 2: Customer & Payment ───────────────────────── */}
         {step === 2 && (
           <div className="flex flex-col flex-1 min-h-0 px-6 py-4 gap-4">
-            <div className="flex-1 overflow-y-auto min-h-0 space-y-5">
+            <div className="flex-1 overflow-y-auto min-h-0 space-y-5 px-1 -mx-1">
               {/* Customer info */}
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">
@@ -428,15 +449,83 @@ export function ManualSaleModal({ open, onOpenChange }: ManualSaleModalProps) {
                           (optional)
                         </span>
                       </Label>
-                      <Input
-                        id="customerPhone"
-                        type="tel"
-                        placeholder="+1 (416) 555-0000"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                      />
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-sm text-muted-foreground select-none pointer-events-none">
+                          +1
+                        </span>
+                        <Input
+                          id="customerPhone"
+                          type="tel"
+                          placeholder="(416) 555-0000"
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(e.target.value)}
+                          className="pl-8"
+                        />
+                      </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  Address{" "}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    (optional)
+                  </span>
+                </h3>
+
+                {/* Billing Address */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="billingAddress">Billing Address</Label>
+                  <Textarea
+                    id="billingAddress"
+                    placeholder="123 Main St, City, Province, Postal Code"
+                    value={billingAddress}
+                    onChange={(e) => {
+                      setBillingAddress(e.target.value);
+                      if (!e.target.value.trim()) setSameAsShipping(false);
+                    }}
+                    className="min-h-[60px] resize-none"
+                  />
+                </div>
+
+                {/* Same-as-billing toggle — shown only when billing has content */}
+                {billingAddress.trim() && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="sameAsShipping"
+                      checked={sameAsShipping}
+                      onCheckedChange={(checked) =>
+                        setSameAsShipping(!!checked)
+                      }
+                    />
+                    <Label
+                      htmlFor="sameAsShipping"
+                      className="text-sm font-normal text-muted-foreground cursor-pointer"
+                    >
+                      Use same address for shipping
+                    </Label>
+                  </div>
+                )}
+
+                {/* Shipping Address */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="shippingAddress">Shipping Address</Label>
+                  {sameAsShipping ? (
+                    <div className="px-3 py-2 min-h-[60px] rounded-md border border-border bg-muted/40 text-sm text-muted-foreground whitespace-pre-wrap">
+                      {billingAddress}
+                    </div>
+                  ) : (
+                    <Textarea
+                      id="shippingAddress"
+                      placeholder="123 Main St, City, Province, Postal Code"
+                      value={shippingAddress}
+                      onChange={(e) => setShippingAddress(e.target.value)}
+                      className="min-h-[60px] resize-none"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -454,13 +543,37 @@ export function ManualSaleModal({ open, onOpenChange }: ManualSaleModalProps) {
                     <SelectValue placeholder="Select payment method" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MANUAL_PAYMENT_METHODS.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label}
+                    {PAYMENT_METHODS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {PAYMENT_METHOD_LABELS[value] ?? value}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* HST */}
+              <div className="space-y-1.5">
+                <Label htmlFor="hstPercent">
+                  HST / Tax Rate{" "}
+                  <span className="text-xs text-muted-foreground">(%)</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="hstPercent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="e.g. 13"
+                    value={hstPercent}
+                    onChange={(e) => setHstPercent(e.target.value)}
+                    className="pr-8"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                    %
+                  </span>
+                </div>
               </div>
 
               {/* Notes */}
@@ -502,11 +615,21 @@ export function ManualSaleModal({ open, onOpenChange }: ManualSaleModalProps) {
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between text-sm font-semibold border-t border-border pt-2">
-                  <span className="text-foreground">Total</span>
-                  <span className="text-foreground">
-                    {formatPrice(subtotal)}
-                  </span>
+                <div className="border-t border-border pt-2 space-y-1.5">
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span>{formatPrice(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>
+                      HST ({parseFloat(hstPercent) || 0}%)
+                    </span>
+                    <span>{formatPrice(hstAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span className="text-foreground">Total</span>
+                    <span className="text-foreground">{formatPrice(total)}</span>
+                  </div>
                 </div>
               </div>
             </div>
