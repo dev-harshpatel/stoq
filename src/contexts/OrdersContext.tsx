@@ -35,6 +35,9 @@ interface OrdersContextType {
     items: OrderItem[],
     customerInfo: { name: string; email?: string; phone?: string },
     paymentMethod: string,
+    hstPercent?: number,
+    billingAddress?: string,
+    shippingAddress?: string,
     notes?: string
   ) => Promise<Order>;
   updateOrderStatus: (
@@ -282,6 +285,9 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       items: OrderItem[],
       customerInfo: { name: string; email?: string; phone?: string },
       paymentMethod: string,
+      hstPercent?: number,
+      billingAddress?: string,
+      shippingAddress?: string,
       notes?: string
     ): Promise<Order> => {
       if (!items || items.length === 0) {
@@ -289,6 +295,9 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
       }
 
       const subtotal = calculateOrderSubtotal(items);
+      const taxRate = hstPercent && hstPercent > 0 ? hstPercent / 100 : null;
+      const taxAmount = taxRate ? Math.round(subtotal * taxRate * 100) / 100 : null;
+      const totalPrice = subtotal + (taxAmount ?? 0);
       const itemsJson: Json = items as unknown as Json;
 
       const generateUUID = () =>
@@ -303,9 +312,9 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         user_id: adminUserId,
         items: itemsJson,
         subtotal,
-        tax_rate: null,
-        tax_amount: null,
-        total_price: subtotal,
+        tax_rate: taxRate,
+        tax_amount: taxAmount,
+        total_price: totalPrice,
         status: "approved",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -314,6 +323,8 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         manual_customer_email: customerInfo.email || null,
         manual_customer_phone: customerInfo.phone || null,
         payment_terms: paymentMethod,
+        billing_address: billingAddress || null,
+        shipping_address: shippingAddress || null,
         invoice_notes: notes || null,
       };
 
@@ -560,6 +571,8 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         let customerInfo: {
           businessName: string | null;
           businessAddress: string | null;
+          billingAddress: string | null;
+          shippingAddress: string | null;
         };
         if (order.isManualSale) {
           customerInfo = {
@@ -568,12 +581,16 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
               [order.manualCustomerEmail, order.manualCustomerPhone]
                 .filter(Boolean)
                 .join(" | ") || null,
+            billingAddress: order.billingAddress || null,
+            shippingAddress: order.shippingAddress || null,
           };
         } else {
           const customerProfile = await getUserProfile(order.userId);
           customerInfo = {
             businessName: customerProfile?.businessName || null,
             businessAddress: customerProfile?.businessAddress || null,
+            billingAddress: order.billingAddress || null,
+            shippingAddress: order.shippingAddress || null,
           };
         }
 

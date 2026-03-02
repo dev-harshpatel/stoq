@@ -25,6 +25,8 @@ interface InvoicePDFDocumentProps {
   customerInfo: {
     businessName?: string | null;
     businessAddress?: string | null;
+    billingAddress?: string | null;
+    shippingAddress?: string | null;
   };
   invoiceData: InvoiceData;
   order: Order;
@@ -39,28 +41,35 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     fontFamily: "Helvetica",
     fontSize: 10,
-    padding: 40,
+    padding: 30,
   },
   // Header Section
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 30,
+    alignItems: "center",
+    marginBottom: 12,
   },
-  headerLeft: {
-    flexDirection: "column",
+  // Logo + company name side by side
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
   },
   logo: {
-    width: 80,
-    height: 80,
-    marginBottom: 10,
+    width: 110,
+    height: 65,
     objectFit: "contain",
   },
+  companyInfo: {
+    flexDirection: "column",
+    justifyContent: "center",
+  },
   companyName: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: "Helvetica-Bold",
     color: "#1a1a1a",
-    marginBottom: 5,
+    marginBottom: 2,
   },
   companyAddress: {
     fontSize: 9,
@@ -71,47 +80,50 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   invoiceTitle: {
-    fontSize: 28,
+    fontSize: 26,
     fontFamily: "Helvetica-Bold",
     color: "#2563eb",
-    marginBottom: 10,
+    marginBottom: 5,
   },
   invoiceDetails: {
     fontSize: 9,
     color: "#4b5563",
-    marginBottom: 3,
+    marginBottom: 2,
   },
   invoiceDetailsBold: {
     fontSize: 9,
     fontFamily: "Helvetica-Bold",
     color: "#1f2937",
-    marginBottom: 3,
+    marginBottom: 2,
   },
   // Bill To / Ship To Section
   addressSection: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 25,
-    gap: 20,
+    marginBottom: 12,
+    gap: 10,
   },
   addressBox: {
     flex: 1,
-    padding: 15,
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 10,
+    paddingRight: 10,
     backgroundColor: "#f9fafb",
     borderRadius: 4,
     border: "1 solid #e5e7eb",
   },
   addressTitle: {
-    fontSize: 11,
+    fontSize: 7,
     fontFamily: "Helvetica-Bold",
-    color: "#374151",
-    marginBottom: 8,
+    color: "#9ca3af",
+    marginBottom: 2,
   },
   addressName: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: "Helvetica-Bold",
     color: "#1f2937",
-    marginBottom: 5,
+    marginBottom: 1,
   },
   addressText: {
     fontSize: 9,
@@ -121,7 +133,7 @@ const styles = StyleSheet.create({
   // Table Section
   table: {
     width: "100%",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   tableHeader: {
     flexDirection: "row",
@@ -183,7 +195,7 @@ const styles = StyleSheet.create({
   },
   // Summary Section
   summarySection: {
-    marginTop: 20,
+    marginTop: 12,
     alignItems: "flex-end",
   },
   summaryBox: {
@@ -194,13 +206,19 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 10,
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 10,
+    paddingRight: 10,
     borderBottom: "1 solid #e5e7eb",
   },
   summaryRowLast: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 10,
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingLeft: 10,
+    paddingRight: 10,
   },
   summaryLabel: {
     fontSize: 10,
@@ -224,7 +242,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     backgroundColor: "#2563eb",
-    padding: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingLeft: 10,
+    paddingRight: 10,
     borderBottomLeftRadius: 4,
     borderBottomRightRadius: 4,
   },
@@ -244,8 +265,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#fef3c7",
     border: "2 solid #fbbf24",
     borderRadius: 4,
-    padding: 15,
-    marginTop: 15,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingLeft: 10,
+    paddingRight: 10,
+    marginTop: 8,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -262,7 +286,7 @@ const styles = StyleSheet.create({
   },
   // Footer Section
   footer: {
-    marginTop: 40,
+    marginTop: 24,
   },
   footerSection: {
     marginBottom: 20,
@@ -279,8 +303,9 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
   hstText: {
-    fontSize: 8,
-    color: "#9ca3af",
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: "#374151",
     marginTop: 10,
   },
 });
@@ -358,12 +383,14 @@ export const InvoicePDFDocument = ({
       <Page size="A4" style={styles.page}>
         {/* Header Section */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
+          <View style={styles.logoRow}>
             {companyInfo.logoUrl && (
               <Image style={styles.logo} src={companyInfo.logoUrl} />
             )}
-            <Text style={styles.companyName}>{companyInfo.name}</Text>
-            <Text style={styles.companyAddress}>{companyInfo.address}</Text>
+            <View style={styles.companyInfo}>
+              <Text style={styles.companyName}>{companyInfo.name}</Text>
+              <Text style={styles.companyAddress}>{companyInfo.address}</Text>
+            </View>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
@@ -388,7 +415,7 @@ export const InvoicePDFDocument = ({
         {/* Bill To / Ship To Section */}
         <View style={styles.addressSection}>
           <View style={styles.addressBox}>
-            <Text style={styles.addressTitle}>Bill To:</Text>
+            <Text style={styles.addressTitle}>BILL TO:</Text>
             <Text style={styles.addressName}>
               {customerInfo.businessName || "Customer"}
             </Text>
@@ -397,15 +424,25 @@ export const InvoicePDFDocument = ({
                 {customerInfo.businessAddress}
               </Text>
             )}
+            {customerInfo.billingAddress && (
+              <Text style={[styles.addressText, { marginTop: 3 }]}>
+                {customerInfo.billingAddress}
+              </Text>
+            )}
           </View>
           <View style={styles.addressBox}>
-            <Text style={styles.addressTitle}>Ship To:</Text>
+            <Text style={styles.addressTitle}>SHIP TO:</Text>
             <Text style={styles.addressName}>
               {customerInfo.businessName || "Customer"}
             </Text>
             {customerInfo.businessAddress && (
               <Text style={styles.addressText}>
                 {customerInfo.businessAddress}
+              </Text>
+            )}
+            {customerInfo.shippingAddress && (
+              <Text style={[styles.addressText, { marginTop: 3 }]}>
+                {customerInfo.shippingAddress}
               </Text>
             )}
           </View>
@@ -553,10 +590,11 @@ export const InvoicePDFDocument = ({
           )}
 
           {/* HST Number */}
-          {invoiceData.hstNumber &&
-            (!invoiceData.invoiceNotes || !invoiceData.invoiceNotes.trim()) && (
-              <Text style={styles.hstText}>HST: {invoiceData.hstNumber}</Text>
-            )}
+          {invoiceData.hstNumber && (
+            <Text style={styles.hstText}>
+              HST #: {invoiceData.hstNumber}
+            </Text>
+          )}
         </View>
       </Page>
     </Document>
