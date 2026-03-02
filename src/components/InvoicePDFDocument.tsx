@@ -14,6 +14,7 @@ import {
 } from "@react-pdf/renderer";
 import { InvoiceData } from "@/types/invoice";
 import { Order } from "@/types/order";
+import { GRADE_LABELS } from "@/lib/constants/grades";
 
 interface InvoicePDFDocumentProps {
   companyInfo: {
@@ -347,7 +348,10 @@ export const InvoicePDFDocument = ({
   const tableRows = Array.isArray(order.items)
     ? order.items.map((orderItem, index) => {
         if (orderItem?.item) {
-          const itemName = `${orderItem.item.deviceName} ${orderItem.item.storage}`;
+          const gradeLabel =
+            GRADE_LABELS[orderItem.item.grade as keyof typeof GRADE_LABELS] ??
+            orderItem.item.grade;
+          const itemName = `${orderItem.item.deviceName} (${gradeLabel}) ${orderItem.item.storage}`;
           const quantity = orderItem.quantity;
           const itemPrice =
             orderItem.item.sellingPrice ?? orderItem.item.pricePerUnit;

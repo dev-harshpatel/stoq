@@ -28,6 +28,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { formatPrice } from "@/data/inventory";
+import { GRADE_LABELS } from "@/lib/constants/grades";
 import {
   generateInvoiceNumber,
   generatePONumber,
@@ -906,7 +907,9 @@ export default function InvoicePage() {
                               {orderItem.item.deviceName}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {orderItem.item.storage} • Qty:{" "}
+                              {GRADE_LABELS[orderItem.item.grade as keyof typeof GRADE_LABELS] ??
+                                orderItem.item.grade}{" "}
+                              • {orderItem.item.storage} • Qty:{" "}
                               {orderItem.quantity}
                             </p>
                           </div>
