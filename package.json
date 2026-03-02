@@ -1,7 +1,8 @@
 {
   "name": "stoq",
+  "description": "Inventory management platform for Hari Om Traders — built with Next.js and Supabase.",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
