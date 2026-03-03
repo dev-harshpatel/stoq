@@ -43,6 +43,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   EMT: "E-Transfer (EMT)",
   WIRE: "Wire Transfer",
   CHQ: "Cheque",
+  CASH: "Cash",
   "NET 15": "Net 15",
   "NET 30": "Net 30",
   "NET 60": "Net 60",

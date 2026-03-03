@@ -49,6 +49,7 @@ interface OrdersContextType {
     rejectionComment?: string,
     discountAmount?: number
   ) => Promise<void>;
+  deleteOrder: (orderId: string) => Promise<void>;
   updateInvoice: (
     orderId: string,
     invoiceData: {
@@ -416,6 +417,29 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     [loadOrders, getOrderById, queryClient]
   );
 
+  const deleteOrder = useCallback(
+    async (orderId: string): Promise<void> => {
+      const { data: deleted, error } = await (supabase as any).rpc(
+        "delete_order_and_restore_inventory",
+        {
+          p_order_id: orderId,
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message || "Failed to delete order");
+      }
+      if (!deleted) {
+        throw new Error("Order was already deleted.");
+      }
+
+      await loadOrders();
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders });
+      queryClient.invalidateQueries({ queryKey: queryKeys.inventory });
+    },
+    [loadOrders, queryClient]
+  );
+
   const getUserOrders = useCallback(
     (userId: string): Order[] => {
       return orders
@@ -628,6 +652,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         createOrder,
         createManualOrder,
         updateOrderStatus,
+        deleteOrder,
         updateInvoice,
         confirmInvoice,
         downloadInvoicePDF,

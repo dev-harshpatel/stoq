@@ -65,7 +65,7 @@ export async function generatePONumber(orderDate: Date): Promise<string> {
 /**
  * Calculate due date based on payment terms
  * @param invoiceDate - Invoice date
- * @param paymentTerms - Payment terms (e.g., "CHQ", "EMT", "WIRE", "NET 30", "NET 15", "NET 60")
+ * @param paymentTerms - Payment terms (e.g., "CHQ", "EMT", "WIRE", "CASH", "NET 30", "NET 15", "NET 60")
  * @returns Due date string (YYYY-MM-DD format)
  */
 export function calculateDueDate(
@@ -79,11 +79,12 @@ export function calculateDueDate(
     return invoiceDate; // Return original if invalid date
   }
 
-  // Payment on receipt = same day (CHQ, EMT, WIRE)
+  // Payment on receipt = same day (CHQ, EMT, WIRE, CASH)
   if (
     paymentTerms === "CHQ" ||
     paymentTerms === "EMT" ||
-    paymentTerms === "WIRE"
+    paymentTerms === "WIRE" ||
+    paymentTerms === "CASH"
   ) {
     return invoiceDate;
   }
