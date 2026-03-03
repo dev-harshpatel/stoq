@@ -345,7 +345,7 @@ export const OrderDetailsModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <div className="flex items-start justify-between pr-8">
             <div>
@@ -367,14 +367,20 @@ export const OrderDetailsModal = ({
         </DialogHeader>
 
         {isAdmin ? (
-          <Tabs defaultValue="order" className="flex-1 min-h-0 flex flex-col">
+          <Tabs
+            defaultValue="order"
+            className="flex-1 min-h-0 flex flex-col overflow-hidden"
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="order">Order</TabsTrigger>
               <TabsTrigger value="profit">Profit</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="order" className="flex-1 min-h-0 mt-3">
-              <div className="h-full overflow-y-auto min-h-0 space-y-6 pr-1">
+            <TabsContent
+              value="order"
+              className="flex-1 min-h-0 mt-3 overflow-y-auto pr-1 data-[state=active]:flex data-[state=active]:flex-col"
+            >
+              <div className="space-y-6 pb-3">
           {/* Manual Sale Banner */}
           {order.isManualSale && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-orange-50 border border-orange-200 dark:bg-orange-950 dark:border-orange-800 text-sm text-orange-700 dark:text-orange-400">
@@ -615,8 +621,11 @@ export const OrderDetailsModal = ({
               </div>
             </TabsContent>
 
-            <TabsContent value="profit" className="flex-1 min-h-0 mt-3">
-              <div className="h-full overflow-y-auto min-h-0 space-y-4 pr-1">
+            <TabsContent
+              value="profit"
+              className="flex-1 min-h-0 mt-3 overflow-y-auto pr-1 data-[state=active]:flex data-[state=active]:flex-col"
+            >
+              <div className="space-y-4 pb-3">
                 <div className="rounded-lg border border-border bg-muted/30 p-4">
                   <h3 className="font-semibold text-foreground">
                     Profit Summary
@@ -728,7 +737,7 @@ export const OrderDetailsModal = ({
             </TabsContent>
           </Tabs>
         ) : (
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-6">
+          <div className="flex-1 overflow-y-auto min-h-0 space-y-6 pb-3">
             {/* Manual Sale Banner */}
             {order.isManualSale && (
               <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-orange-50 border border-orange-200 dark:bg-orange-950 dark:border-orange-800 text-sm text-orange-700 dark:text-orange-400">
@@ -972,7 +981,7 @@ export const OrderDetailsModal = ({
         )}
 
         {/* Actions */}
-        <div className="border-t border-border pt-4 space-y-3">
+        <div className="border-t border-border bg-background pt-4 space-y-3 shrink-0">
           {/* Admin Invoice Actions */}
           {isAdmin &&
             (canCreateEditInvoice ||
