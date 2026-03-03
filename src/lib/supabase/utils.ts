@@ -153,112 +153,41 @@ export const createUserProfileWithDetails = async (
   }
 ): Promise<UserProfile | null> => {
   try {
-    // Try using client first (works if user has session)
-    type InsertType = Database["public"]["Tables"]["user_profiles"]["Insert"];
+    const response = await fetch("/api/user-profile/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId,
+        firstName: details.firstName,
+        lastName: details.lastName,
+        phone: details.phone,
+        businessName: details.businessName,
+        businessAddress: details.businessAddress,
+        businessAddressComponents: details.businessAddressComponents,
+        businessState: details.businessState,
+        businessCity: details.businessCity,
+        businessCountry: details.businessCountry,
+        businessYears: details.businessYears,
+        businessWebsite: details.businessWebsite,
+        businessEmail: details.businessEmail,
+        role: details.role || "user",
+      }),
+    });
 
-    const insertData = {
-      user_id: userId,
-      role: details.role || "user",
-      approval_status: "pending" as const,
-      approval_status_updated_at: null,
-      first_name: details.firstName || null,
-      last_name: details.lastName || null,
-      phone: details.phone || null,
-      business_name: details.businessName || null,
-      business_address: details.businessAddress || null,
-      business_address_components: details.businessAddressComponents || null,
-      business_state: details.businessState || null,
-      business_city: details.businessCity || null,
-      business_country: details.businessCountry || null,
-      business_years: details.businessYears || null,
-      business_website: details.businessWebsite || null,
-      business_email: details.businessEmail || null,
-    } as InsertType;
-
-    const client = supabase.from("user_profiles") as unknown as {
-      insert: (values: InsertType) => {
-        select: () => {
-          single: () => Promise<{
-            data: UserProfileRow | null;
-            error: { code?: string; message?: string; name?: string } | null;
-          }>;
-        };
-      };
-    };
-
-    const { data, error } = await client.insert(insertData).select().single();
-
-    // Type the error properly for Supabase errors
-    const supabaseError = error as {
-      code?: string;
-      message?: string;
-      name?: string;
-    } | null;
-    const errorCode = supabaseError?.code;
-    const errorMessage = supabaseError?.message || "";
-    const isRLSError =
-      errorCode === "42501" || errorMessage.includes("row-level security");
-
-    if (error && isRLSError) {
-      // RLS error - try using server API route with admin client
-      try {
-        const response = await fetch("/api/user-profile/create", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId,
-            firstName: details.firstName,
-            lastName: details.lastName,
-            phone: details.phone,
-            businessName: details.businessName,
-            businessAddress: details.businessAddress,
-            businessAddressComponents: details.businessAddressComponents,
-            businessState: details.businessState,
-            businessCity: details.businessCity,
-            businessCountry: details.businessCountry,
-            businessYears: details.businessYears,
-            businessWebsite: details.businessWebsite,
-            businessEmail: details.businessEmail,
-            role: details.role || "user",
-          }),
-        });
-
-        if (!response.ok) {
-          // Return RLS error marker so caller can handle it
-          return { __isRLSError: true } as unknown as UserProfile;
-        }
-
-        const responseData = await response.json();
-        const { profile: serverProfile } = responseData;
-        if (serverProfile) {
-          const row = serverProfile as UserProfileRow;
-          const profile = dbRowToUserProfile(row);
-          return profile;
-        } else {
-          return { __isRLSError: true } as unknown as UserProfile;
-        }
-      } catch (apiError) {
-        // Return RLS error marker so caller can handle it
-        return { __isRLSError: true } as unknown as UserProfile;
-      }
-
-      // If server API also fails, return RLS error marker
-      return { __isRLSError: true } as unknown as UserProfile;
-    }
-
-    if (error) {
+    if (!response.ok) {
       return null;
     }
 
-    if (data) {
-      const row = data as UserProfileRow;
-      const profile = dbRowToUserProfile(row);
-      return profile;
+    const responseData = await response.json();
+    const { profile: serverProfile } = responseData;
+    if (!serverProfile) {
+      return null;
     }
-
-    return null;
+    const row = serverProfile as UserProfileRow;
+    const profile = dbRowToUserProfile(row);
+    return profile;
   } catch (error) {
     return null;
   }
