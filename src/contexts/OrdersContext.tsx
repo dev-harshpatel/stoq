@@ -13,6 +13,8 @@ import {
   useState,
   useCallback,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { dbRowToOrder } from "@/lib/supabase/queries";
 
 export interface OrderAddresses {
@@ -47,6 +49,7 @@ interface OrdersContextType {
     rejectionComment?: string,
     discountAmount?: number
   ) => Promise<void>;
+  deleteOrder: (orderId: string) => Promise<void>;
   updateInvoice: (
     orderId: string,
     invoiceData: {
@@ -157,6 +160,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { ordersVersion } = useRealtimeContext();
+  const queryClient = useQueryClient();
 
   // Load orders from Supabase
   const loadOrders = useCallback(async () => {
@@ -403,11 +407,37 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
 
         // Reload orders from database to ensure we have the latest data
         await loadOrders();
+
+        // Also invalidate React Query caches that back the admin orders page
+        queryClient.invalidateQueries({ queryKey: queryKeys.orders });
       } catch (error) {
         throw error;
       }
     },
-    [loadOrders, getOrderById]
+    [loadOrders, getOrderById, queryClient]
+  );
+
+  const deleteOrder = useCallback(
+    async (orderId: string): Promise<void> => {
+      const { data: deleted, error } = await (supabase as any).rpc(
+        "delete_order_and_restore_inventory",
+        {
+          p_order_id: orderId,
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message || "Failed to delete order");
+      }
+      if (!deleted) {
+        throw new Error("Order was already deleted.");
+      }
+
+      await loadOrders();
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders });
+      queryClient.invalidateQueries({ queryKey: queryKeys.inventory });
+    },
+    [loadOrders, queryClient]
   );
 
   const getUserOrders = useCallback(
@@ -622,6 +652,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         createOrder,
         createManualOrder,
         updateOrderStatus,
+        deleteOrder,
         updateInvoice,
         confirmInvoice,
         downloadInvoicePDF,

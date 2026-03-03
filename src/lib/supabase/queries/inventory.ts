@@ -41,7 +41,9 @@ function applyInventoryFilters(query: any, filters: InventoryFilters) {
   if (filters.stockStatus !== "all") {
     switch (filters.stockStatus) {
       case "in-stock":
-        query = query.gt("quantity", 10);
+        // Treat "In Stock" as any item with quantity > 0,
+        // regardless of whether it's low or critical.
+        query = query.gt("quantity", 0);
         break;
       case "low-stock":
         query = query.gte("quantity", 5).lte("quantity", 10);

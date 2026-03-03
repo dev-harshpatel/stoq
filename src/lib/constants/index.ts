@@ -20,7 +20,7 @@ export const BLOB_CLEANUP_TIMEOUT_MS = 200;
 export const BULK_INSERT_BATCH_SIZE = 50;
 
 // Payment Methods
-export const PAYMENT_METHODS = ["EMT", "WIRE", "CHQ"] as const;
+export const PAYMENT_METHODS = ["EMT", "WIRE", "CHQ", "CASH"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 // Inventory Sort Order

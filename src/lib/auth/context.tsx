@@ -87,6 +87,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
+    // First, check via server whether this email already exists.
+    // Do not block signup if this pre-check endpoint is temporarily unavailable.
+    let emailExists: boolean | null = null;
+    try {
+      const res = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (res.ok) {
+        const { exists } = await res.json();
+        emailExists = Boolean(exists);
+      }
+    } catch {
+      // Fall back to Supabase handling below.
+    }
+
+    if (emailExists) {
+      throw new Error(
+        "An account with this email already exists. Please log in instead."
+      );
+    }
+
     // Use the actual browser origin so the email link always matches
     // the domain the user signed up from (works for both b2bmobiles.ca and stoq-bice.vercel.app)
     const getRedirectUrl = () => {
@@ -123,8 +149,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { user: data.user, session: data.session };
     }
 
-    // If there's an error and no user was created, throw it
+    // If there's an error and no user was created, throw a more helpful message
     if (error) {
+      const supabaseCode = (error as any).code ?? "";
+      const msg = (error as any).message ?? "";
+
+      if (
+        supabaseCode === "user_already_exists" ||
+        /already registered/i.test(msg) ||
+        /already exists/i.test(msg)
+      ) {
+        throw new Error(
+          "An account with this email already exists. Please log in instead."
+        );
+      }
+
       throw error;
     }
 

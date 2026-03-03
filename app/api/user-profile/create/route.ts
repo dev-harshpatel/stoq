@@ -33,26 +33,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Use admin client to bypass RLS
+    // Upsert on user_id so repeated calls update the existing profile
     const { data, error } = await supabaseAdmin
       .from("user_profiles")
-      .insert({
-        user_id: userId,
-        role,
-        approval_status: "pending",
-        approval_status_updated_at: null,
-        first_name: firstName || null,
-        last_name: lastName || null,
-        phone: phone || null,
-        business_name: businessName || null,
-        business_address: businessAddress || null,
-        business_address_components: businessAddressComponents || null,
-        business_state: businessState || null,
-        business_city: businessCity || null,
-        business_country: businessCountry || null,
-        business_years: businessYears || null,
-        business_website: businessWebsite || null,
-        business_email: businessEmail || null,
-      } as InsertType)
+      .upsert(
+        {
+          user_id: userId,
+          role,
+          approval_status: "pending",
+          approval_status_updated_at: null,
+          first_name: firstName || null,
+          last_name: lastName || null,
+          phone: phone || null,
+          business_name: businessName || null,
+          business_address: businessAddress || null,
+          business_address_components: businessAddressComponents || null,
+          business_state: businessState || null,
+          business_city: businessCity || null,
+          business_country: businessCountry || null,
+          business_years: businessYears || null,
+          business_website: businessWebsite || null,
+          business_email: businessEmail || null,
+        } as InsertType,
+        { onConflict: "user_id" }
+      )
       .select()
       .single();
 
