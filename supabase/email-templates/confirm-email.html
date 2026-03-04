@@ -175,7 +175,7 @@
                       "
                     >
                       <a
-                        href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup"
+                        href="{{ .ConfirmationURL }}"
                         target="_blank"
                         style="
                           display: inline-block;
@@ -245,10 +245,9 @@
                   "
                 >
                   <a
-                    href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup"
+                    href="{{ .ConfirmationURL }}"
                     style="color: #6c63ea; text-decoration: none"
-                    >{{ .SiteURL
-                    }}/auth/callback?token_hash={{ .TokenHash }}&type=signup</a
+                    >{{ .ConfirmationURL }}</a
                   >
                 </p>
               </td>

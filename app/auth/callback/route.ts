@@ -57,11 +57,12 @@ export async function GET(request: NextRequest) {
   const token_hash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type") as EmailOtpType | null;
   const code = requestUrl.searchParams.get("code");
+   const flow = requestUrl.searchParams.get("flow");
 
   try {
     const supabase = await getSupabaseClient();
 
-    // Token hash flow (email confirmation links) — no PKCE verifier needed
+    // Token hash flow (email confirmation links, password recovery) — no PKCE verifier needed
     if (token_hash && type) {
       const { error } = await supabase.auth.verifyOtp({
         token_hash,
@@ -74,6 +75,11 @@ export async function GET(request: NextRequest) {
           status: error.status,
         });
         return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+      }
+
+      // Password recovery: redirect to reset-password page to set new password
+      if (type === "recovery" || flow === "recovery") {
+        return NextResponse.redirect(`${origin}/auth/reset-password`);
       }
 
       return redirectByRole(supabase, origin);
@@ -108,6 +114,12 @@ export async function GET(request: NextRequest) {
         }
 
         return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+      }
+
+      // If this code flow was triggered for a password recovery link,
+      // send the user to the reset-password page after the session is created.
+      if (type === "recovery" || flow === "recovery") {
+        return NextResponse.redirect(`${origin}/auth/reset-password`);
       }
 
       return redirectByRole(supabase, origin);

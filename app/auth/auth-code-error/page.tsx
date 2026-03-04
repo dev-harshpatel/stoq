@@ -59,6 +59,20 @@ function ResendConfirmationForm() {
           <span className="font-medium text-foreground">{email}</span>. Please
           check your inbox and spam folder.
         </p>
+        <p className="text-xs text-muted-foreground border border-border rounded-md p-2 bg-muted/30">
+          Not receiving it? Supabase's default email has strict limits. Your
+          admin may need to configure custom SMTP in Supabase Dashboard → Auth →
+          SMTP Settings. See{" "}
+          <a
+            href="https://supabase.com/docs/guides/auth/auth-smtp"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Supabase SMTP docs
+          </a>
+          .
+        </p>
         <Button
           variant="outline"
           className="w-full"

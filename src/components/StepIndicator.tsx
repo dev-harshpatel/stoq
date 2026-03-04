@@ -12,7 +12,7 @@ interface StepIndicatorProps {
 export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndicatorProps) {
   return (
     <div className="w-full px-4 pt-6">
-      <div className="flex items-center justify-between">
+      <div className="flex w-full items-start">
         {stepLabels.map((label, index) => {
           const stepNumber = index + 1
           const isCompleted = stepNumber < currentStep
@@ -20,8 +20,14 @@ export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndic
           const isUpcoming = stepNumber > currentStep
 
           return (
-            <div key={stepNumber} className="flex items-center flex-1">
-              <div className="flex flex-col items-center flex-1">
+            <div
+              key={stepNumber}
+              className={cn(
+                'relative flex flex-1 flex-col items-center',
+                index < totalSteps - 1 && 'pr-4'
+              )}
+            >
+              <div className="relative flex w-full justify-center">
                 {/* Step Circle */}
                 <div
                   className={cn(
@@ -31,9 +37,7 @@ export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndic
                     isCurrent &&
                       'bg-primary/10 border-primary text-primary ring-2 ring-primary/20',
                     isUpcoming &&
-                      'bg-background border-muted-foreground/30 text-muted-foreground',
-                    index === 0 && 'ml-2',
-                    index === stepLabels.length - 1 && 'mr-2'
+                      'bg-background border-muted-foreground/30 text-muted-foreground'
                   )}
                 >
                   {isCompleted ? (
@@ -42,6 +46,20 @@ export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndic
                     <span className="text-sm font-semibold">{stepNumber}</span>
                   )}
                 </div>
+
+                {/* Connector Line */}
+                {index < totalSteps - 1 && (
+                  <div className="absolute left-[calc(50%+1.5rem)] top-1/2 h-0.5 w-[calc(100%-3rem)] -translate-y-1/2">
+                    <div
+                      className={cn(
+                        'h-full w-full transition-colors duration-300',
+                        stepNumber < currentStep ? 'bg-primary' : 'bg-muted'
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+
                 {/* Step Label */}
                 <div className="mt-2 text-center">
                   <p
@@ -55,16 +73,6 @@ export function StepIndicator({ currentStep, totalSteps, stepLabels }: StepIndic
                     {label}
                   </p>
                 </div>
-              </div>
-              {/* Connector Line */}
-              {index < stepLabels.length - 1 && (
-                <div
-                  className={cn(
-                    'h-0.5 flex-1 mx-2 transition-colors duration-300',
-                    stepNumber < currentStep ? 'bg-primary' : 'bg-muted'
-                  )}
-                />
-              )}
             </div>
           )
         })}

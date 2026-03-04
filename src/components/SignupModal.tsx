@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type FocusEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -53,6 +53,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const stepRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { signUp } = useAuth();
 
@@ -519,6 +520,32 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
     }
   }, [open]);
 
+  const handleFocusCapture = (event: FocusEvent<HTMLFormElement>) => {
+    const container = scrollContainerRef.current;
+    const target = event.target as HTMLElement | null;
+    if (!container || !target) return;
+
+    // Keep keyboard tab focus visible inside the dialog's scroll container.
+    requestAnimationFrame(() => {
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const topPadding = 20;
+      const bottomPadding = 20;
+
+      if (targetRect.top < containerRect.top + topPadding) {
+        container.scrollBy({
+          top: targetRect.top - (containerRect.top + topPadding),
+          behavior: "smooth",
+        });
+      } else if (targetRect.bottom > containerRect.bottom - bottomPadding) {
+        container.scrollBy({
+          top: targetRect.bottom - (containerRect.bottom - bottomPadding),
+          behavior: "smooth",
+        });
+      }
+    });
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
@@ -530,7 +557,10 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto min-h-0 px-6 scrollbar-thin">
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto min-h-0 px-6 scrollbar-thin"
+          >
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit((data) => {
@@ -538,6 +568,7 @@ export function SignupModal({ open, onOpenChange }: SignupModalProps) {
                     handleSubmit(data);
                   }
                 })}
+                onFocusCapture={handleFocusCapture}
                 className="space-y-6"
               >
                 {/* Step Indicator */}
