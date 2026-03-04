@@ -13,6 +13,12 @@ export const TOAST_MESSAGES = {
   LOGOUT_SUCCESS: "You have been successfully logged out.",
   LOGOUT_FAILED: "Failed to logout",
 
+  // Password reset
+  PASSWORD_RESET_EMAIL_SENT:
+    "If an account exists with that email, you'll receive a password reset link shortly.",
+  PASSWORD_RESET_SUCCESS: "Your password has been updated. You can now sign in.",
+  PASSWORD_RESET_FAILED: "Failed to reset password. Please try again.",
+
   // Signup
   SIGNUP_SUCCESS: "Welcome to Stoq! 🎉",
   SIGNUP_FAILED: "Signup failed",

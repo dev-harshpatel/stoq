@@ -34,8 +34,11 @@ export const LoginModal = ({
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailNotConfirmed, setShowEmailNotConfirmed] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const { signIn, signOut } = useAuth();
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const { signIn, signOut, resetPasswordForEmail } = useAuth();
   const router = useRouter();
 
   const isEmailNotConfirmedError = (message: string) => {
@@ -69,7 +72,26 @@ export const LoginModal = ({
 
   const handleBackToLogin = () => {
     setShowEmailNotConfirmed(false);
+    setShowForgotPassword(false);
+    setResetEmailSent(false);
     setPassword("");
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setIsSendingReset(true);
+    try {
+      await resetPasswordForEmail(email.trim());
+      setResetEmailSent(true);
+      toast.success(TOAST_MESSAGES.PASSWORD_RESET_EMAIL_SENT);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : TOAST_MESSAGES.PASSWORD_RESET_FAILED;
+      toast.error(message);
+    } finally {
+      setIsSendingReset(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,6 +139,8 @@ export const LoginModal = ({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setShowEmailNotConfirmed(false);
+      setShowForgotPassword(false);
+      setResetEmailSent(false);
     }
     onOpenChange(open);
   };
@@ -124,7 +148,89 @@ export const LoginModal = ({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
-        {showEmailNotConfirmed ? (
+        {showForgotPassword ? (
+          <>
+            <DialogHeader>
+              <div className="flex items-center justify-center mb-2">
+                <div className="rounded-full bg-primary/10 p-3">
+                  <Mail className="h-6 w-6 text-primary" />
+                </div>
+              </div>
+              <DialogTitle className="text-center">
+                Reset Password
+              </DialogTitle>
+              <DialogDescription className="text-center">
+                {resetEmailSent
+                  ? "Check your email for the reset link"
+                  : "Enter your email and we'll send you a link to reset your password"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              {resetEmailSent ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground text-center">
+                    We've sent a password reset link to{" "}
+                    <span className="font-medium text-foreground break-all">
+                      {email}
+                    </span>
+                    . Check your inbox and spam folder.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setResetEmailSent(false);
+                        setShowForgotPassword(false);
+                      }}
+                      className="w-full"
+                    >
+                      Back to Login
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Email</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      required
+                      disabled={isSendingReset}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      type="submit"
+                      disabled={isSendingReset}
+                      className="w-full"
+                    >
+                      {isSendingReset ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Send Reset Link"
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleBackToLogin}
+                      className="w-full"
+                    >
+                      Back to Login
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </>
+        ) : showEmailNotConfirmed ? (
           <>
             <DialogHeader>
               <div className="flex items-center justify-center mb-2">
@@ -198,7 +304,16 @@ export const LoginModal = ({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-xs text-primary hover:underline font-medium"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <Input
                   id="password"
                   type="password"

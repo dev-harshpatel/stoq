@@ -212,7 +212,10 @@ export function BusinessDetailsStep({ form }: BusinessDetailsStepProps) {
                     />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                <SelectContent
+                  className="max-h-60 overscroll-contain"
+                  onWheelCapture={(event) => event.stopPropagation()}
+                >
                   {stateOptions.map((state) => (
                     <SelectItem key={state} value={state}>
                       {state}

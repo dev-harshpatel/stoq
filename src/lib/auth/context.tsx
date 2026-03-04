@@ -13,6 +13,7 @@ type AuthContextType = {
     password: string
   ) => Promise<{ user: User | null; session: any }>;
   signOut: () => Promise<void>;
+  resetPasswordForEmail: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -176,12 +177,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  const resetPasswordForEmail = async (email: string) => {
+    const baseUrl =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_SITE_URL
+        ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "")
+        : "http://localhost:3000";
+
+    // For password recovery, include a custom flow marker so the callback
+    // route can distinguish this from normal email confirmation.
+    const redirectTo = `${baseUrl}/auth/callback?flow=recovery`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
+    if (error) throw error;
+  };
+
   const value = {
     user,
     loading,
     signIn,
     signUp,
     signOut,
+    resetPasswordForEmail,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
