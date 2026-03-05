@@ -2,11 +2,23 @@
 
 import { Loader } from "@/components/Loader";
 import { useNavigation } from "@/contexts/NavigationContext";
+import { usePathname } from "next/navigation";
+
+const NO_GLOBAL_LOADER_PATHS = [
+  "/admin/dashboard",
+  "/admin/reports",
+  "/admin/hst",
+];
 
 export function NavigationIndicator() {
   const { isNavigating } = useNavigation();
+  const pathname = usePathname();
 
-  if (!isNavigating) {
+  const shouldHideGlobalLoader = NO_GLOBAL_LOADER_PATHS.some((path) =>
+    pathname?.startsWith(path)
+  );
+
+  if (!isNavigating || shouldHideGlobalLoader) {
     return null;
   }
 

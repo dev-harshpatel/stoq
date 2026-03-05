@@ -44,7 +44,10 @@ export default function Inventory() {
   const { data, totalCount, totalPages, isLoading, rangeText } =
     usePaginatedReactQuery<InventoryItem>({
       queryKey,
-      fetchFn: (range) => fetchPaginatedInventory(serverFilters, range),
+      fetchFn: (range) =>
+        fetchPaginatedInventory(serverFilters, range, {
+          includeAdminFields: true,
+        }),
       currentPage,
       setCurrentPage,
       filtersKey,
@@ -80,7 +83,11 @@ export default function Inventory() {
               Add Product
             </Button>
             <ExportActions
-              onFetchAllData={() => fetchAllFilteredInventory(serverFilters)}
+              onFetchAllData={() =>
+                fetchAllFilteredInventory(serverFilters, {
+                  includeAdminFields: true,
+                })
+              }
               filename="inventory"
             />
           </div>

@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
       businessYears,
       businessWebsite,
       businessEmail,
-      role = "user",
     } = body;
 
     if (!userId) {
@@ -39,7 +38,9 @@ export async function POST(request: NextRequest) {
       .upsert(
         {
           user_id: userId,
-          role,
+          // IMPORTANT: Never trust role from the client for this public route.
+          // Always create profiles as regular users; admins are managed separately.
+          role: "user",
           approval_status: "pending",
           approval_status_updated_at: null,
           first_name: firstName || null,

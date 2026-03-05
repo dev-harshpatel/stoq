@@ -81,7 +81,10 @@ export default function ProductManagement() {
   } = usePaginatedReactQuery<InventoryItem>({
     queryKey,
     fetchFn: (range) =>
-      fetchPaginatedInventory(serverFilters, range, { showInactive: true }),
+      fetchPaginatedInventory(serverFilters, range, {
+        showInactive: true,
+        includeAdminFields: true,
+      }),
     currentPage,
     setCurrentPage,
     filtersKey,

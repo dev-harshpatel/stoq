@@ -25,6 +25,7 @@ import {
   Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdminHSTSkeleton } from "@/components/skeletons/AdminHSTSkeleton";
 import {
   Popover,
   PopoverContent,
@@ -63,8 +64,8 @@ interface SalesHSTRow {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function HSTReconciliation() {
-  const { inventory } = useInventory();
-  const { orders } = useOrders();
+  const { inventory, isLoading: inventoryLoading } = useInventory();
+  const { orders, isLoading: ordersLoading } = useOrders();
 
   const [dateRange, setDateRange] = useState<{
     from: Date | null;
@@ -72,6 +73,7 @@ export default function HSTReconciliation() {
   }>({ from: null, to: null });
 
   const hasActiveFilters = dateRange.from !== null || dateRange.to !== null;
+  const isPageLoading = inventoryLoading || ordersLoading;
 
   // ── Table search + pagination state ───────────────────────────────────────
   const PAGE_SIZE = 10;
@@ -329,6 +331,10 @@ export default function HSTReconciliation() {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="space-y-6 pb-6">
+        {isPageLoading ? (
+          <AdminHSTSkeleton />
+        ) : (
+          <>
         {/* Page Header */}
         <div>
           <h2 className="text-2xl font-semibold text-foreground">
@@ -968,6 +974,8 @@ export default function HSTReconciliation() {
               </table>
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

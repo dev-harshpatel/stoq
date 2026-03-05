@@ -9,6 +9,42 @@ import { dbRowToUserProfile } from "@/lib/supabase/queries";
 
 type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"];
 
+const USER_PROFILE_FIELDS = [
+  "id",
+  "user_id",
+  "role",
+  "approval_status",
+  "approval_status_updated_at",
+  "first_name",
+  "last_name",
+  "phone",
+  "business_name",
+  "business_address",
+  "business_address_components",
+  "business_state",
+  "business_city",
+  "business_country",
+  "business_years",
+  "business_website",
+  "business_email",
+  "shipping_address",
+  "shipping_address_components",
+  "shipping_city",
+  "shipping_state",
+  "shipping_country",
+  "shipping_postal_code",
+  "billing_address",
+  "billing_address_components",
+  "billing_city",
+  "billing_state",
+  "billing_country",
+  "billing_postal_code",
+  "shipping_same_as_business",
+  "billing_same_as_business",
+  "created_at",
+  "updated_at",
+].join(", ");
+
 /**
  * Get user profile by user ID
  */
@@ -18,7 +54,7 @@ export const getUserProfile = async (
   try {
     const { data, error } = await supabase
       .from("user_profiles")
-      .select("*")
+      .select(USER_PROFILE_FIELDS)
       .eq("user_id", userId)
       .single();
 

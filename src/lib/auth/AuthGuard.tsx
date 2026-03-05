@@ -12,6 +12,13 @@ interface AuthGuardProps {
   requireAdmin?: boolean
 }
 
+const PAGE_LEVEL_LOADING_ADMIN_PATHS = [
+  '/admin/dashboard',
+  '/admin/reports',
+  '/admin/hst',
+  '/admin/products',
+]
+
 function AuthGuardInner({ 
   children, 
   redirectTo = '/', 
@@ -26,6 +33,9 @@ function AuthGuardInner({
   const [isRedirecting, setIsRedirecting] = useState(false)
 
   const loading = authLoading || profileLoading
+  const usePageLevelLoading =
+    requireAdmin &&
+    PAGE_LEVEL_LOADING_ADMIN_PATHS.some((path) => pathname?.startsWith(path))
 
   useEffect(() => {
     if (!loading) {
@@ -53,8 +63,9 @@ function AuthGuardInner({
     }
   }, [user, loading, isAdmin, router, redirectTo, requireAuth, requireAdmin, searchParams, pathname])
 
-  // Show loading spinner while checking authentication or redirecting
-  if (loading || isRedirecting) {
+  // Show loading spinner while redirecting. For selected admin pages we skip
+  // the generic "Crafting..." loader and allow page-level skeletons instead.
+  if (isRedirecting || (loading && !usePageLevelLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="flex flex-col items-center space-y-4">
@@ -65,6 +76,10 @@ function AuthGuardInner({
         </div>
       </div>
     )
+  }
+
+  if (loading && usePageLevelLoading) {
+    return <>{children}</>
   }
 
   // Only show children if user state matches requirement
@@ -124,4 +139,3 @@ export function AuthGuard(props: AuthGuardProps) {
     </Suspense>
   )
 }
-

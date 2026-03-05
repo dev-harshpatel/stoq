@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/client/admin";
+import { ensureAdmin } from "@/lib/supabase/admin-auth";
 
 export async function POST(request: NextRequest) {
+  const authError = await ensureAdmin();
+  if (authError) {
+    return authError;
+  }
+
   try {
     const { userIds } = await request.json();
 

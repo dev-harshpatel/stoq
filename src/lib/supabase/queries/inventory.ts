@@ -12,6 +12,40 @@ import type { FilterValues } from "@/components/FilterBar";
 
 export type InventoryFilters = FilterValues;
 
+// Columns safe for regular users / public views
+export const INVENTORY_PUBLIC_FIELDS = [
+  "id",
+  "device_name",
+  "brand",
+  "grade",
+  "storage",
+  "quantity",
+  "selling_price",
+  "last_updated",
+  "price_change",
+  "is_active",
+].join(", ");
+
+// Columns required for admin views (includes cost/margin data)
+export const INVENTORY_ADMIN_FIELDS = [
+  "id",
+  "device_name",
+  "brand",
+  "grade",
+  "storage",
+  "quantity",
+  "price_per_unit",
+  "purchase_price",
+  "hst",
+  "selling_price",
+  "last_updated",
+  "price_change",
+  "is_active",
+].join(", ");
+
+// Helper applies filters to a Supabase query builder.
+// Query builder typing is complex; allow `any` here for ergonomics.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyInventoryFilters(query: any, filters: InventoryFilters) {
   if (filters.search) {
     query = query.ilike("device_name", `%${filters.search}%`);
@@ -62,11 +96,15 @@ function applyInventoryFilters(query: any, filters: InventoryFilters) {
 export async function fetchPaginatedInventory(
   filters: InventoryFilters,
   range: { from: number; to: number },
-  options?: { showInactive?: boolean }
+  options?: { showInactive?: boolean; includeAdminFields?: boolean }
 ): Promise<PaginatedResult<InventoryItem>> {
+  const fields = options?.includeAdminFields
+    ? INVENTORY_ADMIN_FIELDS
+    : INVENTORY_PUBLIC_FIELDS;
+
   let query = supabase
     .from("inventory")
-    .select("*", { count: "exact" })
+    .select(fields, { count: "exact" })
     .order("created_at", INVENTORY_SORT_ORDER.created_at)
     .order("id", INVENTORY_SORT_ORDER.id); // Stable sort - prevents reshuffling when created_at ties
 
@@ -96,11 +134,16 @@ export async function fetchFilterOptions(): Promise<{
 
   if (error || !data) return { brands: [], storageOptions: [] };
 
-  const brands = Array.from(new Set(data.map((r: any) => r.brand)))
+  const rows = (data || []) as Array<{
+    brand: string | null;
+    storage: string | null;
+  }>;
+
+  const brands = Array.from(new Set(rows.map((r) => r.brand)))
     .filter(Boolean)
     .sort() as string[];
 
-  const storageOptions = Array.from(new Set(data.map((r: any) => r.storage)))
+  const storageOptions = Array.from(new Set(rows.map((r) => r.storage)))
     .filter(Boolean)
     .sort((a: string, b: string) => {
       const numA = parseInt(a);
@@ -114,11 +157,15 @@ export async function fetchFilterOptions(): Promise<{
 
 export async function fetchAllFilteredInventory(
   filters: InventoryFilters,
-  options?: { showInactive?: boolean }
+  options?: { showInactive?: boolean; includeAdminFields?: boolean }
 ): Promise<InventoryItem[]> {
+  const fields = options?.includeAdminFields
+    ? INVENTORY_ADMIN_FIELDS
+    : INVENTORY_PUBLIC_FIELDS;
+
   let query = supabase
     .from("inventory")
-    .select("*")
+    .select(fields)
     .order("created_at", INVENTORY_SORT_ORDER.created_at)
     .order("id", INVENTORY_SORT_ORDER.id);
 
@@ -144,7 +191,7 @@ export async function fetchInventoryByIds(
 
   const { data, error } = await supabase
     .from("inventory")
-    .select("*")
+    .select(INVENTORY_PUBLIC_FIELDS)
     .in("id", itemIds)
     .eq("is_active", true)
     .order("created_at", INVENTORY_SORT_ORDER.created_at)

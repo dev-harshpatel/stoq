@@ -75,7 +75,7 @@ export default function Settings() {
       try {
         const { data, error } = await supabase
           .from("company_settings")
-          .select("*")
+          .select("id, company_name, company_address, hst_number, logo_url")
           .single();
 
         if (!error && data) {

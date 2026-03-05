@@ -11,13 +11,35 @@ import { Database } from "@/lib/types/database";
 
 type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"];
 
+// Field set needed for admin user list + details modal
+const ADMIN_USER_LIST_FIELDS = [
+  "id",
+  "user_id",
+  "role",
+  "approval_status",
+  "approval_status_updated_at",
+  "first_name",
+  "last_name",
+  "phone",
+  "business_name",
+  "business_email",
+  "business_address",
+  "business_state",
+  "business_country",
+  "business_years",
+  "business_website",
+  "business_city",
+  "created_at",
+  "updated_at",
+].join(", ");
+
 export async function fetchPaginatedUsers(
   search: string,
   range: { from: number; to: number }
 ): Promise<PaginatedResult<UserProfile>> {
   let query = supabase
     .from("user_profiles")
-    .select("*", { count: "exact" })
+    .select(ADMIN_USER_LIST_FIELDS, { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (search.trim()) {

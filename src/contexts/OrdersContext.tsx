@@ -15,7 +15,7 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { dbRowToOrder } from "@/lib/supabase/queries";
+import { dbRowToOrder, ORDER_FIELDS } from "@/lib/supabase/queries";
 
 export interface OrderAddresses {
   shippingAddress: string | null;
@@ -167,7 +167,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("*")
+        .select(ORDER_FIELDS)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -579,7 +579,7 @@ export const OrdersProvider = ({ children }: OrdersProviderProps) => {
         // Fetch fresh order data from database to ensure we have the latest invoice info
         const { data: orderData, error: orderError } = await supabase
           .from("orders")
-          .select("*")
+          .select(ORDER_FIELDS)
           .eq("id", orderId)
           .single();
 
