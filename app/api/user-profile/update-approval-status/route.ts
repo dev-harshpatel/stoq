@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/client/admin";
 import { Database } from "@/lib/database.types";
+import { ensureAdmin } from "@/lib/supabase/admin-auth";
 
 type UpdateType = Database["public"]["Tables"]["user_profiles"]["Update"];
 
 export async function POST(request: NextRequest) {
+  const authError = await ensureAdmin();
+  if (authError) {
+    return authError;
+  }
+
   try {
     const body = await request.json();
     const { userId, status } = body;

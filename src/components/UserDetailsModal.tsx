@@ -210,7 +210,8 @@ export const UserDetailsModal = ({
   const canApprove =
     user.approvalStatus === "pending" || user.approvalStatus === "rejected";
   const canReject = user.approvalStatus === "pending";
-  const canDelete = user.approvalStatus === "approved";
+  const canDelete =
+    user.approvalStatus === "approved" || user.approvalStatus === "rejected";
 
   const fullName =
     [user.firstName, user.lastName].filter(Boolean).join(" ") || "N/A";

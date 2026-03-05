@@ -23,6 +23,7 @@ import { formatPrice } from "@/lib/utils";
 import { Download, Calendar, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AdminReportsSkeleton } from "@/components/skeletons/AdminReportsSkeleton";
 import {
   Popover,
   PopoverContent,
@@ -74,7 +75,7 @@ interface ReportFilters {
 }
 
 export default function Reports() {
-  const { inventory } = useInventory();
+  const { inventory, isLoading: inventoryLoading } = useInventory();
   const { orders, isLoading: ordersLoading } = useOrders();
 
   // Initialize filters
@@ -340,14 +341,35 @@ export default function Reports() {
         item.pricePerUnit,
         item.hst
       );
-      if (costPerUnit != null) {
-        totalProfit += (item.sellingPrice - costPerUnit) * item.quantity;
+      if (costPerUnit == null) return;
+
+      const selling = Number.isFinite(item.sellingPrice)
+        ? item.sellingPrice
+        : 0;
+      const qty = Number.isFinite(item.quantity) ? item.quantity : 0;
+
+      const profitDelta = (selling - costPerUnit) * qty;
+      if (Number.isFinite(profitDelta)) {
+        totalProfit += profitDelta;
         itemsWithData++;
       }
     });
 
+    if (!Number.isFinite(totalProfit)) {
+      totalProfit = 0;
+    }
+
     return { totalProfit, itemsWithData };
   }, [filteredInventory]);
+
+  const isEstimatedProfitPending = useMemo(() => {
+    if (inventoryLoading) return true;
+    if (filteredInventory.length === 0) return false;
+
+    // If rows are present but none have computable cost/selling inputs yet,
+    // keep showing loading state instead of a misleading "$0 · 0 items".
+    return estimatedProfitStats.itemsWithData === 0;
+  }, [inventoryLoading, filteredInventory.length, estimatedProfitStats.itemsWithData]);
 
   // Profit from orders in the selected date range (approved/completed only).
   // Per line: (selling - cost) × qty. Cost is per-unit WITHOUT HST.
@@ -363,17 +385,28 @@ export default function Reports() {
       orderCount++;
       order.items.forEach((orderItem) => {
         const item = orderItem.item;
-        const qty = orderItem.quantity ?? 0;
-        const selling = item?.sellingPrice ?? item?.pricePerUnit ?? 0;
-        const batchQty = item?.quantity ?? 1;
+        const qty = Number.isFinite(orderItem.quantity)
+          ? orderItem.quantity
+          : orderItem.quantity ?? 0;
+        const selling =
+          (item?.sellingPrice ??
+            item?.pricePerUnit ??
+            0) as number;
+        const batchQty =
+          (Number.isFinite(item?.quantity) ? item?.quantity : 1) ?? 1;
         const costPerUnit = getCostPerUnitWithoutHst(
           item?.purchasePrice,
           batchQty,
           item?.pricePerUnit ?? 0,
           item?.hst
         );
-        const cost = costPerUnit ?? item?.pricePerUnit ?? 0;
-        totalProfit += (selling - cost) * qty;
+        const costBase = (item?.pricePerUnit ?? 0) as number;
+        const cost = costPerUnit ?? costBase;
+
+        const profitDelta = (selling - cost) * qty;
+        if (Number.isFinite(profitDelta)) {
+          totalProfit += profitDelta;
+        }
       });
     });
 
@@ -391,6 +424,10 @@ export default function Reports() {
       else periodLabel = "Profit (Period)";
     } else {
       periodLabel = "Profit (All time)";
+    }
+
+    if (!Number.isFinite(totalProfit)) {
+      totalProfit = 0;
     }
 
     return { totalProfit, orderCount, periodLabel };
@@ -416,6 +453,10 @@ export default function Reports() {
       filters.brand !== "all"
     );
   }, [filters]);
+
+  if (inventoryLoading || ordersLoading) {
+    return <AdminReportsSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
@@ -601,11 +642,13 @@ export default function Reports() {
                   : "text-destructive"
               )}
             >
-              {formatPrice(estimatedProfitStats.totalProfit)}
+              {isEstimatedProfitPending
+                ? "Calculating..."
+                : formatPrice(estimatedProfitStats.totalProfit)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              (Selling − Cost/unit) × Qty · Excl. HST · {estimatedProfitStats.itemsWithData}{" "}
-              items
+              (Selling − Cost/unit) × Qty · Excl. HST ·{" "}
+              {isEstimatedProfitPending ? "…" : estimatedProfitStats.itemsWithData} items
             </p>
           </div>
           <div className="bg-card rounded-lg border border-border shadow-soft p-4">

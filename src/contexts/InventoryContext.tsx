@@ -5,6 +5,7 @@ import { Database } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/context";
 import { useRealtimeContext } from "@/contexts/RealtimeContext";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 import {
   ReactNode,
   createContext,
@@ -14,7 +15,11 @@ import {
   useCallback,
 } from "react";
 import { UploadHistory, BulkInsertResult } from "@/types/upload";
-import { dbRowToInventoryItem } from "@/lib/supabase/queries";
+import {
+  dbRowToInventoryItem,
+  INVENTORY_PUBLIC_FIELDS,
+  INVENTORY_ADMIN_FIELDS,
+} from "@/lib/supabase/queries";
 import { BULK_INSERT_BATCH_SIZE, INVENTORY_SORT_ORDER } from "@/lib/constants";
 
 interface InventoryContextType {
@@ -92,15 +97,18 @@ function productToInsertRow(product: InventoryItem) {
 export const InventoryProvider = ({ children }: InventoryProviderProps) => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { inventoryVersion } = useRealtimeContext();
+  const { isAdmin, isLoading: profileLoading } = useUserProfile();
 
   // Load inventory from Supabase
   const loadInventory = useCallback(async () => {
     try {
+      const fields = isAdmin ? INVENTORY_ADMIN_FIELDS : INVENTORY_PUBLIC_FIELDS;
+
       const { data, error } = await supabase
         .from("inventory")
-        .select("*")
+        .select(fields)
         .order("created_at", INVENTORY_SORT_ORDER.created_at)
         .order("id", INVENTORY_SORT_ORDER.id);
 
@@ -118,12 +126,21 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
     } catch (error) {
       setInventory([]);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     let isMounted = true;
 
     const initializeInventory = async () => {
+      // Wait until auth/profile state is resolved so admin views fetch admin fields
+      // on first load and don't briefly compute from incomplete public rows.
+      if (authLoading || (user?.id && profileLoading)) {
+        if (isMounted) {
+          setIsLoading(true);
+        }
+        return;
+      }
+
       setIsLoading(true);
       await loadInventory();
       if (isMounted) {
@@ -135,7 +152,7 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
     return () => {
       isMounted = false;
     };
-  }, [user?.id]);
+  }, [user?.id, authLoading, profileLoading, loadInventory]);
 
   // Reload inventory when RealtimeProvider signals inventory changes
   useEffect(() => {
@@ -304,7 +321,20 @@ export const InventoryProvider = ({ children }: InventoryProviderProps) => {
   const getUploadHistory = useCallback(async (): Promise<UploadHistory[]> => {
     try {
       const { data, error } = await (supabase.from("product_uploads") as any)
-        .select("*")
+        .select(
+          [
+            "id",
+            "uploaded_by",
+            "file_name",
+            "total_products",
+            "successful_inserts",
+            "failed_inserts",
+            "upload_status",
+            "error_message",
+            "created_at",
+            "updated_at",
+          ].join(", ")
+        )
         .order("created_at", { ascending: false });
 
       if (error) {

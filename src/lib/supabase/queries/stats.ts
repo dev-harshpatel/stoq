@@ -79,14 +79,14 @@ export async function fetchOrderStats(): Promise<OrderStats> {
   // Get total count
   const { count: totalOrders, error: totalError } = await supabase
     .from("orders")
-    .select("*", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true });
 
   if (totalError) throw totalError;
 
   // Get pending count
   const { count: pendingOrders, error: pendingError } = await supabase
     .from("orders")
-    .select("*", { count: "exact", head: true })
+    .select("id", { count: "exact", head: true })
     .eq("status", "pending");
 
   if (pendingError) throw pendingError;
@@ -94,7 +94,7 @@ export async function fetchOrderStats(): Promise<OrderStats> {
   // Get completed count
   const { count: completedOrders, error: completedError } = await supabase
     .from("orders")
-    .select("*", { count: "exact", head: true })
+    .select("id", { count: "exact", head: true })
     .eq("status", "completed");
 
   if (completedError) throw completedError;

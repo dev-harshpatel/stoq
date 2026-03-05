@@ -13,6 +13,7 @@ import { useOrders } from "@/contexts/OrdersContext";
 import { formatPrice } from "@/lib/utils";
 import { EmptyState } from "@/components/EmptyState";
 import { StatCard } from "@/components/StatCard";
+import { AdminDashboardSkeleton } from "@/components/skeletons/AdminDashboardSkeleton";
 import { fetchInventoryStats, fetchOrderStats } from "@/lib/supabase/queries";
 import type { InventoryStats, OrderStats } from "@/lib/supabase/queries";
 
@@ -157,12 +158,62 @@ export default function Dashboard() {
       .map(({ timestamp, ...rest }) => rest);
   }, [orders, inventoryStats]);
 
-  // Top devices - simplified (could be optimized further with a separate query)
+  // Top ordered devices (by total units ordered across approved/completed orders)
   const topDevices = useMemo(() => {
-    // Return empty array - this feature would need a separate query for optimization
-    // For now, keeping it simple since it's not critical
-    return [];
-  }, []);
+    if (!orders || orders.length === 0) {
+      return [];
+    }
+
+    type TopDevice = {
+      id: string;
+      deviceName: string;
+      sellingPrice: number;
+      quantity: number;
+    };
+
+    const map = new Map<string, TopDevice>();
+
+    orders
+      // Include all orders except explicitly rejected ones so that
+      // self-recorded/manual orders and in-progress orders are counted.
+      .filter((order) => order.status !== "rejected")
+      .forEach((order) => {
+        const items = Array.isArray(order.items) ? order.items : [];
+        items.forEach((orderItem) => {
+          const item = orderItem.item as
+            | { id?: string; deviceName?: string; sellingPrice?: number; pricePerUnit?: number }
+            | undefined;
+          const itemId = item?.id;
+          const qty = orderItem.quantity || 0;
+          if (!itemId || qty <= 0) return;
+
+          const sellingPrice =
+            (item.sellingPrice ?? item.pricePerUnit ?? 0) as number;
+          const existing = map.get(itemId);
+
+          if (existing) {
+            existing.quantity += qty;
+          } else {
+            map.set(itemId, {
+              id: itemId,
+              deviceName: item.deviceName || "Unknown Device",
+              sellingPrice,
+              quantity: qty,
+            });
+          }
+        });
+      });
+
+    return Array.from(map.values())
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+  }, [orders]);
+
+  const isDashboardLoading = isLoadingStats || ordersLoading;
+
+  if (isDashboardLoading) {
+    return <AdminDashboardSkeleton />;
+  }
 
   return (
     <div className="flex flex-col h-full overflow-y-auto lg:overflow-hidden">
