@@ -32,7 +32,6 @@ import {
   fetchAllFilteredInventory,
 } from "@/lib/supabase/queries";
 import { useFilterOptions } from "@/hooks/use-filter-options";
-import { exportToPDF } from "@/lib/export";
 
 export default function UserProducts() {
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -97,6 +96,7 @@ export default function UserProducts() {
         });
         return;
       }
+      const { exportToPDF } = await import("@/lib/export/pdf");
       exportToPDF(allItems, "inventory");
       toast.success(TOAST_MESSAGES.EXPORT_SUCCESS, {
         description: "Your PDF file has been downloaded",
@@ -309,6 +309,11 @@ export default function UserProducts() {
                                         e.stopPropagation();
                                         toggleWishlist(item);
                                       }}
+                                      aria-label={
+                                        isInWishlist(item.id)
+                                          ? "Remove item from wishlist"
+                                          : "Add item to wishlist"
+                                      }
                                     >
                                       <Heart
                                         className={cn(
@@ -332,6 +337,7 @@ export default function UserProducts() {
                                           handleBuyClick(item);
                                         }}
                                         title="Buy"
+                                        aria-label="Buy item"
                                       >
                                         <ShoppingCart className="h-4 w-4" />
                                       </Button>
@@ -470,6 +476,11 @@ export default function UserProducts() {
                                   : "text-muted-foreground hover:text-destructive"
                               )}
                               onClick={() => toggleWishlist(item)}
+                              aria-label={
+                                isInWishlist(item.id)
+                                  ? "Remove item from wishlist"
+                                  : "Add item to wishlist"
+                              }
                             >
                               <Heart
                                 className={cn(
@@ -489,6 +500,7 @@ export default function UserProducts() {
                                 className="h-10 w-10"
                                 onClick={() => handleBuyClick(item)}
                                 title="Buy"
+                                aria-label="Buy item"
                               >
                                 <ShoppingCart className="h-5 w-5" />
                               </Button>

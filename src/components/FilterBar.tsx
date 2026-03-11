@@ -93,7 +93,10 @@ export function FilterBar({
           value={filters.brand}
           onValueChange={(v) => handleChange("brand", v)}
         >
-          <SelectTrigger className="w-[130px] bg-background border-border">
+          <SelectTrigger
+            className="w-[130px] bg-background border-border"
+            aria-label="Filter by brand"
+          >
             <SelectValue placeholder="Brand" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
@@ -110,7 +113,10 @@ export function FilterBar({
           value={filters.grade}
           onValueChange={(v) => handleChange("grade", v)}
         >
-          <SelectTrigger className="w-[160px] bg-background border-border">
+          <SelectTrigger
+            className="w-[160px] bg-background border-border"
+            aria-label="Filter by grade"
+          >
             <SelectValue placeholder="Grade" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
@@ -127,7 +133,10 @@ export function FilterBar({
           value={filters.storage}
           onValueChange={(v) => handleChange("storage", v)}
         >
-          <SelectTrigger className="w-[130px] bg-background border-border">
+          <SelectTrigger
+            className="w-[130px] bg-background border-border"
+            aria-label="Filter by storage"
+          >
             <SelectValue placeholder="Storage" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
@@ -144,7 +153,10 @@ export function FilterBar({
           value={filters.priceRange}
           onValueChange={(v) => handleChange("priceRange", v)}
         >
-          <SelectTrigger className="w-[140px] bg-background border-border">
+          <SelectTrigger
+            className="w-[140px] bg-background border-border"
+            aria-label="Filter by price range"
+          >
             <SelectValue placeholder="Price Range" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
@@ -159,7 +171,10 @@ export function FilterBar({
           value={filters.stockStatus}
           onValueChange={(v) => handleChange("stockStatus", v)}
         >
-          <SelectTrigger className="w-[140px] bg-background border-border">
+          <SelectTrigger
+            className="w-[140px] bg-background border-border"
+            aria-label="Filter by stock status"
+          >
             <SelectValue placeholder="Stock Status" />
           </SelectTrigger>
           <SelectContent className="bg-card border-border">
@@ -230,7 +245,10 @@ export function FilterBar({
                     value={filters.brand}
                     onValueChange={(v) => handleChange("brand", v)}
                   >
-                    <SelectTrigger className="w-full bg-background border-border">
+                    <SelectTrigger
+                      className="w-full bg-background border-border"
+                      aria-label="Filter by brand"
+                    >
                       <SelectValue placeholder="Brand" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
@@ -252,7 +270,10 @@ export function FilterBar({
                     value={filters.grade}
                     onValueChange={(v) => handleChange("grade", v)}
                   >
-                    <SelectTrigger className="w-full bg-background border-border">
+                    <SelectTrigger
+                      className="w-full bg-background border-border"
+                      aria-label="Filter by grade"
+                    >
                       <SelectValue placeholder="Grade" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
@@ -274,7 +295,10 @@ export function FilterBar({
                     value={filters.storage}
                     onValueChange={(v) => handleChange("storage", v)}
                   >
-                    <SelectTrigger className="w-full bg-background border-border">
+                    <SelectTrigger
+                      className="w-full bg-background border-border"
+                      aria-label="Filter by storage"
+                    >
                       <SelectValue placeholder="Storage" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border max-h-[300px] overflow-y-auto">
@@ -296,7 +320,10 @@ export function FilterBar({
                     value={filters.priceRange}
                     onValueChange={(v) => handleChange("priceRange", v)}
                   >
-                    <SelectTrigger className="w-full bg-background border-border">
+                    <SelectTrigger
+                      className="w-full bg-background border-border"
+                      aria-label="Filter by price range"
+                    >
                       <SelectValue placeholder="Price Range" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
@@ -316,7 +343,10 @@ export function FilterBar({
                     value={filters.stockStatus}
                     onValueChange={(v) => handleChange("stockStatus", v)}
                   >
-                    <SelectTrigger className="w-full bg-background border-border">
+                    <SelectTrigger
+                      className="w-full bg-background border-border"
+                      aria-label="Filter by stock status"
+                    >
                       <SelectValue placeholder="Stock Status" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
