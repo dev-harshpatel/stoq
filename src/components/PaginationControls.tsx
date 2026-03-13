@@ -52,16 +52,16 @@ export const PaginationControls = memo(function PaginationControls({
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row items-center justify-between gap-2 w-full max-w-full min-w-0",
+        "flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-2 w-full max-w-full min-w-0",
         className
       )}
     >
-      <p className="text-sm text-muted-foreground shrink-0">
+      <p className="text-xs sm:text-sm text-muted-foreground shrink-0">
         Showing {rangeText}
       </p>
       <div className="w-full sm:w-auto max-w-full min-w-0">
         <Pagination className="w-auto mx-0 min-w-0">
-          <PaginationContent className="flex-wrap justify-center gap-1 sm:gap-1">
+          <PaginationContent className="flex-wrap justify-center gap-0.5 sm:gap-1">
             <PaginationItem>
               <PaginationPrevious
                 onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
