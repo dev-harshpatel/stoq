@@ -84,6 +84,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
     });
     if (error) throw error;
+
+    // Enforce email confirmation: block unconfirmed users even if Supabase
+    // allows it (e.g. when "Confirm Email" is disabled in Auth settings)
+    if (data.user && !data.user.email_confirmed_at) {
+      await supabase.auth.signOut({ scope: "local" });
+      const err = new Error("Email not confirmed");
+      (err as Error & { name?: string }).name = "EmailNotConfirmed";
+      throw err;
+    }
+
     return { user: data.user };
   };
 
