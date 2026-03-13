@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/client/admin";
 import { Database } from "@/lib/database.types";
 
-type UserProfileRow = Database["public"]["Tables"]["user_profiles"]["Row"];
 type InsertType = Database["public"]["Tables"]["user_profiles"]["Insert"];
 
 export async function POST(request: NextRequest) {
@@ -66,10 +65,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ profile: data }, { status: 201 });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
