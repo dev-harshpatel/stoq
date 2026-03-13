@@ -117,17 +117,17 @@ export const PurchaseModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[85vh] overflow-y-auto w-[calc(100vw-2rem)] max-w-md p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Add to Cart</DialogTitle>
           <DialogDescription>
             Select quantity for {item.deviceName}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           <div className="space-y-2">
             <Label>Device</Label>
-            <div className="p-3 bg-muted rounded-lg">
+            <div className="p-2.5 sm:p-3 bg-muted rounded-lg">
               <p className="font-medium text-foreground">{item.deviceName}</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Grade: {item.grade} | Storage: {item.storage}
@@ -198,7 +198,7 @@ export const PurchaseModal = ({
           </div>
           <div className="space-y-2">
             <Label>Total Price</Label>
-            <p className="text-2xl font-bold text-primary">
+            <p className="text-xl sm:text-2xl font-bold text-primary">
               {formatPrice(totalPrice)}
             </p>
           </div>

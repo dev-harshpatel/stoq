@@ -13,13 +13,13 @@ import {
   buildServerFilters,
 } from "@/components/FilterBar";
 import { PurchaseModal } from "@/components/PurchaseModal";
+import { ProductDetailSheet } from "@/components/ProductDetailSheet";
 import { StockRequestButton } from "@/components/StockRequestButton";
 import { GradeBadge } from "@/components/GradeBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { Loader } from "@/components/Loader";
 import { PaginationControls } from "@/components/PaginationControls";
-import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
@@ -36,6 +36,9 @@ import { useFilterOptions } from "@/hooks/use-filter-options";
 export default function UserProducts() {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [detailSheetItem, setDetailSheetItem] = useState<InventoryItem | null>(
+    null
+  );
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
   const filterOptions = useFilterOptions();
@@ -67,6 +70,10 @@ export default function UserProducts() {
   const handleBuyClick = (item: InventoryItem) => {
     setSelectedItem(item);
     setPurchaseModalOpen(true);
+  };
+
+  const handleCardTap = (item: InventoryItem) => {
+    setDetailSheetItem(item);
   };
 
   const handleResetFilters = () => {
@@ -354,10 +361,10 @@ export default function UserProducts() {
                 </div>
               </div>
 
-              {/* Mobile Cards - extra pb so last card isn't hidden behind fixed pagination on mobile */}
-              <div className="md:hidden space-y-3 pb-20">
+              {/* Mobile Cards - Compact layout (5-6 cards visible per screen) */}
+              <div className="md:hidden space-y-2 pb-20">
                 {groupedByBrand.map(({ brand, items: groupItems }) => (
-                  <div key={brand} className="space-y-3">
+                  <div key={brand} className="space-y-2">
                     {groupItems.map((item) => {
                       const status = getStockStatus(item.quantity);
                       const isLowStock =
@@ -367,94 +374,46 @@ export default function UserProducts() {
                       return (
                         <div
                           key={item.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleCardTap(item)}
+                          onKeyDown={(e) => {
+                            if (
+                              e.key === "Enter" ||
+                              e.key === " "
+                            ) {
+                              e.preventDefault();
+                              handleCardTap(item);
+                            }
+                          }}
+                          aria-label={`View details for ${item.deviceName}`}
                           className={cn(
-                            "p-3 bg-card rounded-lg border border-border",
+                            "flex flex-col gap-1.5 p-2 bg-card rounded-lg border border-border cursor-pointer active:bg-muted/50 transition-colors",
                             isLowStock &&
                               "border-destructive/20 bg-destructive/[0.02]",
                             isOutOfStock && "bg-muted/50"
                           )}
                         >
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div className="flex-1">
-                              <h3
-                                className={cn(
-                                  "font-medium",
-                                  isOutOfStock
-                                    ? "text-muted-foreground"
-                                    : "text-foreground"
-                                )}
-                              >
-                                {item.deviceName}
-                              </h3>
-                              <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                <Clock className="h-3 w-3" />
-                                Updated {item.lastUpdated}
-                              </span>
-                            </div>
-                            <StatusBadge quantity={item.quantity} />
-                          </div>
+                          {/* Row 1: Device name (full width) */}
+                          <span
+                            className={cn(
+                              "font-medium text-sm line-clamp-2",
+                              isOutOfStock
+                                ? "text-muted-foreground"
+                                : "text-foreground"
+                            )}
+                          >
+                            {item.deviceName}
+                          </span>
 
-                          <div className="grid grid-cols-5 gap-3 text-sm mb-4">
-                            <div>
-                              <span className="text-xs text-muted-foreground block mb-1">
-                                Brand
-                              </span>
-                              <span
-                                className={cn(
-                                  "font-medium",
-                                  isOutOfStock
-                                    ? "text-muted-foreground"
-                                    : "text-foreground"
-                                )}
-                              >
-                                {item.brand}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground block mb-1">
-                                Grade
-                              </span>
+                          {/* Row 2: Grade, Status, Price, Actions */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
                               <GradeBadge grade={item.grade} />
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground block mb-1">
-                                Storage
-                              </span>
+                              <StatusBadge quantity={item.quantity} />
                               <span
                                 className={cn(
-                                  "font-medium",
-                                  isOutOfStock
-                                    ? "text-muted-foreground"
-                                    : "text-foreground"
-                                )}
-                              >
-                                {item.storage}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground block mb-1">
-                                Qty
-                              </span>
-                              <span
-                                className={cn(
-                                  "font-semibold",
-                                  status === "out-of-stock" &&
-                                    "text-destructive",
-                                  status === "critical" && "text-destructive",
-                                  status === "low-stock" && "text-warning",
-                                  status === "in-stock" && "text-foreground"
-                                )}
-                              >
-                                {item.quantity}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground block mb-1">
-                                Price
-                              </span>
-                              <span
-                                className={cn(
-                                  "font-medium",
+                                  "font-semibold text-sm shrink-0",
                                   isOutOfStock
                                     ? "text-muted-foreground"
                                     : "text-foreground"
@@ -463,48 +422,55 @@ export default function UserProducts() {
                                 {formatPrice(item.sellingPrice)}
                               </span>
                             </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 shrink-0">
                             <Button
                               variant="outline"
                               size="icon"
                               className={cn(
-                                "h-10 w-10 flex-shrink-0",
+                                "h-8 w-8 flex-shrink-0",
                                 isInWishlist(item.id)
                                   ? "text-destructive hover:text-destructive border-destructive/20"
                                   : "text-muted-foreground hover:text-destructive"
                               )}
-                              onClick={() => toggleWishlist(item)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleWishlist(item);
+                              }}
                               aria-label={
                                 isInWishlist(item.id)
-                                  ? "Remove item from wishlist"
-                                  : "Add item to wishlist"
+                                  ? "Remove from wishlist"
+                                  : "Add to wishlist"
                               }
                             >
                               <Heart
                                 className={cn(
-                                  "h-5 w-5",
+                                  "h-4 w-4",
                                   isInWishlist(item.id) && "fill-current"
                                 )}
                               />
                             </Button>
                             {isOutOfStock ? (
-                              <StockRequestButton
-                                item={item}
-                                className="h-10 w-10"
-                              />
+                              <div onClick={(e) => e.stopPropagation()}>
+                                <StockRequestButton
+                                  item={item}
+                                  className="h-8 w-8 flex-shrink-0"
+                                />
+                              </div>
                             ) : (
                               <Button
                                 size="icon"
-                                className="h-10 w-10"
-                                onClick={() => handleBuyClick(item)}
-                                title="Buy"
-                                aria-label="Buy item"
+                                className="h-8 w-8 flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBuyClick(item);
+                                }}
+                                title="Add to cart"
+                                aria-label={`Add ${item.deviceName} to cart`}
                               >
-                                <ShoppingCart className="h-5 w-5" />
+                                <ShoppingCart className="h-4 w-4" />
                               </Button>
                             )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -526,6 +492,15 @@ export default function UserProducts() {
           />
         </div>
       </div>
+
+      <ProductDetailSheet
+        open={!!detailSheetItem}
+        onOpenChange={(open) => !open && setDetailSheetItem(null)}
+        item={detailSheetItem}
+        isInWishlist={isInWishlist}
+        onToggleWishlist={toggleWishlist}
+        onAddToCart={handleBuyClick}
+      />
 
       <PurchaseModal
         open={purchaseModalOpen}
