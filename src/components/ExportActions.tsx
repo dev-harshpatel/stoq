@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { TOAST_MESSAGES } from "@/lib/constants/toast-messages";
 import { cn } from "@/lib/utils";
-import { exportToExcel, exportToPDF } from "@/lib/export";
 import { InventoryItem } from "@/data/inventory";
 
 interface ExportActionsProps {
@@ -58,6 +57,7 @@ export function ExportActions({
     if (!exportData) return;
 
     try {
+      const { exportToExcel } = await import("@/lib/export/excel");
       exportToExcel(exportData, filename);
       toast.success(TOAST_MESSAGES.EXPORT_SUCCESS, {
         description: "Your Excel file has been downloaded",
@@ -74,6 +74,7 @@ export function ExportActions({
     if (!exportData) return;
 
     try {
+      const { exportToPDF } = await import("@/lib/export/pdf");
       exportToPDF(exportData, filename);
       toast.success(TOAST_MESSAGES.EXPORT_SUCCESS, {
         description: "Your PDF file has been downloaded",

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { getUserProfile } from "@/lib/supabase/utils";
+import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,9 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showEmailNotConfirmed, setShowEmailNotConfirmed] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const { user, signIn, signOut, resetPasswordForEmail } = useAuth();
   const { isAdmin, isLoading: profileLoading } = useUserProfile();
@@ -30,6 +33,27 @@ export default function AdminLogin() {
       router.replace("/admin/dashboard");
     }
   }, [user, isAdmin, profileLoading, router]);
+
+  const handleResendConfirmation = async () => {
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+      toast.success("Confirmation email sent! Please check your inbox.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to resend email";
+      toast.error(message);
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +94,15 @@ export default function AdminLogin() {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : TOAST_MESSAGES.LOGIN_FAILED;
-      toast.error(errorMessage);
+      if (
+        error instanceof Error &&
+        (error.message.toLowerCase().includes("email not confirmed") ||
+          error.message.toLowerCase().includes("email_not_confirmed"))
+      ) {
+        setShowEmailNotConfirmed(true);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +139,41 @@ export default function AdminLogin() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {showForgotPassword ? (
+          {showEmailNotConfirmed ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Your email address hasn't been confirmed yet. We've sent a
+                confirmation link to{" "}
+                <span className="font-medium text-foreground break-all">
+                  {email}
+                </span>
+                . Check your inbox and spam folder, or request a new link below.
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={handleResendConfirmation}
+                  disabled={isResending}
+                  className="w-full"
+                >
+                  {isResending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Resend Confirmation Email"
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEmailNotConfirmed(false)}
+                  className="w-full"
+                >
+                  Back to Sign In
+                </Button>
+              </div>
+            </div>
+          ) : showForgotPassword ? (
             <div className="space-y-4">
               {resetEmailSent ? (
                 <div className="space-y-3">

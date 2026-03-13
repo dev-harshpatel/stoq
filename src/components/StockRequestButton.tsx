@@ -104,6 +104,7 @@ export function StockRequestButton({
           className
         )}
         title="Requested — click to cancel"
+        aria-label="Cancel stock request"
       >
         {isCancelling ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -126,6 +127,7 @@ export function StockRequestButton({
           className
         )}
         title="Notify me when back in stock"
+        aria-label="Notify me when back in stock"
       >
         <Bell className="h-4 w-4" />
       </Button>

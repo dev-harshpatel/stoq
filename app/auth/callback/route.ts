@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
   const token_hash = requestUrl.searchParams.get("token_hash");
   const type = requestUrl.searchParams.get("type") as EmailOtpType | null;
   const code = requestUrl.searchParams.get("code");
-   const flow = requestUrl.searchParams.get("flow");
+  const flow = requestUrl.searchParams.get("flow");
 
   try {
     const supabase = await getSupabaseClient();
@@ -74,7 +74,14 @@ export async function GET(request: NextRequest) {
           message: error.message,
           status: error.status,
         });
-        return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+        const reason =
+          error.message?.includes("expired") ||
+          error.message?.includes("otp_expired")
+            ? "otp_expired"
+            : undefined;
+        const errorUrl = new URL(`${origin}/auth/auth-code-error`);
+        if (reason) errorUrl.searchParams.set("reason", reason);
+        return NextResponse.redirect(errorUrl.toString());
       }
 
       // Password recovery: redirect to reset-password page to set new password
@@ -85,7 +92,7 @@ export async function GET(request: NextRequest) {
       return redirectByRole(supabase, origin);
     }
 
-    // PKCE code flow (legacy / OAuth)
+    // PKCE code flow (email confirmation or OAuth) — requires code_verifier in cookies
     if (code) {
       const { error: exchangeError } =
         await supabase.auth.exchangeCodeForSession(code);
@@ -125,8 +132,10 @@ export async function GET(request: NextRequest) {
       return redirectByRole(supabase, origin);
     }
 
-    // No token_hash and no code — invalid callback
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+    // No token_hash and no code — invalid callback (e.g. Supabase sent error in hash)
+    return NextResponse.redirect(
+      `${origin}/auth/auth-code-error?reason=otp_expired`
+    );
   } catch (error: unknown) {
     const err = error as { message?: string };
     console.error("[Auth Callback] Unexpected error:", err?.message);

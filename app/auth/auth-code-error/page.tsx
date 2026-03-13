@@ -141,16 +141,35 @@ function AuthCodeErrorContent() {
           {reason === "redirect_mismatch" ? (
             <p className="text-sm text-muted-foreground">
               The email confirmation link was generated for a different URL.
-              Please try signing up again or contact support if the issue
-              persists.
+              Ensure Supabase Dashboard → Auth → URL Configuration has the
+              correct Site URL and Redirect URLs for this domain. Try signing up
+              again or contact support if the issue persists.
             </p>
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
                 This can happen if the link has expired (links are valid for 24
-                hours) or has already been used. You can request a new
+                hours), has already been used, or was consumed by an email
+                security scanner before you clicked it. You can request a new
                 confirmation email below.
               </p>
+              {reason === "otp_expired" && (
+                <p className="text-xs text-muted-foreground border border-border rounded-md p-2 bg-muted/30">
+                  <strong>First-time click?</strong> Some email providers
+                  (Gmail, Outlook) or security tools pre-scan links, which can
+                  consume the token. Also verify Supabase Dashboard → Auth → URL
+                  Configuration has the correct Site URL and Redirect URLs. See{" "}
+                  <a
+                    href="https://supabase.com/docs/guides/troubleshooting/otp-verification-failures-token-has-expired-or-otp_expired-errors-5ee4d0"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Supabase troubleshooting
+                  </a>
+                  .
+                </p>
+              )}
               <div className="border-t border-border pt-4">
                 <p className="text-sm font-medium text-foreground mb-1">
                   Resend confirmation email
