@@ -354,8 +354,8 @@ export default function UserProducts() {
                 </div>
               </div>
 
-              {/* Mobile Cards - grouped by brand (company) */}
-              <div className="md:hidden space-y-3 pb-4">
+              {/* Mobile Cards - extra pb so last card isn't hidden behind fixed pagination on mobile */}
+              <div className="md:hidden space-y-3 pb-20">
                 {groupedByBrand.map(({ brand, items: groupItems }) => (
                   <div key={brand} className="space-y-3">
                     {groupItems.map((item) => {
@@ -517,7 +517,7 @@ export default function UserProducts() {
         </div>
 
         {/* Pagination - Fixed at bottom on mobile, sticky on desktop */}
-        <div className="fixed bottom-0 left-0 right-0 z-10 bg-background border-t border-border px-4 py-2 lg:sticky lg:bottom-0 lg:-mx-6 lg:px-6 lg:relative lg:left-auto lg:right-auto">
+        <div className="fixed bottom-0 left-0 right-0 z-10 flex-shrink-0 border-t border-border px-4 py-2 bg-background [&_button]:h-8 [&_button]:min-w-8 [&_button]:text-xs [&_button]:px-2 md:static md:[&_button]:h-10 md:[&_button]:min-w-10 md:[&_button]:text-sm lg:-mx-6 lg:px-6 lg:sticky lg:bottom-0">
           <PaginationControls
             currentPage={currentPage}
             totalPages={totalPages}
